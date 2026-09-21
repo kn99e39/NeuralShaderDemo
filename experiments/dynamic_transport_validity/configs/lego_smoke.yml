@@ -1,0 +1,18 @@
+name: "batch1-lego-smoke"
+renderer: "NeuralSurfaceHairRenderer"
+module: "NeuralSurfaceTriplaneModule"
+renderer_params:
+  blend_file: "data/scenes/Lego_rough_aovs_normalized.blend"
+  checkpoint: "data/ckpts/lego.ckpt"
+  resolution: [128, 128]
+  aa_samples: 1
+  reference_samples: 8
+feature_pass_samples: 1
+training_light_intensity: 5.0
+random_camera: false
+animate_camera: true
+animate_light: true
+output_dir: "../../results/batch1_dynamic_validity/environment/lego_smoke"
+frames: [13]
+json: "config/render/lego.json"
+

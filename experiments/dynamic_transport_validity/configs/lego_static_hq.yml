@@ -1,0 +1,18 @@
+name: "batch1-lego-static-hq"
+renderer: "NeuralSurfaceHairRenderer"
+module: "NeuralSurfaceTriplaneModule"
+renderer_params:
+  blend_file: "data/scenes/Lego_rough_aovs_normalized.blend"
+  checkpoint: "data/ckpts/lego.ckpt"
+  resolution: [1024, 1024]
+  aa_samples: 16
+  reference_samples: 2048
+feature_pass_samples: 1
+training_light_intensity: 5.0
+random_camera: false
+animate_camera: true
+animate_light: true
+output_dir: "../../results/batch1_dynamic_validity/static_baseline"
+frames: [13]
+json: "config/render/lego.json"
+

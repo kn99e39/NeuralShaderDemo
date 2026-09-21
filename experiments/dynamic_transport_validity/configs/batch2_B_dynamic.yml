@@ -1,0 +1,17 @@
+name: "batch2-B-approach-dynamic"
+renderer: "NeuralSurfaceHairRenderer"
+module: "NeuralSurfaceTriplaneModule"
+renderer_params:
+  blend_file: "../../experiments/dynamic_transport_validity/assets/batch2_B_approach_flaps.blend"
+  checkpoint: "unused-override-required.ckpt"
+  resolution: [512, 512]
+  aa_samples: 16
+  reference_samples: 2048
+feature_pass_samples: 1
+training_light_intensity: 5.0
+random_camera: false
+animate_camera: true
+animate_light: true
+output_dir: "unused"
+frames: [0]
+json: "../../experiments/dynamic_transport_validity/configs/batch2_B_eval.json"

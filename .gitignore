@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# Local dependency checkout and generated training/render caches.
+external/
+results/batch2_nonrigid_visualization/A/
+results/batch2_nonrigid_visualization/B/
+results/batch2_nonrigid_visualization/C/

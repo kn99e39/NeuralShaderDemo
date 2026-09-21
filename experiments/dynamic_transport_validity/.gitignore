@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+# Local dependency checkout and all generated datasets, checkpoints, EXRs,
+# renders, metrics, videos, and review packages.
+external/
+results/
+*.h5
+*.ckpt
+*.exr
