@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "global_contract": {
+    "preserve": ["materials", "textures", "topology", "vertex_identity", "uv", "camera", "primary_lighting", "renderer", "rna_architecture", "canonical_checkpoint"],
+    "change_only": ["geometry_pose"],
+    "selection_rule": "States are predeclared. No state may be added, removed, or re-parameterized after viewing frozen-RNA error."
+  },
+  "character_einar_v1": {
+    "trajectory": "Right arm moves from separated pose toward torso using the named production rig controls. Exact sign is validated from a non-evidence viewport preview before data generation; the listed magnitudes remain fixed thereafter.",
+    "pose_controls": ["FK-UpperArm.R", "FK-Forearm.R", "IK-Wrist.R"],
+    "states": [
+      {"id": "P0", "label": "separated canonical", "upper_arm_delta_degrees": 0, "forearm_delta_degrees": 0, "expected_role": "baseline gap"},
+      {"id": "P1", "label": "moderate articulation", "upper_arm_delta_degrees": 18, "forearm_delta_degrees": 12, "expected_role": "approach begins"},
+      {"id": "P2", "label": "cross-part approach", "upper_arm_delta_degrees": 36, "forearm_delta_degrees": 28, "expected_role": "reduced arm-torso gap"},
+      {"id": "P3", "label": "near-contact", "upper_arm_delta_degrees": 52, "forearm_delta_degrees": 42, "expected_role": "narrow gap/cavity"},
+      {"id": "P4", "label": "stable contact if collision-free", "upper_arm_delta_degrees": 60, "forearm_delta_degrees": 50, "expected_role": "contact or closest valid configuration"}
+    ],
+    "roi_definitions": ["arm_torso_gap", "elbow_or_armpit_cavity", "newly_occluded_region", "newly_exposed_region"],
+    "descriptors": ["upper_arm_angle_degrees", "forearm_angle_degrees", "minimum_arm_torso_distance"]
+  },
+  "cloth_rain_v2_garment_set": {
+    "trajectory": "A topology-preserving shape-key or lattice deformation is applied to the selected Rain scarf/top garment meshes. It changes their fold geometry only; source materials and UVs are retained.",
+    "states": [
+      {"id": "F0", "label": "open/weakly folded canonical", "fold_angle_degrees": 0, "fold_depth_relative_bbox": 0.00},
+      {"id": "F1", "label": "moderate fold", "fold_angle_degrees": 32, "fold_depth_relative_bbox": 0.12},
+      {"id": "F2", "label": "deep fold/cavity", "fold_angle_degrees": 64, "fold_depth_relative_bbox": 0.26},
+      {"id": "F3", "label": "near/self-contact if stable", "fold_angle_degrees": 86, "fold_depth_relative_bbox": 0.36}
+    ],
+    "roi_definitions": ["scarf_fold_interior", "top_fold_cavity", "near_contact_gap", "newly_shadowed_region"],
+    "descriptors": ["fold_angle_degrees", "fold_depth_relative_bbox", "minimum_self_distance"]
+  }
+}

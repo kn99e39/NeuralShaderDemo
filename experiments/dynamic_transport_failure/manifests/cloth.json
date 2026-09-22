@@ -1,0 +1,9 @@
+{
+  "asset_id": "cloth_rain_v2_garment_set",
+  "static_gate": "pending",
+  "canonical_checkpoint": null,
+  "states": ["F0", "F1", "F2", "F3"],
+  "preserve": ["materials", "textures", "topology", "surface_identity", "uv", "camera", "lighting", "renderer", "rna_architecture", "canonical_checkpoint"],
+  "change_only": ["pose_geometry"],
+  "results_root": "results/batch1_hq_dynamic_failure/cloth"
+}

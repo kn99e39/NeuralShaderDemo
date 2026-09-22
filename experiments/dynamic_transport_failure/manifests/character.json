@@ -1,0 +1,9 @@
+{
+  "asset_id": "character_einar_v1",
+  "static_gate": "pending",
+  "canonical_checkpoint": null,
+  "states": ["P0", "P1", "P2", "P3", "P4"],
+  "preserve": ["materials", "textures", "topology", "surface_identity", "uv", "camera", "lighting", "renderer", "rna_architecture", "canonical_checkpoint"],
+  "change_only": ["pose_geometry"],
+  "results_root": "results/batch1_hq_dynamic_failure/character"
+}

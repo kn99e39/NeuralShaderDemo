@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "external_assets_are_ignored": true,
+    "minimum_static_gate": "passed",
+    "synthetic_evidence_allowed": false,
+    "notes": "Only provenance records and scripts are tracked; archives, textures, datasets, renders, and checkpoints are not."
+  },
+  "assets": [
+    {
+      "id": "character_einar_v1",
+      "role": "required-primary-character",
+      "status": "source-downloading",
+      "source_page": "https://studio.blender.org/characters/einar/v1/",
+      "source_archive": "https://studio.blender.org/download-source/files/41/419e83fb75f30b989adf7920dec7a21c/419e83fb75f30b989adf7920dec7a21c.zip",
+      "license": "CC-BY-4.0",
+      "credit": "Einar Rig (CC-BY) Blender Foundation | studio.blender.org",
+      "minimum_blender_version": "3.5",
+      "planned_states": ["P0", "P1", "P2", "P3", "P4"],
+      "canonical_state": "P0",
+      "sha256": "3cbb5a1dd9ffd3ca39edab420a83ea7f7db337b435a78ef27a0c87ff3e6977f7",
+      "selected_objects": ["RIG-einar", "GEO-einar_jacket_main", "GEO-einar_sweater", "GEO-einar_body", "arm/hand meshes determined by pose audit"],
+      "static_gate": "not-run"
+    },
+    {
+      "id": "cloth_rain_v2_garment_set",
+      "role": "required-secondary-cloth",
+      "status": "accepted-pending-static-gate",
+      "source_page": "https://studio.blender.org/characters/rain/v2/",
+      "source_archive": "https://studio.blender.org/download-source/files/10/1033fad76f67bba3e362065d68c85791/1033fad76f67bba3e362065d68c85791.zip",
+      "license": "CC-BY-4.0",
+      "credit": "Rain Rig (CC-BY) Blender Foundation | studio.blender.org",
+      "planned_states": ["F0", "F1", "F2", "F3"],
+      "canonical_state": "F0",
+      "sha256": "91d9ecf53b62c5ac533d86d711697fbe177b9ca6968ef46471661e2ffd8586eb",
+      "selected_objects": ["RIG-rain", "GEO-rain_scarf", "GEO-rain_top"],
+      "static_gate": "not-run"
+    },
+    {
+      "id": "cloth_erika_archer_candidate",
+      "role": "rejected-secondary-cloth",
+      "status": "rejected-not-a-garment-mesh",
+      "source_page": "https://clothy3d.com/listing/erika-archer/",
+      "source_archive": "https://drive.google.com/uc?export=view&id=1r_y6xw9G-YeYwGmntay8JA6-FwDHNMny",
+      "license": "CC-BY (as stated by source listing)",
+      "credit": "Clothy3D1 / Erika Archer listing",
+      "sha256": "caf95a23efdd16e25d0d668909ab277192347b0ad7df59ba6893f16e41de333c",
+      "rejection_reason": "The nested torso/sleeve FBX files import as arrow meshes without usable garment geometry, textures, or shape keys in BPy 3.5.1."
+    }
+  ]
+}
