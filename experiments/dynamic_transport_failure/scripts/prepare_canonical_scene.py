@@ -1,8 +1,9 @@
-"""Create an isolated canonical scene without changing source topology.
+"""Create an isolated canonical scene without changing selected-source topology.
 
 The saved file is an ignored run input.  It retains source meshes, material
-graphs, UVs, and armature modifiers; only non-target objects are hidden from
-render and the static-gate camera resolution is set.  It is deliberately not a
+graphs, UVs, and armature modifiers.  A new run-only scene links only the
+selected meshes and their armature, so a multi-scene production file cannot
+reintroduce excluded objects at render time.  It is deliberately not a
 deformation script.
 """
 
@@ -20,7 +21,13 @@ from mathutils import Vector
 ASSET_SELECTIONS = {
     "character": {
         "source_id": "character_einar_v1",
-        "mesh_prefixes": ("GEO-einar_", "GEO-arm_", "GEO-shoulder_", "GEO-upper_arm_", "GEO-forearm_", "GEO-wrist", "GEO-thumb"),
+        "mesh_prefixes": (
+            "GEO-einar_jacket_", "GEO-einar_sweater", "GEO-einar_glove",
+            "GEO-einar_fingers", "GEO-einar_tire_shoulder", "GEO-arm_",
+            "GEO-shoulder_", "GEO-upper_arm_", "GEO-forearm_", "GEO-wrist",
+            "GEO-thumb", "GEO-index", "GEO-middle", "GEO-pinkie", "GEO-palm",
+            "GEO-plate", "GEO-cushion", "GEO-fasteners",
+        ),
         "armature": "RIG-einar",
     },
     "cloth": {
@@ -77,7 +84,7 @@ def install_fixed_review_rig(
         radius *= 0.62
     camera_data = bpy.data.cameras.new("HQ-B1-Camera")
     camera = bpy.data.objects.new("HQ-B1-Camera", camera_data)
-    bpy.context.collection.objects.link(camera)
+    scene.collection.objects.link(camera)
     camera.location = center + Vector((0.65 * radius, -2.75 * radius, 0.30 * radius))
     camera_data.lens = 58
     point_at(camera, center + Vector((0.0, 0.0, 0.05 * radius)))
@@ -94,7 +101,7 @@ def install_fixed_review_rig(
         data.shape = "DISK"
         data.size = max(size * radius, 0.25)
         light = bpy.data.objects.new(name, data)
-        bpy.context.collection.objects.link(light)
+        scene.collection.objects.link(light)
         light.location = center + radius * Vector(offset)
         point_at(light, center)
     return {"camera": camera.name, "target_center": list(center), "target_radius": radius, "lights": [item[0] for item in lights]}
@@ -119,11 +126,15 @@ def main() -> None:
 
     included = []
     selected_objects = []
-    for obj in bpy.context.scene.objects:
+    excluded_mesh_names = []
+    # Enumerate all objects because the source uses several linked scenes.  We
+    # preserve every datablock, but link only selected meshes into the derived
+    # run scene below.
+    for obj in bpy.data.objects:
         selected = is_selected_mesh(obj, selection)
         if obj.type == "MESH":
-            obj.hide_render = not selected
             if selected:
+                obj.hide_render = False
                 selected_objects.append(obj)
                 included.append(
                     {
@@ -135,16 +146,33 @@ def main() -> None:
                         "modifiers": [modifier.type for modifier in obj.modifiers],
                     }
                 )
+            else:
+                excluded_mesh_names.append(obj.name)
     if not included:
         raise RuntimeError(f"no target meshes selected for {args.asset}")
     armature = bpy.data.objects.get(selection["armature"])
     if armature is None or armature.type != "ARMATURE":
         raise RuntimeError(f"expected armature not found: {selection['armature']}")
+    # Create a single authoritative scene.  Removing the old *scenes* rather
+    # than their objects keeps source mesh datablocks (and their dependent
+    # shape-key data) intact while making the render domain unambiguous.
+    source_world = bpy.context.scene.world
+    scene = bpy.data.scenes.new("RNA-Canonical")
+    # The official RNA renderer controls the source World background during
+    # dataset generation, so retain it in the isolated scene.
+    if source_world is None:
+        source_world = bpy.data.worlds.new("RNA-Canonical-World")
+        source_world.use_nodes = True
+    scene.world = source_world
+    bpy.context.window.scene = scene
+    for old_scene in [item for item in bpy.data.scenes if item != scene]:
+        bpy.data.scenes.remove(old_scene)
+    for obj in [*selected_objects, armature]:
+        scene.collection.objects.link(obj)
     # An armature never renders but must stay present because the original
     # modifiers refer to it.  The source file, armature, modifiers, material
     # graphs and texture paths are otherwise preserved untouched.
     armature.hide_render = True
-    scene = bpy.context.scene
     scene.render.resolution_x = args.resolution
     scene.render.resolution_y = args.resolution
     scene.render.resolution_percentage = 100
@@ -171,9 +199,11 @@ def main() -> None:
                 "review_rig": review_rig,
                 "resolution": [args.resolution, args.resolution],
                 "included_meshes": included,
-                "topology_mutation": False,
+                "selected_topology_mutation": False,
                 "material_mutation": False,
                 "pose_mutation": False,
+                "run_scene": scene.name,
+                "excluded_source_meshes_not_linked_to_run_scene": excluded_mesh_names,
                 "pack_warning": pack_warning,
             },
             indent=2,

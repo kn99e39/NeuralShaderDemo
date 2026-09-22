@@ -1,0 +1,15 @@
+# Static P0 production dataset.  Not a deformation dataset.
+name: "batch1a-einar-static-hq"
+dataset_name: "../../results/batch1_hq_dynamic_failure/character/static/dataset/einar_static_train.h5"
+blend_file: "../../results/batch1_hq_dynamic_failure/character/static/canonical_einar_aovs.blend"
+resolution: [512, 512]
+num_images: 200
+sample_count: 256
+camera_radius: 2.20
+camera_lookat: [0.05887455, -0.02508211, 1.40677774]
+fixed_patch: true
+hair: false
+validation: false
+light_energy: 5.0
+light_radius: 0.0
+denoise_beauty: false

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "frozen_before_training": true,
+  "character_einar_v1": {
+    "neural_asset_domain": "Torso garment and every human/robot arm surface that can participate in the selected arm-to-torso approach; no head, legs, footwear, hair, satchel, scene props, or rig widgets.",
+    "included_surface_rules": [
+      "GEO-einar_jacket_*", "GEO-einar_sweater", "GEO-einar_glove and GEO-einar_fingers", "GEO-einar_tire_shoulder*",
+      "GEO-arm_*, GEO-shoulder_*, GEO-upper_arm_*, GEO-forearm_*, GEO-wrist*",
+      "GEO-thumb*, GEO-index*, GEO-middle*, GEO-pinkie*, GEO-palm*, GEO-plate*, GEO-cushion*, GEO-fasteners*"
+    ],
+    "excluded_surface_rules": [
+      "head, face, teeth, tongue, hat, hair and curve/groom objects", "pants, boots, knee hardware and all lower-body surfaces",
+      "satchel, dart, unrelated props, cameras, lights, helper meshes and rig widgets"
+    ],
+    "rationale": "The included domain contains both sides of the future mutual-visibility interaction and the garment immediately around the torso. Exclusions cannot cast or receive the selected arm-torso transport under the fixed close camera and would expand the learned volume without supporting the target claim."
+  },
+  "cloth_rain_v2_garment_set": {
+    "neural_asset_domain": "GEO-rain_scarf plus GEO-rain_top as one interacting garment transport domain.",
+    "included_surface_rules": ["GEO-rain_scarf", "GEO-rain_top"],
+    "excluded_surface_rules": ["Rain body, head, hair, eyes, jeans, shoes, rig widgets and scene helpers"],
+    "rationale": "The intended secondary case includes scarf fold/cavity formation and scarf-to-top proximity. Training scarf alone would remove a physically relevant receiver/occluder and make later scarf-top transport inconsistent."
+  }
+}

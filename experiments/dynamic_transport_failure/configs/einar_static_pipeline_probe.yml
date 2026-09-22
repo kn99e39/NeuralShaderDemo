@@ -1,0 +1,16 @@
+# One-view diagnostic for the official query/AOV/HDF5 bridge only.
+# It is explicitly not a static-quality dataset or a scientific result.
+name: "batch1a-einar-pipeline-probe"
+dataset_name: "../../results/batch1_hq_dynamic_failure/character/environment/einar_pipeline_probe.h5"
+blend_file: "../../results/batch1_hq_dynamic_failure/character/static/canonical_einar_aovs.blend"
+resolution: [64, 64]
+num_images: 1
+sample_count: 8
+camera_radius: 2.20
+camera_lookat: [0.05887455, -0.02508211, 1.40677774]
+fixed_patch: true
+hair: false
+validation: false
+light_energy: 5.0
+light_radius: 0.0
+denoise_beauty: false

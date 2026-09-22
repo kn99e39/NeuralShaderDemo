@@ -1,0 +1,15 @@
+# Held-out static F0 views.  Uses the same canonical scene and render quality.
+name: "batch1a-rain-static-hq-val"
+dataset_name: "../../results/batch1_hq_dynamic_failure/cloth/static/dataset/rain_static.h5"
+blend_file: "../../results/batch1_hq_dynamic_failure/cloth/static/canonical_rain_garments_aovs.blend"
+resolution: [512, 512]
+num_images: 40
+sample_count: 256
+camera_radius: 1.10
+camera_lookat: [0.00692255, -0.04966395, 1.09928739]
+fixed_patch: true
+hair: false
+validation: true
+light_energy: 5.0
+light_radius: 0.0
+denoise_beauty: false

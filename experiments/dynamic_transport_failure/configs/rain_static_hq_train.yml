@@ -1,0 +1,28 @@
+name: "batch1a-rain-static-hq"
+training_dataset: "../../results/batch1_hq_dynamic_failure/cloth/static/dataset/rain_static_train.h5"
+validation_dataset: "../../results/batch1_hq_dynamic_failure/cloth/static/dataset/rain_static_val.h5"
+num_epochs: 250
+training_interface: "NeuralSurfaceTriplaneModule"
+interface_params:
+  lr: 0.001
+  loss: "l2"
+  use_log: true
+  decay_iters: 50
+  decay_rate: 0.5
+  visibility_loss_weight: 10.0
+data_interface: "NeuralSurfaceDataModule"
+data_interface_params:
+  bs: 1
+  num_workers: 0
+  use_for_visibility: "diffuse_direct"
+  device: "cuda"
+  ops_device: "cuda"
+model: "NeuralSurfaceTriPlane"
+model_params:
+  resolution: [512, 512]
+  triplane_features_num_channels: 8
+  triplane_features_min_sigma: 1.0
+  initial_sigma: 8.0
+  iterations_to_sigma_1: 20000
+  mlp_num_hidden_layers: 4
+  mlp_hidden_layer_neurons: 512
