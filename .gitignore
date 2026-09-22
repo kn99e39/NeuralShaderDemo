@@ -4,3 +4,8 @@ __pycache__/
 # Local dependency checkout and generated training/render caches.
 external/
 results/
+
+# Original binary artifacts remain local; only verified checkpoint bundle parts
+# under an explicit artifact directory may be committed.
+*.ckpt
+*.h5
