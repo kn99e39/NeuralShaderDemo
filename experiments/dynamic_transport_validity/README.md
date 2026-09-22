@@ -1,4 +1,4 @@
-# Batch 1: Dynamic transport validity
+# Dynamic transport validity experiments
 
 This directory contains isolated instrumentation for testing a frozen RNA surface
 asset after topology-preserving deformation.  The official implementation is kept
@@ -17,17 +17,25 @@ canonical triangle.  RNA then receives:
 This is experimental instrumentation only.  It does not alter RNA's model,
 features, loss, or checkpoint.
 
-## Entry points
+## Layout and entry points
 
-- `correspondence.py`: renderer-independent barycentric correspondence utilities.
-- `dynamic_renderer.py`: Blender/RNA correspondence-preserving renderer.
-- `create_synthetic_scene.py`: deterministic, finite-thickness connected folding-sheet control scene.
-- `metrics.py`: image metrics and changed-visibility attribution.
-- `summarize_training.py`: TensorBoard curve/final validation extraction.
-- `build_review_package.py`: review PNGs, aggregate CSV, and sweep videos.
-- `build_refit_comparison.py`: shared-scale G4 frozen-versus-refit review panel.
-- `tests/`: focused identity, rigid-transform, barycentric, and normal tests.
-- `configs/`: immutable experiment configs and the evaluation manifest.
+- `batch1/`: Lego and synthetic folding-sheet controls, including G4 refit.  Its
+  `assets/` and `configs/` are exclusive to Batch 1; scene construction and
+  correspondence validation scripts also live here.
+- `batch2/`: authored A/B/C deformation families.  It owns their assets,
+  training/evaluation configs, asset generator, deformation definitions, and
+  region-of-interest review script.
+- `shared/`: renderer-independent correspondence, the Blender/RNA renderer,
+  metrics, compatibility code, and review/batch-metric utilities used by both
+  batches.
+- `tools/`: environment capture, checkpoint inspection, artifact management,
+  deterministic launcher, and TensorBoard summarization.
+- `tests/`: focused tests for shared correspondence behavior.
+
+Run a script from its listed directory, for example
+`experiments/dynamic_transport_validity/shared/dynamic_renderer.py` or
+`experiments/dynamic_transport_validity/batch2/create_assets.py`.  Paths embedded
+in the configs remain workspace-relative and have been updated for this layout.
 
 Run commands from the official RNA repository under Ubuntu/WSL unless stated
 otherwise. Every render writes its resolved CLI/config/checkpoint and deformation

@@ -10,7 +10,7 @@ import numpy as np
 EXPERIMENT_DIR = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(EXPERIMENT_DIR))
 
-from correspondence import (  # noqa: E402
+from shared.correspondence import (  # noqa: E402
     interpolate,
     map_deformed_to_canonical,
     transform_points,
@@ -85,4 +85,3 @@ class CorrespondenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
