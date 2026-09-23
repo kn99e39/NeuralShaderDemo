@@ -30,19 +30,38 @@ def ensure_aov(view_layer: bpy.types.ViewLayer) -> None:
     aov.name = AOV_NAME
 
 
-def set_canonical_attribute(obj: bpy.types.Object) -> tuple[int, list[list[float]]]:
+def set_canonical_attribute(
+    obj: bpy.types.Object, depsgraph: bpy.types.Depsgraph
+) -> tuple[int, list[list[float]]]:
     mesh = obj.data
     existing = mesh.attributes.get(ATTRIBUTE_NAME)
     if existing is not None:
         mesh.attributes.remove(existing)
-    # A FLOAT_VECTOR is a spatial attribute and Blender converts it through
-    # the object's current transform in shader evaluation.  A FLOAT_COLOR is
-    # a non-spatial four-float payload, so RGB can carry canonical XYZ without
-    # acquiring a whole-object rigid motion.
+    # A FLOAT_COLOR is a non-spatial four-float payload, so RGB can carry
+    # canonical XYZ without acquiring a whole-object rigid motion.  Capture
+    # evaluated P0 coordinates: Einar's release scene is already armature
+    # posed at its nominal static baseline.
     attribute = mesh.color_attributes.new(ATTRIBUTE_NAME, "FLOAT_COLOR", "POINT")
-    values = np.empty((len(mesh.vertices), 3), dtype=np.float32)
-    for index, vertex in enumerate(mesh.vertices):
-        values[index] = obj.matrix_world @ vertex.co
+    evaluated = obj.evaluated_get(depsgraph)
+    evaluated_mesh = evaluated.to_mesh()
+    try:
+        values = np.empty((len(mesh.vertices), 3), dtype=np.float32)
+        if len(evaluated_mesh.vertices) != len(mesh.vertices):
+            # This object cannot receive an exact per-vertex evaluated-P0
+            # payload.  Retain its source coordinates, report it loudly, and
+            # let the identity audit decide whether it materially affects the
+            # evaluated render instead of fabricating an index correspondence.
+            print(
+                f"canonical AOV fallback for {obj.name}: "
+                f"{len(mesh.vertices)} source versus {len(evaluated_mesh.vertices)} evaluated vertices"
+            )
+            for index, vertex in enumerate(mesh.vertices):
+                values[index] = obj.matrix_world @ vertex.co
+        else:
+            for index, vertex in enumerate(evaluated_mesh.vertices):
+                values[index] = evaluated.matrix_world @ vertex.co
+    finally:
+        evaluated.to_mesh_clear()
     colors = np.ones((len(mesh.vertices), 4), dtype=np.float32)
     colors[:, :3] = values
     attribute.data.foreach_set("color", colors.reshape(-1))
@@ -103,8 +122,9 @@ def main() -> None:
     records = []
     all_positions = []
     processed_materials: set[str] = set()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     for obj in objects:
-        count, positions = set_canonical_attribute(obj)
+        count, positions = set_canonical_attribute(obj, depsgraph)
         all_positions.extend(positions)
         records.append({"object": obj.name, "vertices": count, "attribute": ATTRIBUTE_NAME})
         for slot in obj.material_slots:
