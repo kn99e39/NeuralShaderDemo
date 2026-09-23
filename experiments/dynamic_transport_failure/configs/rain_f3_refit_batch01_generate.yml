@@ -1,0 +1,15 @@
+# First fixed-geometry shard for the same-architecture F3 refit.
+name: "batch1-rain-F3-refit-batch01"
+dataset_name: "../../results/batch1_hq_dynamic_failure/cloth/refit_f3/dataset/rain_F3_train_batch01.h5"
+blend_file: "../../results/batch1_hq_dynamic_failure/cloth/states/rain_F3.blend"
+resolution: [512, 512]
+num_images: 50
+sample_count: 256
+camera_radius: 1.10
+camera_lookat: [0.00692255, -0.04966395, 1.09928739]
+fixed_patch: true
+hair: false
+validation: false
+light_energy: 5.0
+light_radius: 0.0
+denoise_beauty: false
