@@ -1,0 +1,17 @@
+{
+  "label": "PREDECLARED RAIN PRIMARY DEFORMATION ROIS",
+  "resolution": [512, 512],
+  "camera": "rain_primary_fixed_camera_light.json",
+  "regions": {
+    "collar_cavity": [170, 40, 320, 150],
+    "scarf_top_facing": [150, 90, 315, 245],
+    "tail_fold": [185, 150, 300, 325],
+    "non_target_lower_top": [135, 285, 370, 455]
+  },
+  "semantics": {
+    "collar_cavity": "self-occluded collar and scarf interior",
+    "scarf_top_facing": "scarf/top facing surfaces and possible near-contact",
+    "tail_fold": "deforming scarf tail; fixed presentation crop",
+    "non_target_lower_top": "comparative top region away from collar/scarf interaction"
+  }
+}
