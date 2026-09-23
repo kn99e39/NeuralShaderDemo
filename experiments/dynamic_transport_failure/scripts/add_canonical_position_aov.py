@@ -35,11 +35,17 @@ def set_canonical_attribute(obj: bpy.types.Object) -> tuple[int, list[list[float
     existing = mesh.attributes.get(ATTRIBUTE_NAME)
     if existing is not None:
         mesh.attributes.remove(existing)
-    attribute = mesh.attributes.new(ATTRIBUTE_NAME, "FLOAT_VECTOR", "POINT")
+    # A FLOAT_VECTOR is a spatial attribute and Blender converts it through
+    # the object's current transform in shader evaluation.  A FLOAT_COLOR is
+    # a non-spatial four-float payload, so RGB can carry canonical XYZ without
+    # acquiring a whole-object rigid motion.
+    attribute = mesh.color_attributes.new(ATTRIBUTE_NAME, "FLOAT_COLOR", "POINT")
     values = np.empty((len(mesh.vertices), 3), dtype=np.float32)
     for index, vertex in enumerate(mesh.vertices):
         values[index] = obj.matrix_world @ vertex.co
-    attribute.data.foreach_set("vector", values.reshape(-1))
+    colors = np.ones((len(mesh.vertices), 4), dtype=np.float32)
+    colors[:, :3] = values
+    attribute.data.foreach_set("color", colors.reshape(-1))
     return len(mesh.vertices), values.tolist()
 
 
@@ -56,8 +62,9 @@ def install_material_aov(material: bpy.types.Material) -> None:
     output = tree.nodes.new("ShaderNodeOutputAOV")
     output.name = AOV_NAME
     output.label = AOV_NAME
-    output.aov_name = AOV_NAME
-    tree.links.new(attribute.outputs["Vector"], output.inputs["Color"])
+    # Color is non-spatial.  The attribute is a FLOAT_COLOR payload carrying
+    # canonical XYZ in RGB, not a geometric Vector socket.
+    tree.links.new(attribute.outputs["Color"], output.inputs["Color"])
 
 
 def install_compositor_aov(scene: bpy.types.Scene) -> None:
