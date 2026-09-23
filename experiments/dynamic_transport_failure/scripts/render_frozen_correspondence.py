@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import pathlib
+import shutil
 import sys
 
 import h5py
@@ -35,12 +36,14 @@ class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
         canonical_aabb_min: np.ndarray,
         canonical_aabb_max: np.ndarray,
         trace_file: pathlib.Path | None = None,
+        diagnostics_dir: pathlib.Path | None = None,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.canonical_aabb_min = th.tensor(canonical_aabb_min, dtype=th.float32)
         self.canonical_aabb_max = th.tensor(canonical_aabb_max, dtype=th.float32)
         self.trace_file = trace_file
+        self.diagnostics_dir = diagnostics_dir
 
     def trace(self, message: str) -> None:
         if self.trace_file is None:
@@ -72,6 +75,19 @@ class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
         """Use current explicit inputs but canonical AOV for TriPlane lookup."""
         self.trace(f"process_start frame={frame} pixels={int(mask.sum())}")
         prefix = renderers.TMP_RENDER_DIR
+        if self.diagnostics_dir is not None:
+            self.diagnostics_dir.mkdir(parents=True, exist_ok=True)
+            # These are the actual current-geometry renderer outputs that
+            # drive the frozen evaluation.  Preserve them before later frames
+            # overwrite tmprndr so transport attribution can distinguish a
+            # changed direct branch selector from branch-radiance error.
+            for stem in ("position0001_", "normal0001_", "camera_dir0001_", "diffuse_direct"):
+                source = pathlib.Path(prefix + stem + str(frame) + ".exr")
+                if source.is_file():
+                    shutil.copy2(source, self.diagnostics_dir / source.name)
+            canonical_source = pathlib.Path(prefix + CANONICAL_AOV_FILE + "_" + str(frame) + ".exr")
+            if canonical_source.is_file():
+                shutil.copy2(canonical_source, self.diagnostics_dir / canonical_source.name)
         canonical_pixels = th.from_numpy(exr.read(prefix + CANONICAL_AOV_FILE + "_" + str(frame) + ".exr"))
         tangent_pixels = th.from_numpy(exr.read(prefix + "tangent0001_" + str(frame) + ".exr"))
         normals_pixels = th.from_numpy(exr.read(prefix + "normal0001_" + str(frame) + ".exr"))
@@ -126,6 +142,7 @@ def main() -> None:
     parser.add_argument("--reference", action="store_true")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--trace-file", type=pathlib.Path)
+    parser.add_argument("--diagnostics-dir", type=pathlib.Path)
     args = parser.parse_args()
     if not args.model and not args.reference:
         raise ValueError("select --model and/or --reference")
@@ -138,6 +155,8 @@ def main() -> None:
     if args.trace_file is not None:
         args.trace_file.parent.mkdir(parents=True, exist_ok=True)
         args.trace_file.write_text("main_start\n", encoding="utf-8")
+    if args.diagnostics_dir is not None:
+        args.diagnostics_dir.mkdir(parents=True, exist_ok=True)
     with h5py.File(args.canonical_dataset.resolve(), "r") as dataset:
         aabb_min, aabb_max = dataset.attrs["aabb_min"], dataset.attrs["aabb_max"]
     renderer_params = dict(conf.renderer_params)
@@ -149,6 +168,7 @@ def main() -> None:
         canonical_aabb_min=aabb_min,
         canonical_aabb_max=aabb_max,
         trace_file=args.trace_file,
+        diagnostics_dir=args.diagnostics_dir,
         device=args.device,
         **renderer_params,
     )
