@@ -1,0 +1,18 @@
+name: "batch1-einar-static-gate"
+renderer: "NeuralSurfaceHairRenderer"
+module: "NeuralSurfaceTriplaneModule"
+renderer_params:
+  blend_file: "../../results/batch1_hq_dynamic_failure/character/static/canonical_einar_aovs.blend"
+  checkpoint: "CHECKPOINT_SUPPLIED_BY_CLI"
+  resolution: [512, 512]
+  aa_samples: 1
+  reference_samples: 256
+light_type: "PointLight"
+training_light_intensity: 5.0
+feature_pass_samples: 1
+random_camera: false
+animate_camera: true
+animate_light: false
+output_dir: "../../results/batch1_hq_dynamic_failure/character/static/review/heldout"
+frames: [0, 1, 2, 3, 4, 5, 6, 7]
+json: "../../results/batch1_hq_dynamic_failure/character/static/review/einar_static_heldout.json"
