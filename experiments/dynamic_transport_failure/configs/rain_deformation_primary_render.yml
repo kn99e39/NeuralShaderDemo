@@ -1,0 +1,18 @@
+name: "batch1-rain-frozen-deformation-primary"
+renderer: "NeuralSurfaceHairRenderer"
+module: "NeuralSurfaceTriplaneModule"
+renderer_params:
+  blend_file: "../../results/batch1_hq_dynamic_failure/cloth/states/rain_F0.blend"
+  checkpoint: "CHECKPOINT_SUPPLIED_BY_CLI"
+  resolution: [512, 512]
+  aa_samples: 1
+  reference_samples: 256
+light_type: "PointLight"
+training_light_intensity: 5.0
+feature_pass_samples: 1
+random_camera: false
+animate_camera: true
+animate_light: false
+output_dir: "../../results/batch1_hq_dynamic_failure/cloth/deformation/primary/F0"
+frames: [0]
+json: "../../results/batch1_hq_dynamic_failure/cloth/deformation/rain_primary_fixed_camera_light.json"
