@@ -65,21 +65,29 @@ def main() -> None:
     top_distance, _ = top_tree.query(artifact_points)
     is_scarf = scarf_distance < top_distance
     support = np.zeros(len(artifact_points), dtype=np.int32)
+    same_surface_support = np.zeros(len(artifact_points), dtype=np.int32)
     nearest = np.full(len(artifact_points), np.inf, dtype=np.float32)
+    nearest_same_surface = np.full(len(artifact_points), np.inf, dtype=np.float32)
     with h5py.File(args.training_h5.resolve(), "r") as dataset:
         for index in range(dataset["position"].shape[0]):
             alpha = dataset["alpha"][index, :, 0] > 0.0
             positions = dataset["position"][index, alpha, :].astype(np.float32)
             if len(positions) == 0:
                 continue
-            distances, _ = cKDTree(positions).query(artifact_points)
+            distances, nearest_indices = cKDTree(positions).query(artifact_points)
+            nearest_positions = positions[nearest_indices]
+            nearest_scarf_distance, _ = scarf_tree.query(nearest_positions)
+            nearest_top_distance, _ = top_tree.query(nearest_positions)
+            same_surface = (nearest_scarf_distance < nearest_top_distance) == is_scarf
             support += distances <= args.support_radius
+            same_surface_support += (distances <= args.support_radius) & same_surface
             nearest = np.minimum(nearest, distances)
+            nearest_same_surface[same_surface] = np.minimum(nearest_same_surface[same_surface], distances[same_surface])
     artifact_map = np.zeros((*cyan.shape, 3), dtype=np.uint8)
     flat = artifact_map.reshape(-1, 3)
     flat_indices = np.flatnonzero(cyan.reshape(-1))
     # Green: canonical top; red: scarf. Brightness encodes observed view count.
-    brightness = np.clip(support / 10.0, 0.15, 1.0)
+    brightness = np.clip(same_surface_support / 10.0, 0.15, 1.0)
     flat[flat_indices[is_scarf], 0] = (255 * brightness[is_scarf]).astype(np.uint8)
     flat[flat_indices[~is_scarf], 1] = (255 * brightness[~is_scarf]).astype(np.uint8)
     output = args.output_dir.resolve()
@@ -107,6 +115,15 @@ def main() -> None:
             "at_least_one_view_fraction": float((support > 0).mean()),
             "nearest_sample_distance_median": float(np.median(nearest)),
             "nearest_sample_distance_p95": float(np.quantile(nearest, 0.95)),
+        },
+        "same_surface_training_support_views": {
+            "mean": float(same_surface_support.mean()),
+            "median": float(np.median(same_surface_support)),
+            "zero_view_pixels": int((same_surface_support == 0).sum()),
+            "zero_view_fraction": float((same_surface_support == 0).mean()),
+            "at_least_one_view_fraction": float((same_surface_support > 0).mean()),
+            "nearest_same_surface_sample_distance_median": float(np.median(nearest_same_surface)),
+            "nearest_same_surface_sample_distance_p95": float(np.quantile(nearest_same_surface, 0.95)),
         },
     }
     (output / "F1_cyan_artifact_canonical_coverage.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
