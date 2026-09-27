@@ -19,14 +19,21 @@
     "descriptors": ["upper_arm_angle_degrees", "forearm_angle_degrees", "minimum_arm_torso_distance"]
   },
   "cloth_rain_v2_garment_set": {
-    "trajectory": "A topology-preserving shape-key or lattice deformation is applied to the selected Rain scarf/top garment meshes. It changes their fold geometry only; source materials and UVs are retained.",
-    "states": [
-      {"id": "F0", "label": "open/weakly folded canonical", "fold_angle_degrees": 0, "fold_depth_relative_bbox": 0.00},
-      {"id": "F1", "label": "moderate fold", "fold_angle_degrees": 32, "fold_depth_relative_bbox": 0.12},
-      {"id": "F2", "label": "deep fold/cavity", "fold_angle_degrees": 64, "fold_depth_relative_bbox": 0.26},
-      {"id": "F3", "label": "near/self-contact if stable", "fold_angle_degrees": 86, "fold_depth_relative_bbox": 0.36}
+    "trajectory": "Historical F0-F3 uses the production RIG-rain FK-Scarf2 and FK-Scarf3 local-X controls. The locked R0-R4 attribution trajectory additionally uses FK-Scarf1; it changes only pose geometry while retaining mesh data, materials, UVs, camera, lighting, renderer, checkpoint, and canonical feature identity.",
+    "historical_states": [
+      {"id": "F0", "label": "canonical open", "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 0},
+      {"id": "F1", "label": "moderate two-link flexion", "FK-Scarf2_local_X_degrees": 32, "FK-Scarf3_local_X_degrees": -20},
+      {"id": "F2", "label": "deep two-link flexion", "FK-Scarf2_local_X_degrees": 64, "FK-Scarf3_local_X_degrees": -48},
+      {"id": "F3", "label": "strong two-link flexion", "FK-Scarf2_local_X_degrees": 86, "FK-Scarf3_local_X_degrees": -72}
     ],
-    "roi_definitions": ["scarf_fold_interior", "top_fold_cavity", "near_contact_gap", "newly_shadowed_region"],
-    "descriptors": ["fold_angle_degrees", "fold_depth_relative_bbox", "minimum_self_distance"]
+    "attribution_states": [
+      {"id": "R0", "label": "separated canonical relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 0},
+      {"id": "R1", "label": "local-bend control", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 60},
+      {"id": "R2", "label": "approach begins", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 30, "FK-Scarf3_local_X_degrees": 60},
+      {"id": "R3", "label": "narrowing interaction", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 60, "FK-Scarf3_local_X_degrees": 60},
+      {"id": "R4", "label": "high interaction", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 90, "FK-Scarf3_local_X_degrees": 60}
+    ],
+    "roi_definitions": ["scarf_segment_interaction", "local_bend_control", "newly_exposed_surface", "non_target_lower_top"],
+    "descriptors": ["FK-Scarf1_local_X_degrees", "FK-Scarf2_local_X_degrees", "FK-Scarf3_local_X_degrees", "cross_segment_distance"]
   }
 }

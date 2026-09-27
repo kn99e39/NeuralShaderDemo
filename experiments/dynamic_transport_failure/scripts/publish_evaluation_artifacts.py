@@ -43,7 +43,12 @@ def main() -> None:
 
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    artifacts = []
+    manifest_path = output_dir / "manifest.json"
+    if manifest_path.is_file():
+        prior = json.loads(manifest_path.read_text(encoding="utf-8"))
+        artifacts = {entry["review_name"]: entry for entry in prior.get("artifacts", [])}
+    else:
+        artifacts = {}
     for source_string, review_name in args.copy:
         source = pathlib.Path(source_string).resolve()
         destination = output_dir / review_name
@@ -56,17 +61,15 @@ def main() -> None:
         if destination.suffix.lower() != source.suffix.lower():
             raise ValueError("REVIEW_NAME must keep the source file extension")
         shutil.copy2(source, destination)
-        artifacts.append(
-            {
+        artifacts[review_name] = {
                 "review_name": review_name,
                 "source": str(source),
                 "bytes": destination.stat().st_size,
                 "sha256": sha256(destination),
-            }
-        )
+        }
 
-    (output_dir / "manifest.json").write_text(
-        json.dumps({"artifacts": artifacts}, indent=2) + "\n",
+    manifest_path.write_text(
+        json.dumps({"artifacts": [artifacts[name] for name in sorted(artifacts)]}, indent=2) + "\n",
         encoding="utf-8",
     )
 

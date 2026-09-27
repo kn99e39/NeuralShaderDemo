@@ -20,6 +20,14 @@ STATE_SPECS = {
     "F1": {"scarf2_x_degrees": 32.0, "scarf3_x_degrees": -20.0, "meaning": "moderate two-link production-rig flexion"},
     "F2": {"scarf2_x_degrees": 64.0, "scarf3_x_degrees": -48.0, "meaning": "deep two-link fold / cavity progression"},
     "F3": {"scarf2_x_degrees": 86.0, "scarf3_x_degrees": -72.0, "meaning": "strong two-link fold / near-contact progression"},
+    # R0--R4 are the separate attribution trajectory. They are selected
+    # before frozen RNA is rendered: the distal already-visible scarf segment
+    # first bends locally, then approaches the proximal scarf segment.
+    "R0": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 0.0, "meaning": "canonical separated relation"},
+    "R1": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 60.0, "meaning": "local multi-segment bend control; low cross-segment approach"},
+    "R2": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 30.0, "scarf3_x_degrees": 60.0, "meaning": "already-visible scarf segments begin approach"},
+    "R3": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 60.0, "scarf3_x_degrees": 60.0, "meaning": "narrowing scarf-segment cavity"},
+    "R4": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 90.0, "scarf3_x_degrees": 60.0, "meaning": "closest predeclared high-interaction scarf-segment relation"},
 }
 
 
@@ -30,6 +38,7 @@ def main() -> None:
     parser.add_argument("--output", type=pathlib.Path, required=True)
     parser.add_argument("--metadata", type=pathlib.Path, required=True)
     parser.add_argument("--armature", default="RIG-rain")
+    parser.add_argument("--base-bone", default="FK-Scarf1")
     parser.add_argument("--bone", default="FK-Scarf2")
     parser.add_argument("--tip-bone", default="FK-Scarf3")
     args = parser.parse_args()
@@ -38,6 +47,11 @@ def main() -> None:
     armature = bpy.data.objects.get(args.armature)
     if armature is None or armature.type != "ARMATURE":
         raise ValueError(f"expected armature: {args.armature}")
+    base_bone = armature.pose.bones.get(args.base_bone)
+    if base_bone is None:
+        raise ValueError(f"expected production scarf base control: {args.base_bone}")
+    base_bone.rotation_mode = "XYZ"
+    base_bone.rotation_euler.x += math.radians(spec.get("scarf1_x_degrees", 0.0))
     bone = armature.pose.bones.get(args.bone)
     if bone is None:
         raise ValueError(f"expected production scarf control: {args.bone}")
@@ -66,6 +80,8 @@ def main() -> None:
                 "input_blend": str(args.blend.resolve()),
                 "output_blend": str(output),
                 "armature": armature.name,
+                "base_bone": base_bone.name,
+                "base_rotation_degrees_added": spec.get("scarf1_x_degrees", 0.0),
                 "bone": bone.name,
                 "tip_bone": tip_bone.name,
                 "rotation_axis": "local X (production flexion axis)",

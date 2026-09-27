@@ -27,6 +27,7 @@ from utils import exr, ops  # noqa: E402
 
 
 CANONICAL_AOV_FILE = "canonical_position0001"
+PROVENANCE_AOV_FILE = "surface_provenance0001"
 
 
 class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
@@ -70,6 +71,13 @@ class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
                 )
             os.replace(source, destination)
             self.trace(f"canonical_aov_saved frame={frame}")
+            provenance_source = PROVENANCE_AOV_FILE + ".exr"
+            if os.path.exists(provenance_source):
+                os.replace(
+                    provenance_source,
+                    renderers.TMP_RENDER_DIR + PROVENANCE_AOV_FILE + "_" + str(frame) + ".exr",
+                )
+                self.trace(f"provenance_aov_saved frame={frame}")
 
     def process_deep_buffers(self, mask, visibility=True, frame=999):
         """Use current explicit inputs but canonical AOV for TriPlane lookup."""
@@ -88,6 +96,9 @@ class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
             canonical_source = pathlib.Path(prefix + CANONICAL_AOV_FILE + "_" + str(frame) + ".exr")
             if canonical_source.is_file():
                 shutil.copy2(canonical_source, self.diagnostics_dir / canonical_source.name)
+            provenance_source = pathlib.Path(prefix + PROVENANCE_AOV_FILE + "_" + str(frame) + ".exr")
+            if provenance_source.is_file():
+                shutil.copy2(provenance_source, self.diagnostics_dir / provenance_source.name)
         canonical_pixels = th.from_numpy(exr.read(prefix + CANONICAL_AOV_FILE + "_" + str(frame) + ".exr"))
         tangent_pixels = th.from_numpy(exr.read(prefix + "tangent0001_" + str(frame) + ".exr"))
         normals_pixels = th.from_numpy(exr.read(prefix + "normal0001_" + str(frame) + ".exr"))
