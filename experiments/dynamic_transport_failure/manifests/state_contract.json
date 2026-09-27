@@ -19,7 +19,7 @@
     "descriptors": ["upper_arm_angle_degrees", "forearm_angle_degrees", "minimum_arm_torso_distance"]
   },
   "cloth_rain_v2_garment_set": {
-    "trajectory": "Historical F0-F3 uses the production RIG-rain FK-Scarf2 and FK-Scarf3 local-X controls. The locked R0-R4 attribution trajectory additionally uses FK-Scarf1; it changes only pose geometry while retaining mesh data, materials, UVs, camera, lighting, renderer, checkpoint, and canonical feature identity.",
+    "trajectory": "Historical F0-F3 uses the production RIG-rain FK-Scarf2 and FK-Scarf3 local-X controls. After GT-only validation found no usable direct-visibility separation in the original attribution pose path, R0-R4 was redesigned exactly once before any frozen-RNA R render. The final attribution path uses opposing FK-Scarf2/FK-Scarf3 local-X bends and changes only pose geometry while retaining mesh data, materials, UVs, camera, lighting, renderer, checkpoint, and canonical feature identity.",
     "historical_states": [
       {"id": "F0", "label": "canonical open", "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 0},
       {"id": "F1", "label": "moderate two-link flexion", "FK-Scarf2_local_X_degrees": 32, "FK-Scarf3_local_X_degrees": -20},
@@ -28,10 +28,10 @@
     ],
     "attribution_states": [
       {"id": "R0", "label": "separated canonical relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 0},
-      {"id": "R1", "label": "local-bend control", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 60},
-      {"id": "R2", "label": "approach begins", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 30, "FK-Scarf3_local_X_degrees": 60},
-      {"id": "R3", "label": "narrowing interaction", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 60, "FK-Scarf3_local_X_degrees": 60},
-      {"id": "R4", "label": "high interaction", "FK-Scarf1_local_X_degrees": -45, "FK-Scarf2_local_X_degrees": 90, "FK-Scarf3_local_X_degrees": 60}
+      {"id": "R1", "label": "low interaction opposing-bend control", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 45, "FK-Scarf3_local_X_degrees": -45},
+      {"id": "R2", "label": "moderate validated approach", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 90, "FK-Scarf3_local_X_degrees": -90},
+      {"id": "R3", "label": "strong validated approach", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 135, "FK-Scarf3_local_X_degrees": -135},
+      {"id": "R4", "label": "closest validated pre-contact relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 180, "FK-Scarf3_local_X_degrees": -180}
     ],
     "roi_definitions": ["scarf_segment_interaction", "local_bend_control", "newly_exposed_surface", "non_target_lower_top"],
     "descriptors": ["FK-Scarf1_local_X_degrees", "FK-Scarf2_local_X_degrees", "FK-Scarf3_local_X_degrees", "cross_segment_distance"]

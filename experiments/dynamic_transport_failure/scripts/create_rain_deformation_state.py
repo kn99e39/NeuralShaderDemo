@@ -20,14 +20,15 @@ STATE_SPECS = {
     "F1": {"scarf2_x_degrees": 32.0, "scarf3_x_degrees": -20.0, "meaning": "moderate two-link production-rig flexion"},
     "F2": {"scarf2_x_degrees": 64.0, "scarf3_x_degrees": -48.0, "meaning": "deep two-link fold / cavity progression"},
     "F3": {"scarf2_x_degrees": 86.0, "scarf3_x_degrees": -72.0, "meaning": "strong two-link fold / near-contact progression"},
-    # R0--R4 are the separate attribution trajectory. They are selected
-    # before frozen RNA is rendered: the distal already-visible scarf segment
-    # first bends locally, then approaches the proximal scarf segment.
+    # R0--R4 are the separate attribution trajectory.  This is the one
+    # GT-geometry-validated redesign made before any frozen-RNA R render:
+    # opposing local-X bends monotonically reduce the Scarf2/Scarf3 centroid
+    # separation while preserving topology, materials, and AOVs.
     "R0": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 0.0, "meaning": "canonical separated relation"},
-    "R1": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 60.0, "meaning": "local multi-segment bend control; low cross-segment approach"},
-    "R2": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 30.0, "scarf3_x_degrees": 60.0, "meaning": "already-visible scarf segments begin approach"},
-    "R3": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 60.0, "scarf3_x_degrees": 60.0, "meaning": "narrowing scarf-segment cavity"},
-    "R4": {"scarf1_x_degrees": -45.0, "scarf2_x_degrees": 90.0, "scarf3_x_degrees": 60.0, "meaning": "closest predeclared high-interaction scarf-segment relation"},
+    "R1": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 45.0, "scarf3_x_degrees": -45.0, "meaning": "low interaction opposing-bend control"},
+    "R2": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 90.0, "scarf3_x_degrees": -90.0, "meaning": "moderate validated approach"},
+    "R3": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 135.0, "scarf3_x_degrees": -135.0, "meaning": "strong validated approach"},
+    "R4": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 180.0, "scarf3_x_degrees": -180.0, "meaning": "closest validated pre-contact relation"},
 }
 
 
