@@ -29,6 +29,15 @@ STATE_SPECS = {
     "R2": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 90.0, "scarf3_x_degrees": -90.0, "meaning": "moderate validated approach"},
     "R3": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 135.0, "scarf3_x_degrees": -135.0, "meaning": "strong validated approach"},
     "R4": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 180.0, "scarf3_x_degrees": -180.0, "meaning": "closest validated pre-contact relation"},
+    # N0--N4 are a separate fixed-target/nonlocal-neighbor trajectory.  The
+    # target is the source-topology patch wholly dominated by DEF-Scarf1;
+    # only its distal descendant FK-Scarf3 is moved.  These angles were
+    # declared from GT-only rig/geometry probing, before any RNA render.
+    "N0": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 0.0, "meaning": "fixed-target baseline / far relation"},
+    "N1": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 90.0, "meaning": "remote-motion control with substantial distal motion"},
+    "N2": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 135.0, "meaning": "moderate distal approach to fixed proximal target"},
+    "N3": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 165.0, "meaning": "narrow-gap distal approach to fixed proximal target"},
+    "N4": {"scarf1_x_degrees": 0.0, "scarf2_x_degrees": 0.0, "scarf3_x_degrees": 180.0, "meaning": "closest sampled fixed-target pre-contact relation"},
 }
 
 

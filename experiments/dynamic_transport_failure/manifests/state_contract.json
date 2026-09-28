@@ -33,6 +33,22 @@
       {"id": "R3", "label": "strong validated approach", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 135, "FK-Scarf3_local_X_degrees": -135},
       {"id": "R4", "label": "closest validated pre-contact relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 180, "FK-Scarf3_local_X_degrees": -180}
     ],
+    "fixed_target_nonlocal_states": [
+      {"id": "N0", "label": "fixed-target baseline / far relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 0},
+      {"id": "N1", "label": "remote-motion control", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 90},
+      {"id": "N2", "label": "moderate approach", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 135},
+      {"id": "N3", "label": "narrow-gap approach", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 165},
+      {"id": "N4", "label": "closest sampled pre-contact relation", "FK-Scarf1_local_X_degrees": 0, "FK-Scarf2_local_X_degrees": 0, "FK-Scarf3_local_X_degrees": 180}
+    ],
+    "fixed_target_contract": {
+      "target_mesh": "GEO-rain_scarf",
+      "target_vertex_group": "DEF-Scarf1",
+      "target_weight_threshold": 0.99,
+      "target_identity": "source triangle ID plus barycentric coordinates",
+      "moving_neighbor_vertex_group": "DEF-Scarf3",
+      "only_changed_control": "FK-Scarf3 local X",
+      "selection_basis": "production rig weights, topology, canonical visibility, and GT-only geometry/render measurements; never frozen-RNA error"
+    },
     "roi_definitions": ["scarf_segment_interaction", "local_bend_control", "newly_exposed_surface", "non_target_lower_top"],
     "descriptors": ["FK-Scarf1_local_X_degrees", "FK-Scarf2_local_X_degrees", "FK-Scarf3_local_X_degrees", "cross_segment_distance"]
   }
