@@ -7,10 +7,12 @@ This document defines the **research roadmap, milestone gates, stop conditions, 
 It complements:
 
 - `RESEARCH_CENTRIC_TOPIC.md`
+- `BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md`
 
 The two documents serve different purposes:
 
 - `RESEARCH_CENTRIC_TOPIC.md` defines **what problem this project is fundamentally about**.
+- `BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md` defines **how baseline roles, inductive breadth, deductive attribution, and project-level falsification scope are separated**.
 - This roadmap defines **how the project should progress without losing that intent**.
 
 This is a living research document.

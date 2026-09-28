@@ -1,5 +1,15 @@
 # Working On This Repo
 
+## Research context bootstrap
+
+Before substantial research implementation, experiment design, or architecture interpretation, read:
+
+1. `docs/RESEARCH_CENTRIC_TOPIC.md`
+2. `docs/RESEARCH_ROADMAP.md`
+3. `docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md`
+
+In particular, do not confuse implementation/development baselines with scientific replication or architecture-contrast baselines, and do not generalize a negative result from one model/asset pair into project-level falsification without the evidence breadth defined in the strategy document.
+
 ## Worklog conventions
 
 `docs/worklogs/` is the base location for human-readable worklogs — Korean or English
