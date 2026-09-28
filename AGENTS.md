@@ -61,3 +61,27 @@ worklog number: `results/evaluation/<number>/`. For example, artifacts for
 - Do not move, rename, overwrite, or retrospectively reorganize artifacts in
   a prior numbered evaluation folder unless the user explicitly asks. A new
   worklog/session gets a new numbered folder.
+
+## Running long jobs in local WSL
+
+When the `wsl.exe` client that started a job is killed, the job dies with it.
+It gets SIGHUP, and WSL then idles the distro down about 15 s later. That is
+what the old "WSL DXG restart" reports were
+(`docs/worklogs/16_WORKLOG_WSL_DXG_ROOT_CAUSE_DIAGNOSIS.md`). An agent's
+shell-tool timeout is exactly such a kill.
+
+- Never run a WSL render, training, dataset generation or loader job that
+  may outlast the tool timeout as a foreground tool call. Treat anything
+  over about a minute as at risk.
+- Run such a job either as a background task, so the client is not subject
+  to the tool timeout, or through
+  `experiments/dynamic_transport_failure/scripts/wsl_run_detached.sh`.
+  Poll the launcher's `<job>.status` file from short, separate `wsl.exe`
+  calls.
+- Do not rely on `systemd-run`, a bare `nohup ... &`, or a `setsid` job
+  whose launching client is later killed. WSL's idle shutdown kills all of
+  them.
+- A job that ends without its completion marker is not evidence of a GPU,
+  DXG or RNA fault until the launching client is shown to have survived.
+  To check, rerun it under
+  `experiments/dynamic_transport_failure/scripts/capture_wsl_gpu_pv_failure.ps1`.
