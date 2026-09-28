@@ -14,7 +14,6 @@ import json
 import pathlib
 import sys
 
-import bmesh
 import bpy
 import numpy as np
 
