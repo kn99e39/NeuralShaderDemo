@@ -1,0 +1,80 @@
+{
+  "primary_classification": "BASELINE REPRODUCTION FAILED",
+  "scientific_deformation_evaluation_started": false,
+  "official_repository": "https://github.com/lwwu2/8dna26",
+  "official_commit": "4a2157ca24e506c5ac0831f27d656ecc50a64f07",
+  "project_base_commit": "e2056e0c92017d6d1fe7303a27e699a9a4560db2",
+  "release_archives": {
+    "scenes.zip": {
+      "bytes": 125829608,
+      "sha256": "e60653896a978fb7a386c09c85f477cf98054082f41aa6745ea8d2538e0d1d19"
+    },
+    "weights.zip": {
+      "bytes": 27498134,
+      "sha256": "ef134a50bfade0431c97a71fd224dd833a56faeb79bf2ae14312f3a0be0bb13c"
+    },
+    "seal.ckpt": {
+      "sha256": "9104c18b9ccaed9dd18c5c6ad2fe42cf9e4ffe48fd3382079d7beb0f065959fc"
+    }
+  },
+  "intended_official_demo": {
+    "asset": "seal",
+    "scene_function": "scene2",
+    "resolution": [256, 256],
+    "spp": 256,
+    "seed": 0,
+    "integrator": "neuralvolpath",
+    "max_depth": 10,
+    "rr_depth": 5
+  },
+  "environment": {
+    "os": "Windows 10.0.26200",
+    "python": "3.11.9",
+    "torch": "2.3.1+cu121",
+    "torch_cuda_build": "12.1",
+    "mitsuba": "3.5.1",
+    "drjit": "0.4.6",
+    "numpy": "1.26.4",
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "gpu_memory_mib": 16303,
+    "gpu_compute_capability": "12.0",
+    "driver": "596.49",
+    "installed_cuda_toolkit": "13.3",
+    "torch_supported_architectures": [
+      "sm_50",
+      "sm_60",
+      "sm_61",
+      "sm_70",
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90"
+    ]
+  },
+  "attempts": [
+    {
+      "stage": "requirements install",
+      "result": "The unqualified Windows torch==2.3.1 requirement resolved to a CPU-only wheel. It was replaced with the same version from the official cu121 index."
+    },
+    {
+      "stage": "custom extension prerequisites",
+      "result": "Ninja was missing from upstream requirements and installed; the existing Visual Studio 2022 x64 compiler environment was activated."
+    },
+    {
+      "stage": "custom extension target",
+      "result": "The extension was built with TORCH_CUDA_ARCH_LIST=9.0+PTX because PyTorch 2.3.1 does not recognize SM 12.0."
+    },
+    {
+      "stage": "ABI repair",
+      "result": "NumPy 2.4.6 was incompatible with the binary stack and was replaced with NumPy 1.26.4."
+    },
+    {
+      "stage": "final smoke inference",
+      "result": "The process aborted during official model/integrator construction before rendering a pixel (Windows exit -1073740791 / 0xC0000409), while PyTorch reported that SM 12.0 is unsupported."
+    }
+  ],
+  "measurements_available": false,
+  "reviewable_images_available": false,
+  "deformation_verdict": "not evaluated",
+  "failure_scope": "runtime compatibility of the released frozen environment on the available SM 12.0 host; not evidence about 8DNA quality or deformation validity"
+}

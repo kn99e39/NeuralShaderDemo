@@ -1,0 +1,134 @@
+{
+  "candidates": {
+    "seal": [
+      {
+        "path": "scenes/seal/seal.obj",
+        "exists": true,
+        "sha256": "418793ccf403d6b87d2866a22bf25010bd49982bb1441aeadfa5d9bc1b01d36a",
+        "vertices": 334189,
+        "faces": 668378,
+        "bounds": {
+          "min": [
+            -0.655338,
+            -0.364064,
+            -0.655338
+          ],
+          "max": [
+            0.655338,
+            0.701245,
+            0.655338
+          ]
+        },
+        "object_names": [
+          "Cube"
+        ],
+        "group_names": [],
+        "material_names": []
+      },
+      {
+        "path": "scenes/seal/jade.vol",
+        "exists": true,
+        "bytes": 25165872,
+        "sha256": "b0a1813abe54dfe0b489408da69ca6b8297738e76178e08c67f5d3b61cce0188"
+      }
+    ],
+    "teaset": [
+      {
+        "path": "scenes/teaset/teaplate.obj",
+        "exists": true,
+        "sha256": "dfcda160a54e7ab5b0a94acf0c5b4d2c13bee66af4a96e1bc760127f34d46a6b",
+        "vertices": 151,
+        "faces": 285,
+        "bounds": {
+          "min": [
+            -0.71657,
+            -1e-06,
+            -0.720518
+          ],
+          "max": [
+            0.716572,
+            0.18667,
+            0.720517
+          ]
+        },
+        "object_names": [
+          "SM_Tray"
+        ],
+        "group_names": [],
+        "material_names": []
+      },
+      {
+        "path": "scenes/teaset/teapot2.obj",
+        "exists": true,
+        "sha256": "c15e2e9b9b43b6c00277b3a94edec6862a77a256268f019134fbbefdc0e9dada",
+        "vertices": 551,
+        "faces": 1054,
+        "bounds": {
+          "min": [
+            -0.419272,
+            0.003831,
+            -0.538493
+          ],
+          "max": [
+            -0.073843,
+            0.343312,
+            -0.129851
+          ]
+        },
+        "object_names": [
+          "SM_Milk_Pot"
+        ],
+        "group_names": [],
+        "material_names": []
+      },
+      {
+        "path": "scenes/teaset/teapot3.obj",
+        "exists": true,
+        "sha256": "40e04b5d7d61cc5fa6bc2cc49e337e512f3e31092d6f5ec4cc23623809e06129",
+        "vertices": 286,
+        "faces": 555,
+        "bounds": {
+          "min": [
+            0.143988,
+            0.006584,
+            0.068926
+          ],
+          "max": [
+            0.518337,
+            0.456498,
+            0.445335
+          ]
+        },
+        "object_names": [
+          "SM_Biscuit_Tin"
+        ],
+        "group_names": [],
+        "material_names": []
+      },
+      {
+        "path": "scenes/teaset/teapot4.obj",
+        "exists": true,
+        "sha256": "bea0bc855fb93e8879e8d9892c32bbae1a80e6c223c1a68c014889daf1c40d81",
+        "vertices": 757,
+        "faces": 1464,
+        "bounds": {
+          "min": [
+            0.093968,
+            0.00383,
+            -0.554898
+          ],
+          "max": [
+            0.511305,
+            0.690281,
+            0.065984
+          ]
+        },
+        "object_names": [
+          "SM_Tea_Pot"
+        ],
+        "group_names": [],
+        "material_names": []
+      }
+    ]
+  }
+}

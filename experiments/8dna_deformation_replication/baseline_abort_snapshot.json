@@ -1,0 +1,21 @@
+{
+  "status": "running",
+  "gate_closing_run": false,
+  "official_repository": "https://github.com/lwwu2/8dna26",
+  "official_commit": "4a2157ca24e506c5ac0831f27d656ecc50a64f07",
+  "config": {
+    "asset": "seal",
+    "scene_function": "scene2",
+    "resolution": 64,
+    "neural_spp": 1,
+    "chunk_spp": 1,
+    "reference_spp": 1,
+    "seed": 0,
+    "max_depth": 10,
+    "rr_depth": 5
+  },
+  "checkpoint": "external/8dna26/checkpoints/seal.ckpt",
+  "checkpoint_sha256": "9104c18b9ccaed9dd18c5c6ad2fe42cf9e4ffe48fd3382079d7beb0f065959fc",
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26200-SP0"
+}

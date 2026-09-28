@@ -1,0 +1,55 @@
+{
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "executable": "C:\\Projects\\NeuralShaderDemo\\external\\8dna26\\.venv\\Scripts\\python.exe",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "cuda_home": "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8",
+  "nvidia_smi": {
+    "args": [
+      "nvidia-smi",
+      "--query-gpu=name,driver_version,memory.total,compute_cap",
+      "--format=csv,noheader"
+    ],
+    "returncode": 0,
+    "stdout": "NVIDIA GeForce RTX 5080, 596.49, 16303 MiB, 12.0",
+    "stderr": ""
+  },
+  "nvcc": {
+    "args": [
+      "nvcc",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2026 NVIDIA Corporation\nBuilt on Fri_Apr_24_19:26:09_Pacific_Daylight_Time_2026\nCuda compilation tools, release 13.3, V13.3.33\nBuild cuda_13.3.r13.3/compiler.37862127_0",
+    "stderr": ""
+  },
+  "torch": {
+    "version": "2.3.1+cu121",
+    "cuda_build": "12.1",
+    "cuda_available": true,
+    "arch_list": [
+      "sm_50",
+      "sm_60",
+      "sm_61",
+      "sm_70",
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90"
+    ],
+    "device_name": "NVIDIA GeForce RTX 5080",
+    "device_capability": [
+      12,
+      0
+    ]
+  },
+  "mitsuba": {
+    "version": "3.5.1",
+    "variants": [
+      "scalar_rgb",
+      "scalar_spectral",
+      "cuda_ad_rgb",
+      "llvm_ad_rgb"
+    ],
+    "cuda_variant_selected": true
+  }
+}

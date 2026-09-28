@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "gate_closing_run": false,
+  "primary_classification": "BASELINE REPRODUCTION FAILED",
+  "rendered_pixels": 0,
+  "deformation_evaluation_started": false,
+  "authoritative_failure_record": "experiments/8dna_deformation_replication/baseline_failure.json",
+  "last_abrupt_process_snapshot": "experiments/8dna_deformation_replication/baseline_abort_snapshot.json",
+  "reason": "Official PyTorch 2.3.1 CUDA binaries do not support the available RTX 5080 SM 12.0 GPU; the final process aborted during model/integrator construction before rendering."
+}
