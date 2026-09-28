@@ -89,7 +89,7 @@ class FrozenCorrespondenceRenderer(renderers.NeuralSurfaceHairRenderer):
             # drive the frozen evaluation.  Preserve them before later frames
             # overwrite tmprndr so transport attribution can distinguish a
             # changed direct branch selector from branch-radiance error.
-            for stem in ("position0001_", "normal0001_", "camera_dir0001_", "diffuse_direct"):
+            for stem in ("position0001_", "normal0001_", "camera_dir0001_", "uv0001_", "diffuse_direct"):
                 source = pathlib.Path(prefix + stem + str(frame) + ".exr")
                 if source.is_file():
                     shutil.copy2(source, self.diagnostics_dir / source.name)
