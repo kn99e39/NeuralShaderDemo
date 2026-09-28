@@ -43,7 +43,9 @@ pattern was retired 2026-08-24 for exactly that reason):
 - A worklog is bound by the same discipline as everything else here: label
   every result by evaluation regime and never compare across regimes
   without the label, and never state a gate/case verdict stronger than what
-  was actually measured that session.`r`n`r`n## Evaluation artifact conventions
+  was actually measured that session.
+
+## Evaluation artifact conventions
 
 Human-reviewable intermediate and final artifacts (images, GIFs, videos, and
 their evaluation manifest entries) belong under a folder keyed by the session
