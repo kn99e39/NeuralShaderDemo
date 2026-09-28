@@ -43,4 +43,19 @@ pattern was retired 2026-08-24 for exactly that reason):
 - A worklog is bound by the same discipline as everything else here: label
   every result by evaluation regime and never compare across regimes
   without the label, and never state a gate/case verdict stronger than what
-  was actually measured that session.
+  was actually measured that session.`r`n`r`n## Evaluation artifact conventions
+
+Human-reviewable intermediate and final artifacts (images, GIFs, videos, and
+their evaluation manifest entries) belong under a folder keyed by the session
+worklog number: `results/evaluation/<number>/`. For example, artifacts for
+`docs/worklogs/17_WORKLOG_*.md` go in `results/evaluation/17/`.
+
+- Create the matching evaluation folder for every substantive session that
+  produces reviewable output, even if earlier numbers have no evaluation
+  folder. Number gaps are intentional; never reuse another worklog's folder.
+- Keep source experiment outputs in their experiment directories. Copy only
+  reviewer-facing artifacts into the matching evaluation folder and record
+  their provenance/hash in that folder's manifest.
+- Do not move, rename, overwrite, or retrospectively reorganize artifacts in
+  a prior numbered evaluation folder unless the user explicitly asks. A new
+  worklog/session gets a new numbered folder.
