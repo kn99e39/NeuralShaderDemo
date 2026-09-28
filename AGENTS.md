@@ -94,4 +94,8 @@ shell-tool timeout is exactly such a kill.
 - A job that ends without its completion marker is not evidence of a GPU,
   DXG or RNA fault until the launching client is shown to have survived.
   To check, rerun it under
-  `experiments/dynamic_transport_failure/scripts/capture_wsl_gpu_pv_failure.ps1`.
+  `experiments/dynamic_transport_failure/scripts/capture_wsl_gpu_pv_failure.ps1`
+  and read `termination` in its `summary.json`. Only `job_failed` or
+  `killed_without_exit` points at the job or the runtime;
+  `client_teardown` means the client was lost again
+  (`docs/worklogs/20_WORKLOG_WSL_CAPTURE_CLIENT_TEARDOWN_CLASSIFICATION.md`).

@@ -7,6 +7,11 @@
 # window are collected, and summary.json separates boot-time dxgkrnl noise
 # from lines logged during the workload.
 #
+# Inside the guest, a wrapper records whether the workload received SIGHUP
+# (its launching wsl.exe client was torn down) and the workload's own exit
+# code.  summary.json's `termination` separates client teardown from a job
+# that failed on its own.
+#
 # Example (from Windows PowerShell 7):
 #   ./capture_wsl_gpu_pv_failure.ps1 -OutDir results/.../wsl_capture/run01 `
 #     -Command 'cd /mnt/c/Projects/NeuralShaderDemo && ./render.sh'
@@ -22,7 +27,9 @@ $ErrorActionPreference = 'Stop'
 
 $out = New-Item -ItemType Directory -Force $OutDir
 function Out-Path([string] $name) { Join-Path $out.FullName $name }
-function Guest([string] $script) { wsl.exe -d $Distro -u root -- bash -lc $script 2>&1 }
+# `--exec` stops wsl.exe from re-parsing the arguments through the default
+# shell, which would expand `$(...)` in the script before bash sees it.
+function Guest([string] $script) { wsl.exe -d $Distro -u root --exec bash -lc $script 2>&1 }
 
 $kernelPatterns = [ordered]@{
     dxg_ioctl_failed        = 'dxgk: .*Ioctl failed'
@@ -78,15 +85,36 @@ $poller = Start-Job -ArgumentList $Distro, $PollSeconds, $pollFile -ScriptBlock 
 }
 
 # --- Workload ----------------------------------------------------------------
+# The wrapper traps SIGHUP so it outlives a client teardown long enough to
+# record it and the workload's exit code (129 when SIGHUP killed it).  The
+# workload runs in the background so the trap can fire, and SIGHUP is
+# forwarded to it so it dies as it would have in the foreground.
+$guestStatus = (Guest "wslpath -u '$(Out-Path 'workload_guest_status.log')'" | Select-Object -Last 1).Trim()
+$wrapper = @'
+status=$1
+rm -f "$status"
+echo "start=$(date -Is) pid=$$" >> "$status"
+bash -lc "$2" &
+child=$!
+trap 'echo "sighup=$(date -Is)" >> "$status"; kill -HUP "$child" 2>/dev/null' HUP
+while :; do
+  wait "$child"; rc=$?
+  kill -0 "$child" 2>/dev/null || break
+done
+echo "job_exit=$rc end=$(date -Is)" >> "$status"
+exit "$rc"
+'@
 $start = Get-Date
 "$($start.ToString('o')) START $Command" | Set-Content (Out-Path 'workload_times.log')
-wsl.exe -d $Distro -- bash -lc $Command `
+wsl.exe -d $Distro --exec bash -c $wrapper _ $guestStatus $Command `
     1> (Out-Path 'workload_stdout.log') 2> (Out-Path 'workload_stderr.log')
-$exitCode = $LASTEXITCODE
+$clientExitCode = $LASTEXITCODE
 $end = Get-Date
-"$($end.ToString('o')) END exit=$exitCode" | Add-Content (Out-Path 'workload_times.log')
+"$($end.ToString('o')) END client_exit=$clientExitCode" | Add-Content (Out-Path 'workload_times.log')
 
-# Let a dying VM finish tearing down before stopping the capture.
+# Let a dying VM finish tearing down before stopping the capture.  The
+# `dmesg --follow` client keeps the distro from idling down meanwhile, so a
+# "stopped" poll here means a VM/distro failure, never WSL's idle shutdown.
 Start-Sleep -Seconds ([Math]::Max(10, 3 * $PollSeconds))
 Stop-Job $poller; Remove-Job $poller
 if (-not $follow.HasExited) { Stop-Process -Id $follow.Id -Force }
@@ -143,12 +171,25 @@ function Count-InWindow([string[]] $paths, [datetime] $from, [datetime] $to) {
 $kernelSources = @('kernel_follow.log', 'kernel_journal_prior_boot.log', 'kernel_journal_current_boot.log') | ForEach-Object { Out-Path $_ }
 $stoppedPolls = @(Get-Content $pollFile -ErrorAction SilentlyContinue | Where-Object { $_ -match ' stopped$' })
 
+$guestLines = @(Get-Content (Out-Path 'workload_guest_status.log') -ErrorAction SilentlyContinue)
+$sighup = $guestLines | Where-Object { $_ -like 'sighup=*' } | Select-Object -First 1
+$jobExit = if (($guestLines -join "`n") -match '(?m)^job_exit=(\d+)') { [int]$Matches[1] } else { $null }
+$termination =
+    if (-not $guestLines) { 'no_guest_status' }            # wrapper never ran or its record was lost
+    elseif ($sighup) { 'client_teardown' }                 # launching wsl.exe client went away
+    elseif ($null -eq $jobExit) { 'killed_without_exit' }  # wrapper died too: distro/VM stop or SIGKILL
+    elseif ($jobExit -eq 0) { 'completed' }
+    else { 'job_failed' }
+
 [ordered]@{
     distro                        = $Distro
     command                       = $Command
     start                         = $start.ToString('o')
     end                           = $end.ToString('o')
-    exit_code                     = $exitCode
+    termination                   = $termination
+    guest_job_exit                = $jobExit
+    guest_sighup                  = if ($sighup) { $sighup -replace '^sighup=', '' } else { $null }
+    client_exit_code              = $clientExitCode
     boot_id_before                = $bootBefore
     boot_id_after                 = $bootAfter
     vm_restarted                  = $restarted
@@ -160,4 +201,4 @@ $stoppedPolls = @(Get-Content $pollFile -ErrorAction SilentlyContinue | Where-Ob
     host_event_ids                = @($hostEvents | Group-Object log, id | ForEach-Object { $_.Name + ' x' + $_.Count })
 } | ConvertTo-Json -Depth 4 | Set-Content (Out-Path 'summary.json')
 
-Write-Host "Capture written to $($out.FullName) (exit=$exitCode, vm_restarted=$restarted)"
+Write-Host "Capture written to $($out.FullName) (termination=$termination, job_exit=$jobExit, vm_restarted=$restarted)"
