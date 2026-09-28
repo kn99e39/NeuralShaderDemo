@@ -39,23 +39,23 @@ def ensure_aov(view_layer: bpy.types.ViewLayer, name: str) -> None:
     view_layer.aovs.add().name = name
 
 
-def triangulate_source_mesh(mesh: bpy.types.Mesh) -> None:
-    """Deterministically triangulate only the experiment scene copy.
+def triangulate_source_mesh(obj: bpy.types.Object) -> None:
+    """Triangulate only the experiment scene copy through Blender core ops.
 
-    This preserves positions, source vertex indices, UVs, materials, and
-    armature weights while turning Blender's implicit quad/ngon rasterization
-    into explicit source triangles that can carry an unambiguous ID.
+    ``bpy.ops`` is available in both the full Blender executable and the
+    lightweight BPy wheel used by the official RNA environment; ``bmesh`` is
+    not guaranteed by that wheel.
     """
-    if all(len(polygon.vertices) == 3 for polygon in mesh.polygons):
+    if all(len(polygon.vertices) == 3 for polygon in obj.data.polygons):
         return
-    bm = bmesh.new()
-    try:
-        bm.from_mesh(mesh)
-        bmesh.ops.triangulate(bm, faces=list(bm.faces), quad_method="FIXED", ngon_method="BEAUTY")
-        bm.to_mesh(mesh)
-    finally:
-        bm.free()
-    mesh.update()
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.quads_convert_to_tris(quad_method="FIXED", ngon_method="BEAUTY")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    obj.data.update()
 
 def populate_identity(mesh: bpy.types.Mesh, object_code: int) -> dict[str, int]:
 
@@ -138,7 +138,7 @@ def main() -> None:
         if obj is None or obj.type != "MESH":
             raise ValueError(f"missing required mesh: {name}")
         record: dict[str, object] = {"object": name}
-        triangulate_source_mesh(obj.data)
+        triangulate_source_mesh(obj)
         record.update(populate_identity(obj.data, object_code))
         records.append(record)
         for slot in obj.material_slots:
