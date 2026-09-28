@@ -55,6 +55,7 @@ def triangulate_source_mesh(obj: bpy.types.Object) -> None:
     bpy.ops.mesh.quads_convert_to_tris(quad_method="FIXED", ngon_method="BEAUTY")
     bpy.ops.object.mode_set(mode="OBJECT")
     obj.data.update()
+    bpy.context.view_layer.update()
 
 def populate_identity(mesh: bpy.types.Mesh, object_code: int) -> dict[str, int]:
 
