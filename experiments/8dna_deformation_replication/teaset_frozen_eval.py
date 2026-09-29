@@ -38,6 +38,61 @@ def response(dn: np.ndarray, dg: np.ndarray) -> dict:
     }
 
 
+ROI_NAMES = ("interaction", "tray", "far", "mover")
+
+
+def load_rois(gt_dir, states) -> dict:
+    rois = {}
+    for s_name in states:
+        z = np.load(gt_dir / f"rois_{s_name}.npz")
+        rois[s_name] = {k: (z[f"mask_{k}"].reshape(-1), z[f"idx0_{k}"]) for k in ROI_NAMES}
+    return rois
+
+
+def evaluate(proto, gt, neural, neural_b, rois, model_label: str = "8DNA") -> dict:
+    """Noise floors and per-state, per-mode, per-ROI paired metrics.
+
+    gt[state] = (A, B, ...); neural[(state, mode)] = image; neural_b = T0 repeat
+    of mode proto["modes"]["T0"][0].  Every change is paired through the
+    surface correspondence stored with the ROIs.
+    """
+    flat = lambda img: img.reshape(-1, 3)
+    m_key = f"model_change_{model_label}_vs_{model_label}0"
+    e_key = f"model_error_{model_label}_vs_GT"
+    rep_mode = proto["modes"]["T0"][0]
+    out = {"noise": {}, "states": {}}
+    g0 = flat(0.5 * (gt["T0"][0] + gt["T0"][1]))
+    for k in ROI_NAMES:
+        m0 = rois["T0"][k][0]
+        out["noise"][k] = {"gt_repeat_A_vs_B": L.pixel_metrics(flat(gt["T0"][0])[m0], flat(gt["T0"][1])[m0])}
+        if neural_b is not None:
+            out["noise"][k]["neural_seed_repeat_T0"] = L.pixel_metrics(flat(neural_b)[m0], flat(neural[("T0", rep_mode)])[m0])
+    out["noise"]["full_image"] = {"gt_repeat_A_vs_B": L.metrics(gt["T0"][0], gt["T0"][1])}
+    if neural_b is not None:
+        out["noise"]["full_image"]["neural_seed_repeat_T0"] = L.metrics(neural_b, neural[("T0", rep_mode)])
+    for name in proto["states"]:
+        g_img = 0.5 * (gt[name][0] + gt[name][1])
+        g = flat(g_img)
+        st = {"translations": proto["states"][name], "role": proto["roles"][name], "modes": {}}
+        for mode in proto["modes"][name]:
+            n = flat(neural[(name, mode)])
+            n0 = flat(neural[("T0", mode)])
+            reg = {"full_image": {e_key: L.metrics(neural[(name, mode)], g_img)}}
+            for k in ROI_NAMES:
+                m, i0 = rois[name][k]
+                reg[k] = {
+                    # every change is paired: state pixel vs its corresponding T0 pixel
+                    "physical_change_GT_vs_GT0": L.pixel_metrics(g[m], g0[i0]),
+                    m_key: L.pixel_metrics(n[m], n0[i0]),
+                    e_key: L.pixel_metrics(n[m], g[m]),
+                    "model_error_at_T0_same_surface": L.pixel_metrics(n0[i0], g0[i0]),
+                    "response_linear": response(n[m] - n0[i0], g[m] - g0[i0]),
+                }
+            st["modes"][mode] = reg
+        out["states"][name] = st
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--protocol", required=True)
@@ -54,24 +109,30 @@ def main() -> int:
     out = L.RESULTS / proto["frozen_output"]
     gt_dir = L.RESULTS / proto["gt_output"]
     res, states, nr = proto["res"], proto["states"], proto["neural"]
-    roi_names = ("interaction", "tray", "far", "mover")
-    rois = {}
-    for s_name in states:
-        z = np.load(gt_dir / f"rois_{s_name}.npz")
-        rois[s_name] = {k: (z[f"mask_{k}"].reshape(-1), z[f"idx0_{k}"]) for k in roi_names}
+    rois = load_rois(gt_dir, states)
 
-    scene0 = mi.load_dict(T.scene_dict(res, states["T0"]))
+    scene0 = mi.load_dict(T.scene_dict(res, states["T0"], proto.get("lighting")))
     bbox0 = scene0.shapes()[0].bbox()
     integ = L.load_neural_integrator(proto["asset"])
     base = integ.asset_models[0]
 
+    reuse = proto.get("reuse_design_gt", False)
+    if reuse:
+        # the GT-only design run is the reference, provided it ran from this clean commit
+        design_env = json.loads(open(gt_dir / "gt_states.json", encoding="utf-8").read()).get("environment", {})
+        if design_env.get("project_commit") != env["project_commit"] or design_env.get("project_dirty"):
+            raise SystemExit("design references were not rendered from this clean commit; cannot reuse them")
     gt, neural, times = {}, {}, {}
     for name, tr in states.items():
-        scene = mi.load_dict(T.scene_dict(res, tr))
-        a, _ = L.render_reference(scene, proto["gt"]["spp"], proto["gt"]["chunk"], proto["gt"]["seed_A"])
-        b, _ = L.render_reference(scene, proto["gt"]["spp"], proto["gt"]["chunk"], proto["gt"]["seed_B"])
-        design_a = L.load_exr(gt_dir / name / "gt_A.exr")
-        gt[name] = (a, b, float(np.abs(a - design_a).max()))
+        scene = mi.load_dict(T.scene_dict(res, tr, proto.get("lighting")))
+        if reuse:
+            a, b = L.load_exr(gt_dir / name / "gt_A.exr"), L.load_exr(gt_dir / name / "gt_B.exr")
+            gt[name] = (a, b, 0.0)
+        else:
+            a, _ = L.render_reference(scene, proto["gt"]["spp"], proto["gt"]["chunk"], proto["gt"]["seed_A"])
+            b, _ = L.render_reference(scene, proto["gt"]["spp"], proto["gt"]["chunk"], proto["gt"]["seed_B"])
+            design_a = L.load_exr(gt_dir / name / "gt_A.exr")
+            gt[name] = (a, b, float(np.abs(a - design_a).max()))
         L.save_exr(out / name / "gt_A.exr", a)
         L.save_exr(out / name / "gt_B.exr", b)
         for mode in proto["modes"][name]:
@@ -86,36 +147,10 @@ def main() -> int:
 
     rec = {"protocol": proto, "environment": env, "checkpoint_sha256": ck,
            "gt_rerender_max_abs_diff_vs_design": {s: gt[s][2] for s in states},
+           "reference_source": "design run reused (same clean commit)" if reuse else "re-rendered",
            "neural_seconds": {f"{s}/{m}": t for (s, m), t in times.items()},
            "noise": {}, "states": {}}
-    flat = lambda img: img.reshape(-1, 3)
-    g0 = flat(0.5 * (gt["T0"][0] + gt["T0"][1]))
-    for k in roi_names:
-        m0 = rois["T0"][k][0]
-        rec["noise"][k] = {"gt_repeat_A_vs_B": L.pixel_metrics(flat(gt["T0"][0])[m0], flat(gt["T0"][1])[m0]),
-                           "neural_seed_repeat_T0": L.pixel_metrics(flat(neural_b)[m0], flat(neural[("T0", "upstream")])[m0])}
-    rec["noise"]["full_image"] = {"gt_repeat_A_vs_B": L.metrics(gt["T0"][0], gt["T0"][1]),
-                                  "neural_seed_repeat_T0": L.metrics(neural_b, neural[("T0", "upstream")])}
-    for name in states:
-        g_img = 0.5 * (gt[name][0] + gt[name][1])
-        g = flat(g_img)
-        st = {"translations": states[name], "role": proto["roles"][name], "modes": {}}
-        for mode in proto["modes"][name]:
-            n = flat(neural[(name, mode)])
-            n0 = flat(neural[("T0", mode)])
-            reg = {"full_image": {"model_error_8DNA_vs_GT": L.metrics(neural[(name, mode)], g_img)}}
-            for k in roi_names:
-                m, i0 = rois[name][k]
-                reg[k] = {
-                    # every change is paired: state pixel vs its corresponding T0 pixel
-                    "physical_change_GT_vs_GT0": L.pixel_metrics(g[m], g0[i0]),
-                    "model_change_8DNA_vs_8DNA0": L.pixel_metrics(n[m], n0[i0]),
-                    "model_error_8DNA_vs_GT": L.pixel_metrics(n[m], g[m]),
-                    "model_error_at_T0_same_surface": L.pixel_metrics(n0[i0], g0[i0]),
-                    "response_linear": response(n[m] - n0[i0], g[m] - g0[i0]),
-                }
-            st["modes"][mode] = reg
-        rec["states"][name] = st
+    rec.update(evaluate(proto, gt, neural, neural_b, rois))
     L.write_json(out / "frozen_eval.json", rec)
     print("written", L.rel(out / "frozen_eval.json"))
     return 0

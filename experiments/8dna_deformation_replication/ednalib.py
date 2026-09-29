@@ -5,7 +5,9 @@ this module first; `init_upstream()` performs the demo notebook's setup
 (cuda_ad_rgb variant, LoopRecord off) and registers the official
 `neuralpath` / `neuralvolpath` integrators.
 
-One runtime deviation from the notebook: VCallRecord stays on.  With it off,
+Runtime notes.  LoopRecord stays off for every render here, references
+included (render_reference explains why).  One deviation from the notebook:
+VCallRecord stays on.  With it off,
 DrJit 0.4.6 dispatches virtual calls in wavefront mode, and on this SM 12.0
 GPU that dispatch never returns once a render exceeds 8192 lanes (64x64x4 and
 128x128x4 time out; 4096 and 8192 lanes finish).  At 4096 and 8192 lanes the
@@ -111,7 +113,7 @@ def environment_record() -> dict:
         "project_commit": git_head(ROOT),
         "project_dirty": git_dirty(ROOT),
         "upstream_commit": git_head(UPSTREAM),
-        "jit_flags": {"LoopRecord_neural": False, "VCallRecord": True},
+        "jit_flags": {"LoopRecord": False, "VCallRecord": True},
     }
 
 
@@ -157,15 +159,13 @@ def render_chunked(scene, integrator, spp: int, chunk: int, seed: int) -> tuple[
 def render_reference(scene, spp: int, chunk: int, seed: int) -> tuple[np.ndarray, float]:
     """Path-traced reference with the scene's own integrator (prb / prbvolpath).
 
-    Loop recording is re-enabled for the reference only; it changes how the
-    kernel is compiled, not the estimator.
+    Rendered in wavefront mode (LoopRecord off).  With LoopRecord on, DrJit
+    0.4.6 on this SM 12.0 GPU loses 1-5% of the radiance depending on the
+    kernel's lane count and does not reproduce across runs; the wavefront
+    result matches Mitsuba's CPU LLVM backend (probe_loop_record.py,
+    probe_llvm_reference.py).
     """
-    mi, dr = init_upstream()
-    dr.set_flag(dr.JitFlag.LoopRecord, True)
-    try:
-        return render_chunked(scene, scene.integrator(), spp, chunk, seed)
-    finally:
-        dr.set_flag(dr.JitFlag.LoopRecord, False)
+    return render_chunked(scene, scene.integrator(), spp, chunk, seed)
 
 
 # --- image output ------------------------------------------------------------
@@ -272,6 +272,8 @@ def write_json(path: Path, payload: dict) -> None:
 
 
 def _json_default(value):
+    if isinstance(value, np.bool_):
+        return bool(value)
     if isinstance(value, (np.floating, np.integer)):
         return value.item()
     if isinstance(value, np.ndarray):
