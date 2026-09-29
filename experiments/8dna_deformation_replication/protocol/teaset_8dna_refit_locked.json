@@ -1,0 +1,32 @@
+{
+  "purpose": "8DNA same-state refit control for the worklog-21 teaset trajectory. Written before any refit training output exists.",
+  "states_source": "protocol/teaset_frozen_locked.json (unchanged worklog-21 states)",
+  "trainings": {
+    "T0_retrain": {"state": "T0", "role": "pipeline control: same code, schedule and seed as the T3 refit, on the canonical state"},
+    "T3_refit":   {"state": "T3", "role": "same-state refit: persistent state rebuilt on T3"}
+  },
+  "training": {
+    "launcher": "train_8dna_state.py (runs unmodified upstream train.py)",
+    "config": "upstream configs/default.yaml unchanged: bounce 2, dataset N=128 H=128 SPP=256 batch 32768, dataset_reload 1, lr 5e-4, gradient_clip_val 5, val_spp 128, model block identical to the released teaset checkpoint",
+    "max_epochs": 30,
+    "seed": 9,
+    "device": 0,
+    "from_scratch": true,
+    "checkpoint_used": "last.ckpt (end of schedule; no selection on validation loss)"
+  },
+  "evaluation": {
+    "regime": "worklog-21 envmap regime: res 512, reference prb 2x2048 spp with the locked seeds, neural 512 spp seed 0, upstream neuralpath",
+    "renders": {
+      "T0_retrain_at_T0": "retrained checkpoint, upstream mode, T0 scene",
+      "T3_refit_at_T3": "refit checkpoint, upstream mode, T3 scene (its canonical frame is T3, so no pullback)"
+    },
+    "reference_images": "results/8dna_replication/frozen/teaset_locked/<state>/gt_A|gt_B.exr (worklog-21 locked renders)",
+    "rois": "gt_design/v2 rois_<state>.npz (unchanged)",
+    "compare_with": "worklog-21 frozen released attached renders at T0 and T3"
+  },
+  "decision_rule": {
+    "pipeline_control": "T0_retrain is a usable control if its T0 interaction-ROI display-MAE error is within 25% of the released checkpoint's T0 error; otherwise the refit is judged only against T0_retrain and the discrepancy is reported",
+    "refit_recovers": "T3_refit interaction-ROI error at T3 is at most 1.25x T0_retrain's error on the same surfaces at T0, AND the tracking gain <N_refit(T3) - N_retrain(T0), dG>/<dG,dG> is at least 0.5",
+    "cases": "A: frozen fails and refit recovers (stale persistent state supported, capacity sufficient); B: frozen fails and refit does not recover (capacity/optimization remains plausible)"
+  }
+}
