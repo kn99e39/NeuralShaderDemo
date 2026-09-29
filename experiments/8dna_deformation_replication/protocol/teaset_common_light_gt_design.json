@@ -1,0 +1,98 @@
+{
+  "purpose": "GT-only design of the cross-backbone common-light regime (teaset_cross_backbone_common_light). Written before any RNA dataset, RNA training, or common-light neural render exists. Worklog-21 envmap evidence is untouched.",
+  "regime": "teaset_cross_backbone_common_light",
+  "why": "RNA is conditioned on one light direction per sample, with a black world during data generation, and has no environment-map path. Both models are therefore evaluated under one directional light that RNA represents natively and that 8DNA evaluates as an ordinary Mitsuba emitter.",
+  "asset": "teaset",
+  "res": 512,
+  "camera_lighting": "upstream teaset get_scene(res) camera (theta=60 phi=160 r=2.5 target (0,0.2,0), fov 35); envmap removed (black world); one directional light",
+  "lighting": {
+    "type": "directional",
+    "to_light": [
+      -0.6647,
+      0.7071,
+      0.2418
+    ],
+    "irradiance": 5.0,
+    "reference_integrator": {
+      "type": "path",
+      "max_depth": -1,
+      "rr_depth": 5
+    }
+  },
+  "lighting_rule": "Declared before rendering: key light from the camera's azimuth at 45 deg elevation (to_light = cos45 * camera horizontal direction + sin45 * up). Irradiance 5.0 matches RNA's training light energy in the project's Rain configs. One GT-only adjustment is allowed only if this fails the physical-signal gate, before any RNA moved-state output.",
+  "materials": "released Ni_palik rough conductors unchanged (alpha 0.05 tray/teapot, 0.1 milk pot/tin), two-sided",
+  "gt": {
+    "spp": 32768,
+    "chunk": 32,
+    "seed_A": 1000000,
+    "seed_B": 2000000
+  },
+  "states": {
+    "T0": {},
+    "T1": {
+      "plate": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot2": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot3": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot4": [
+        0.0,
+        0.0,
+        0.15
+      ]
+    },
+    "T1b": {
+      "teapot2": [
+        0.0,
+        0.0,
+        0.15
+      ]
+    },
+    "T2": {
+      "teapot2": [
+        0.1,
+        0.0,
+        0.0
+      ]
+    },
+    "T3": {
+      "teapot2": [
+        0.16,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "roles": {
+    "T0": "canonical",
+    "T1": "relation-preserving motion control",
+    "T1b": "lateral relation change",
+    "T2": "moderate approach",
+    "T3": "strong approach"
+  },
+  "rois": {
+    "mover": "teapot2",
+    "target": "teapot4",
+    "far_part": "teapot3",
+    "radius": 0.15,
+    "strongest_state": "T3",
+    "match_eps": 0.006
+  },
+  "error_scale": 0.2,
+  "gate": {
+    "noise_multiple": 3.0
+  },
+  "null_max_ratio": 0.25,
+  "gt_revision": "First GT-only run at 2048 spp (seeds A/B as above) passed the gate on T1b only (interaction change / A-vs-B repeat noise: T1 1.98, T1b 3.39, T2 1.92, T3 2.57); the repeat noise (display MAE 0.033) is dominated by sun-lit nickel interreflection, which a path tracer samples like a caustic. Lighting, states and ROIs are unchanged; only the reference sample count is raised to 32768 spp to lower the noise floor. Decided before any RNA dataset, RNA training or common-light neural render.",
+  "reference_integrator_note": "Reference: Mitsuba C++ path (max_depth -1, rr_depth 5) in wavefront mode (DrJit LoopRecord off). With LoopRecord on, path and prb both lose 1-5% of the radiance on this GPU depending on kernel lane count, and do not reproduce (probe_loop_record.py); in wavefront mode both match Mitsuba's CPU LLVM backend (sun 0.11033 +- 0.00006, envmap 0.11628 +- 0.00003 at 128^2 x 1024 spp; probe_llvm_reference.py) and agree with each other. path replaces the upstream scene's prb only because wavefront prb (a Python integrator) is ~35x slower here. Decided before any neural output in this regime."
+}

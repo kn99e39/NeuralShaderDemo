@@ -135,6 +135,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--protocol", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--require-pass", action="store_true", help="exit 3 unless the physical-signal gate passes")
     args = ap.parse_args()
     proto = json.loads(open(args.protocol, encoding="utf-8").read())
     out = L.RESULTS / args.out
@@ -145,7 +146,7 @@ def main() -> int:
 
     bufs, gts, ids_by_state = {}, {}, {}
     for name, tr in states.items():
-        scene = mi.load_dict(T.scene_dict(res, tr))
+        scene = mi.load_dict(T.scene_dict(res, tr, proto.get("lighting")))
         ids = T.part_shape_ids(scene, tr)
         ids_by_state[name] = ids
         sid, p, n = primary_buffers(scene, res)
@@ -186,11 +187,11 @@ def main() -> int:
     # --- measurements (all changes are paired through the correspondence) ---
     ref0_a = gts["T0"][0].reshape(-1, 3)
     ref0 = (0.5 * (gts["T0"][0] + gts["T0"][1])).reshape(-1, 3)
-    record = {"protocol": proto, "part_shape_ids": ids_by_state, "fixed_pixel_states": fixed,
+    record = {"protocol": proto, "environment": L.environment_record(), "part_shape_ids": ids_by_state, "fixed_pixel_states": fixed,
               "roi_pixels_T0": {k: int(m.sum()) for k, m in base.items()}, "states": {}}
     for name, tr in states.items():
         a, b = gts[name]
-        scene = mi.load_dict(T.scene_dict(res, tr))
+        scene = mi.load_dict(T.scene_dict(res, tr, proto.get("lighting")))
         ids = T.part_shape_ids(scene, tr)
         m_int = rois[name]["interaction"][0]
         pts, nrm = bufs[name][1][m_int], bufs[name][2][m_int]
@@ -226,14 +227,14 @@ def main() -> int:
             "qualifies": record["states"][s]["regions"]["interaction"]["gt_change_display_mae_A"] <= proto["null_max_ratio"] * ref_chg}
         for s in null}
     k = proto["gate"]["noise_multiple"]
-    tested = [s for s in states if proto["roles"][s] not in ("canonical", "low-interaction control")]
+    tested = [s for s in states if proto["roles"][s] != "canonical" and "control" not in proto["roles"][s]]
     passing = [s for s in tested if record["states"][s]["interaction_signal_to_noise"] > k]
     record["physical_signal_gate"] = {"noise_multiple": k, "tested_states": tested, "passing_states": passing,
                                       "verdict": "PASS" if passing else "PHYSICAL EFFECT TOO WEAK"}
     L.write_json(out / "gt_states.json", record)
     print(json.dumps({s: round(record["states"][s]["interaction_signal_to_noise"], 2) for s in states}),
           record["physical_signal_gate"]["verdict"])
-    return 0
+    return 3 if args.require_pass and not passing else 0
 
 
 if __name__ == "__main__":

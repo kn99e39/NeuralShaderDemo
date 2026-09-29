@@ -18,5 +18,5 @@ $py = Join-Path $venv 'Scripts/python.exe'
 & $py -m pip install --upgrade pip
 & $py -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 & $py -m pip install mitsuba==3.5.1 drjit==0.4.6 lightning==2.1.3 omegaconf tensorboard matplotlib `
-    numpy==1.26.4 tqdm ninja scikit-image==0.24.0 "setuptools<70" trimesh==4.5.3 python-fcl==0.7.0.8
+    numpy==1.26.4 tqdm ninja scikit-image==0.24.0 "setuptools<70" trimesh==4.5.3 python-fcl==0.7.0.8 h5py==3.12.1
 & $py -c "import sys, torch, mitsuba, numpy, lightning; mitsuba.set_variant('cuda_ad_rgb'); import drjit; print(sys.version.split()[0], torch.__version__, torch.version.cuda, torch.cuda.get_arch_list()); print('mitsuba', mitsuba.__version__, 'drjit', drjit.__version__, 'numpy', numpy.__version__, 'lightning', lightning.__version__)"

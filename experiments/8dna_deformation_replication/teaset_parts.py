@@ -48,11 +48,18 @@ def _t(translations: dict | None, part: str) -> np.ndarray:
     return np.asarray((translations or {}).get(part, (0.0, 0.0, 0.0)), dtype=np.float64)
 
 
-def scene_dict(res: int, translations: dict | None = None) -> dict:
+def scene_dict(res: int, translations: dict | None = None, lighting: dict | None = None,
+               integrator: dict | None = None) -> dict:
     """Upstream teaset get_scene(res) with per-part translations inside group0.
 
     Parts with zero translation get no `to_world` key, so the canonical state is
-    the unmodified upstream dictionary.
+    the unmodified upstream dictionary.  `lighting=None` keeps the upstream
+    envmap (worklog 21).  `lighting={"type": "directional", "to_light": [x, y, z],
+    "irradiance": E}` replaces it with a black world and one directional light
+    (the cross-backbone common-light regime); geometry, camera and materials
+    are unchanged.  An optional "reference_integrator" replaces the scene's
+    reference integrator (prb) for that regime; `integrator` overrides it for
+    any regime.
     """
     mi, _ = L.init_upstream()
     from scenes.teaset import get_scene
@@ -62,6 +69,18 @@ def scene_dict(res: int, translations: dict | None = None) -> dict:
         t = _t(translations, part)
         if np.any(t != 0):
             d["group0"][part]["to_world"] = mi.ScalarTransform4f.translate([float(v) for v in t])
+    if lighting is not None:
+        if lighting["type"] != "directional":
+            raise ValueError(lighting)
+        del d["background"]
+        to_light = np.asarray(lighting["to_light"], float)
+        to_light /= np.linalg.norm(to_light)
+        d["sun"] = {"type": "directional", "direction": [float(v) for v in -to_light],
+                    "irradiance": {"type": "rgb", "value": float(lighting["irradiance"])}}
+        if "reference_integrator" in lighting:
+            d["integrator"] = dict(lighting["reference_integrator"])
+    if integrator is not None:
+        d["integrator"] = dict(integrator)
     return d
 
 
