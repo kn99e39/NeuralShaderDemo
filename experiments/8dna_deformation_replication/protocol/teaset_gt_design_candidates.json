@@ -1,0 +1,27 @@
+{
+  "purpose": "GT-only trajectory design for the frozen-8DNA teaset study. Written before any moved-state neural render. Not the locked protocol.",
+  "asset": "teaset",
+  "res": 512,
+  "camera_lighting": "upstream scenes/teaset get_scene(res) defaults: camera theta=60 phi=160 r=2.5 target (0,0.2,0), fov 35; envmap textures/envmap.exr rotated 90 deg about y; reference integrator prb max_depth -1 rr_depth 5",
+  "gt": {"spp": 2048, "chunk": 64, "seed_A": 1000000, "seed_B": 2000000},
+  "mover": "teapot2 (milk pot); translation along the flat tray floor only",
+  "states": {
+    "T0":  {},
+    "T1a": {"teapot2": [-0.10, 0.0, 0.0]},
+    "T1b": {"teapot2": [0.0, 0.0, 0.15]},
+    "T2":  {"teapot2": [0.10, 0.0, 0.0]},
+    "T3":  {"teapot2": [0.16, 0.0, 0.0]}
+  },
+  "roles": {
+    "T0": "canonical",
+    "T1a": "low-interaction control",
+    "T1b": "low-interaction control",
+    "T2": "moderate approach",
+    "T3": "strong approach"
+  },
+  "rois": {"mover": "teapot2", "target": "teapot4", "far_part": "teapot3", "radius": 0.15, "strongest_state": "T3"},
+  "error_scale": 0.2,
+  "gate": {"noise_multiple": 3.0},
+  "null_control_rule": "Exactly one of T1a/T1b becomes T1. A candidate is eligible only if it keeps tray-floor contact, clears the tray rim and every other part along its whole sweep. Among eligible candidates choose the one with the smaller interaction-ROI GT change (display MAE vs T0, seed set A). It qualifies as a low-interaction control only if that change is at most 25% of T3's. If neither qualifies, the batch reports that no null control was found instead of relabelling a state.",
+  "redesign_rule": "If T2 and T3 both fail the physical-signal gate, one GT-only redesign is allowed before any moved-state neural render."
+}

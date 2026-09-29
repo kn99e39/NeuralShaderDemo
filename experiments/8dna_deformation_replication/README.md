@@ -1,40 +1,47 @@
-# 8DNA deformation replication
+# 8DNA replication (scientific replication baseline)
 
-This directory contains project-owned adapters for the independent 8DNA
-replication study. The official source remains immutable under
-`external/8dna26/` and is intentionally ignored by Git.
-
-The experiment is gated:
-
-1. reproduce the released static inference path;
-2. audit the representation contract from source;
-3. inspect candidate assets without viewing deformation error;
-4. only then define and lock a correspondence-valid deformation trajectory.
-
-No deformation result is valid unless the static gate in
-`baseline_manifest.json` reports `status: pass`.
+Project-owned adapters for the independent 8DNA replication study. The
+official source stays unmodified under `external/8dna26/` (ignored by Git).
+8DNA is a scientific replication baseline here, not the development base
+(`docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md`).
 
 ## Official dependency
 
 - Repository: <https://github.com/lwwu2/8dna26>
 - Pinned commit: `4a2157ca24e506c5ac0831f27d656ecc50a64f07`
-- Expected checkout: `external/8dna26/`
 - Released scene archive SHA-256:
   `e60653896a978fb7a386c09c85f477cf98054082f41aa6745ea8d2538e0d1d19`
 - Released checkpoint archive SHA-256:
   `ef134a50bfade0431c97a71fd224dd833a56faeb79bf2ae14312f3a0be0bb13c`
 
-## Commands
+## Runtime (RTX 5080, native Windows)
 
-From the repository root, using the isolated upstream environment:
+`windows/setup_env.ps1` builds `external/8dna26/.venv-cu128`. `windows/run.ps1
+<script.py> ...` runs an entry point with MSVC 14.38 and CUDA 12.8, so torch
+JIT-builds the unmodified upstream extension for sm_120. Deviations from the
+upstream environment, none of which touches model code or weights:
 
-```text
-external\8dna26\.venv\Scripts\python.exe experiments\8dna_deformation_replication\probe_environment.py
-external\8dna26\.venv\Scripts\python.exe experiments\8dna_deformation_replication\inspect_assets.py
-external\8dna26\.venv\Scripts\python.exe experiments\8dna_deformation_replication\render_official_baseline.py --mode smoke
-external\8dna26\.venv\Scripts\python.exe experiments\8dna_deformation_replication\render_official_baseline.py --mode official
-```
+- torch 2.8.0+cu128 instead of 2.3.1, whose wheels have no sm_120 kernels;
+- DrJit `VCallRecord` on for neural renders (`ednalib.py` explains the
+  wavefront-dispatch hang; `probe_vcall_dispatch.py` reproduces it);
+- native Windows instead of Linux; under WSL, DrJit 0.4.6 cannot load OptiX
+  (`wsl/README.md`).
 
-The official mode follows the released notebook's `seal`, `scene2`, 256 x
-256, 256 spp, seed-0 path. The smoke mode is an implementation check only and
-cannot close the baseline gate.
+## Pipeline
+
+| Step | Script | Output (under `results/8dna_replication/`) |
+|---|---|---|
+| runtime smoke | `smoke_runtime.py` | `smoke/` |
+| static baseline vs PT reference | `run_static_baseline.py` | `static_baseline/<tag>/` |
+| geometry of candidate states | `measure_teaset_geometry.py` | `gt_design/geometry_*.json` |
+| GT-only trajectory design + ROIs | `teaset_gt_states.py` | `gt_design/<rev>/` |
+| correspondence tests | `test_correspondence.py` | `correspondence_tests/` |
+| locked frozen evaluation | `teaset_frozen_eval.py` | `frozen/teaset_locked/` |
+
+`teaset_parts.py` holds the part-rigid configurations and the correspondence
+adapter (`PartRigidAsset`). `protocol/` holds the GT design revisions and the
+locked protocol. `teaset_frozen_eval.py` refuses to run on a dirty tree.
+
+The earlier files `render_official_baseline.py`, `probe_environment.py`,
+`baseline_*.json` and `environment_probe.json` are the worklog-19 native
+torch 2.3.1 attempt and are kept unchanged as its record.

@@ -1,0 +1,35 @@
+{
+  "purpose": "GT-only trajectory design, revision 2. Written after the v1 GT-only run and before any moved-state neural render.",
+  "supersedes": "protocol/teaset_gt_design_candidates.json (v1)",
+  "revision_reason": "v1 null-control candidates both failed the declared rule: T1a (milk pot -x 0.10) interpenetrates the tray rim (exact mesh distance 0); T1b (milk pot +z 0.15) keeps the pot-teapot gap near 0.17 but slides the pot's mirror image across the teapot, giving an interaction-ROI GT change of 0.062 display MAE, 94% of T3's 0.066. The tray rim bounds the milk pot, so no remote single-part move exists. The physical-signal gate passed in v1 (T2 5.6x, T3 8.8x repeat noise); approach states are unchanged.",
+  "asset": "teaset",
+  "res": 512,
+  "camera_lighting": "upstream scenes/teaset get_scene(res) defaults: camera theta=60 phi=160 r=2.5 target (0,0.2,0), fov 35; envmap textures/envmap.exr rotated 90 deg about y; reference integrator prb max_depth -1 rr_depth 5",
+  "gt": {"spp": 2048, "chunk": 64, "seed_A": 1000000, "seed_B": 2000000},
+  "mover": "teapot2 (milk pot); translation along the flat tray floor only",
+  "states": {
+    "T0":  {},
+    "T1":  {"plate": [0.0, 0.0, 0.15], "teapot2": [0.0, 0.0, 0.15], "teapot3": [0.0, 0.0, 0.15], "teapot4": [0.0, 0.0, 0.15]},
+    "T1b": {"teapot2": [0.0, 0.0, 0.15]},
+    "T2":  {"teapot2": [0.10, 0.0, 0.0]},
+    "T3":  {"teapot2": [0.16, 0.0, 0.0]}
+  },
+  "roles": {
+    "T0": "canonical",
+    "T1": "low-interaction control",
+    "T1b": "lateral relation change",
+    "T2": "moderate approach",
+    "T3": "strong approach"
+  },
+  "state_notes": {
+    "T1": "Whole asset translated +z 0.15: every part moves as much as the milk pot does in T1b, all inter-part relations are preserved exactly; with distant envmap lighting the asset-frame transport is unchanged except for viewpoint parallax.",
+    "T1b": "Same milk-pot displacement vector as T1 with the other parts fixed: relation changes at nearly constant gap (0.172 vs 0.187).",
+    "T2": "Pot-teapot exact gap 0.091.",
+    "T3": "Pot-teapot exact gap 0.034 (the canonical tin-teapot gap is 0.035)."
+  },
+  "rois": {"mover": "teapot2", "target": "teapot4", "far_part": "teapot3", "radius": 0.15, "strongest_state": "T3", "match_eps": 0.006},
+  "error_scale": 0.2,
+  "gate": {"noise_multiple": 3.0},
+  "null_max_ratio": 0.25,
+  "null_control_rule": "T1 qualifies as the low-interaction control if its surface-corresponded interaction-ROI GT change (display MAE vs T0, seed set A) is at most 25% of T3's. If it does not, the batch reports that no null control was found; no further null redesign."
+}

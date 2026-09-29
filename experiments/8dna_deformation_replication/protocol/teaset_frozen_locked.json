@@ -1,0 +1,55 @@
+{
+  "purpose": "Locked frozen-8DNA evaluation of the teaset part-configuration trajectory. Locked after the GT-only design (v2) and the correspondence tests passed, before any moved-state neural render.",
+  "asset": "teaset",
+  "checkpoint": "external/8dna26/checkpoints/teaset.ckpt",
+  "checkpoint_sha256": "6feb5e1b00e17d662596fcc0e6abde686ebbbd48d5233a2100caa407780f5bbc",
+  "asset_sha256": {
+    "scenes/teaset/teaplate.obj": "dfcda160a54e7ab5b0a94acf0c5b4d2c13bee66af4a96e1bc760127f34d46a6b",
+    "scenes/teaset/teapot2.obj": "c15e2e9b9b43b6c00277b3a94edec6862a77a256268f019134fbbefdc0e9dada",
+    "scenes/teaset/teapot3.obj": "40e04b5d7d61cc5fa6bc2cc49e337e512f3e31092d6f5ec4cc23623809e06129",
+    "scenes/teaset/teapot4.obj": "bea0bc855fb93e8879e8d9892c32bbae1a80e6c223c1a68c014889daf1c40d81"
+  },
+  "res": 512,
+  "camera_lighting_materials": "upstream scenes/teaset get_scene(res) unchanged: camera theta=60 phi=160 r=2.5 target (0,0.2,0) fov 35; envmap textures/envmap.exr rotated 90 deg about y; rough Ni_palik conductors (alpha 0.05 tray/teapot, 0.1 milk pot/tin), two-sided",
+  "renderer": {"reference": "scene integrator prb, max_depth -1, rr_depth 5", "neural": "upstream neuralpath, max_depth 10, rr_depth 5, LoopRecord off, VCallRecord on (runtime workaround, see ednalib)"},
+  "gt": {"spp": 2048, "chunk": 64, "seed_A": 1000000, "seed_B": 2000000},
+  "neural": {"spp": 512, "chunk": 4, "seed": 0, "seed_repeat": 100000},
+  "states": {
+    "T0":  {},
+    "T1":  {"plate": [0.0, 0.0, 0.15], "teapot2": [0.0, 0.0, 0.15], "teapot3": [0.0, 0.0, 0.15], "teapot4": [0.0, 0.0, 0.15]},
+    "T1b": {"teapot2": [0.0, 0.0, 0.15]},
+    "T2":  {"teapot2": [0.10, 0.0, 0.0]},
+    "T3":  {"teapot2": [0.16, 0.0, 0.0]}
+  },
+  "roles": {
+    "T0": "canonical",
+    "T1": "relation-preserving motion control (failed the low-interaction GT criterion: 55% of T3)",
+    "T1b": "lateral relation change",
+    "T2": "moderate approach",
+    "T3": "strong approach"
+  },
+  "modes": {
+    "T0": ["upstream", "attached", "fixed"],
+    "T1": ["attached", "fixed", "upstream"],
+    "T1b": ["attached", "fixed", "upstream"],
+    "T2": ["attached", "fixed", "upstream"],
+    "T3": ["attached", "fixed", "upstream"]
+  },
+  "mode_roles": {
+    "attached": "primary correspondence contract",
+    "fixed": "declared envelope sensitivity",
+    "upstream": "T0: released baseline; moved states: coordinate-mismatch diagnostic (current-world queries), not a transport result"
+  },
+  "gt_output": "gt_design/v2",
+  "frozen_output": "frozen/teaset_locked",
+  "rois": "gt_design/v2/rois_<state>.npz from teaset_gt_states.py with protocol/teaset_gt_design_v2.json (interaction, tray, far, mover; surface-corresponded)",
+  "metrics": "per ROI and mode: physical change GT(Ti)-GT(T0), model change 8DNA(Ti)-8DNA(T0), model error 8DNA(Ti)-GT(Ti), T0 error on the same surfaces, linear response (gain = <dN,dG>/<dG,dG>, correlation); full-image error with SSIM",
+  "decision_rule": {
+    "primary_mode": "attached",
+    "primary_roi": "interaction",
+    "failure_in_state": "for a relation-change state (T1b, T2, T3): interaction-ROI display-MAE error rises by at least 25% over the same-surface T0 error AND the model reproduces less than half of the physical change (linear response gain < 0.5)",
+    "control_check": "the same error rise in T1 (relation preserved) must be below 25% of the T0 error for a failure to be attributed to the relation change rather than to generic movement/query handling",
+    "classification": "CROSS-MODEL GEOMETRY-CONFIGURATION FAILURE OBSERVED if failure_in_state holds for at least one relation-change state and control_check holds; NO MEANINGFUL FAILURE UNDER TESTED REGIME if it holds for none; if it holds but control_check fails, the result is reported as failure with generic-movement confound (secondary UNRESOLVED or IMPLEMENTATION-LIKE)",
+    "secondary": "TRANSPORT-LIKE if the error rise concentrates where GT interreflection changed (interaction/tray) while the far ROI stays within 25% of its T0 error and fixed vs attached envelopes agree; LOCAL/SPATIAL-LIKE if the error follows the moved part's own surface or depends strongly on the envelope/query convention; IMPLEMENTATION-LIKE if T1 fails; otherwise UNRESOLVED"
+  }
+}
