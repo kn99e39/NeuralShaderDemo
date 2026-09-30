@@ -70,8 +70,10 @@ function StartRnaOnServer([string] $state) {
     if ($LASTEXITCODE -ne 0) { Note "FAIL copy config $state"; exit 1 }
     & $scp -o BatchMode=yes (Join-Path $PSScriptRoot '../server/train_rna.sh') (Join-Path $PSScriptRoot '../server/queue_rna.sh') "LabServer63:$remote/experiments/8dna_deformation_replication/server/"
     if ($LASTEXITCODE -ne 0) { Note "FAIL copy server scripts"; exit 1 }
-    # nohup + setsid so it survives this ssh session closing.
-    Remote "cd $remote && nohup setsid bash experiments/8dna_deformation_replication/server/queue_rna.sh $state > /dev/null 2>&1 < /dev/null & echo launched" | Out-Null
+    # setsid -f forks into a new session and returns at once. With the earlier
+    # 'nohup setsid ... &' the ssh call made from PowerShell did not return until
+    # the remote job ended (RNA T0: 34 min), which would block the local chain.
+    Remote "cd $remote && setsid -f bash experiments/8dna_deformation_replication/server/queue_rna.sh $state > /dev/null 2>&1 < /dev/null; echo launched" | Out-Null
     Note "LAUNCH rna_train_$state (LabServer63)"
 }
 

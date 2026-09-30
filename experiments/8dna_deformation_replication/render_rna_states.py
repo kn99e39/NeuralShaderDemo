@@ -54,6 +54,7 @@ def main() -> int:
                     help="frozen: T0 model at every state and mode (+ T0 seed-B repeat); refit: T3 model at T3")
     args = ap.parse_args()
     proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
+    L.init_upstream()  # environment_record reads the Mitsuba version, which needs a variant set
     out = L.RESULTS / proto["rna_output"]
     out.mkdir(parents=True, exist_ok=True)
     inf = proto["rna_inference"]
