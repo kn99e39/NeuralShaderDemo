@@ -11,7 +11,6 @@ $run = Join-Path $PSScriptRoot 'run.ps1'
 $log = Join-Path $root 'results/8dna_replication/logs'
 $res = Join-Path $root 'results/8dna_replication'
 $P = 'protocol/teaset_cross_backbone_locked.json'
-$wslRoot = '/mnt/c/Projects/NeuralShaderDemo'
 New-Item -ItemType Directory -Force $log | Out-Null
 $chain = Join-Path $log 'cross_backbone_chain.log'
 function Note([string] $m) { "$(Get-Date -Format o) $m" | Tee-Object -Append $chain | Write-Host }
@@ -26,27 +25,52 @@ function Step([string] $name, [string] $done, [string[]] $argv) {
     Note "END $name"
 }
 
-# Wait for a detached WSL job, then fail the chain if it did not exit 0.
-function WaitWsl([string] $name, [string] $statusFile) {
-    Note "WAIT $name"
-    while (-not (Test-Path $statusFile)) { Start-Sleep -Seconds 60 }
-    $status = (Get-Content $statusFile -Raw).Trim()
-    Note "STATUS $name $status"
-    if ($status -notmatch 'exit=0') { Note "FAIL $name"; exit 1 }
+# Copy a state's datasets to LabServer63 and start RNA training there, detached.
+# RNA training is pure PyTorch over the H5 files, so it does not need Mitsuba and
+# is unaffected by that server's mismatched OptiX libraries; it therefore runs in
+# parallel with the local Mitsuba-bound work instead of competing for this GPU.
+# References and evaluation renders stay on the 5080.
+function StartRnaOnServer([string[]] $states) {
+    $todo = @($states | Where-Object { -not (Test-Path (Join-Path $res "rna_teaset/ckpt/rna-teaset-$_-common-light")) })
+    if (-not $todo) { Note "SKIP rna_train (have checkpoints)"; return }
+    ssh -o BatchMode=yes LabServer63 "mkdir -p ~/NeuralShaderDemo/results/8dna_replication/rna_teaset/datasets ~/NeuralShaderDemo/results/8dna_replication/logs ~/NeuralShaderDemo/experiments/8dna_deformation_replication/{configs,server}"
+    foreach ($state in $todo) {
+        Note "COPY datasets $state -> LabServer63"
+        foreach ($split in 'train', 'val') {
+            scp -o BatchMode=yes (Join-Path $res "rna_teaset/datasets/teaset_${state}_$split.h5") `
+                "LabServer63:~/NeuralShaderDemo/results/8dna_replication/rna_teaset/datasets/"
+            if ($LASTEXITCODE -ne 0) { Note "FAIL copy teaset_${state}_$split.h5"; exit 1 }
+        }
+        scp -o BatchMode=yes (Join-Path $root "experiments/8dna_deformation_replication/configs/rna_teaset_$state.yml") `
+            "LabServer63:~/NeuralShaderDemo/experiments/8dna_deformation_replication/configs/"
+        if ($LASTEXITCODE -ne 0) { Note "FAIL copy config $state"; exit 1 }
+    }
+    scp -o BatchMode=yes (Join-Path $PSScriptRoot "../server/train_rna.sh") `
+        "LabServer63:~/NeuralShaderDemo/experiments/8dna_deformation_replication/server/"
+    if ($LASTEXITCODE -ne 0) { Note "FAIL copy train_rna.sh"; exit 1 }
+    # One detached shell runs the states in sequence (one server GPU); nohup +
+    # setsid so it survives this ssh session closing.
+    $seq = ($todo | ForEach-Object { "bash experiments/8dna_deformation_replication/server/train_rna.sh $_ > results/8dna_replication/logs/rna_teaset_$_.log 2>&1" }) -join '; '
+    Note "LAUNCH rna_train $($todo -join ',') (LabServer63)"
+    ssh -o BatchMode=yes LabServer63 "cd ~/NeuralShaderDemo && nohup setsid bash -c '$seq' > /dev/null 2>&1 < /dev/null & echo launched"
+    if ($LASTEXITCODE -ne 0) { Note "FAIL launch rna_train"; exit 1 }
 }
 
-# Launch an RNA training run detached inside WSL (AGENTS.md "Running long jobs in local WSL").
-function TrainRna([string] $state) {
-    $status = Join-Path $res "logs/wsl/rna_teaset_$state.status"
-    if (Test-Path (Join-Path $res "rna_teaset/ckpt/rna-teaset-$state-common-light")) { Note "SKIP rna_train_$state"; return }
-    Remove-Item $status -ErrorAction SilentlyContinue
-    Note "LAUNCH rna_train_$state"
-    wsl.exe -d Ubuntu-22.04 -u root --exec bash "$wslRoot/experiments/dynamic_transport_failure/scripts/wsl_run_detached.sh" `
-        "rna_teaset_$state" "$wslRoot/results/8dna_replication/logs/wsl" "$wslRoot/external/relightable-neural-assets" -- `
-        .venv/bin/python scripts/train.py --config "../../experiments/8dna_deformation_replication/configs/rna_teaset_$state.yml" `
-        --checkpoint_dir ../../results/8dna_replication/rna_teaset/ckpt --seed 0
-    if ($LASTEXITCODE -ne 0) { Note "FAIL launch rna_train_$state"; exit 1 }
-    WaitWsl "rna_train_$state" $status
+# Block until a server-side RNA run has written its .status file, then check it.
+function WaitRnaOnServer([string] $state) {
+    if (Test-Path (Join-Path $res "rna_teaset/ckpt/rna-teaset-$state-common-light")) { return }
+    Note "WAIT rna_train_$state"
+    while ($true) {
+        $status = ssh -o BatchMode=yes LabServer63 "cat ~/NeuralShaderDemo/results/8dna_replication/logs/rna_teaset_$state.status 2>/dev/null"
+        if ($status) { break }
+        Start-Sleep -Seconds 120
+    }
+    Note "STATUS rna_train_$state $status"
+    if ($status -notmatch 'exit=0') { Note "FAIL rna_train_$state"; exit 1 }
+    Note "FETCH rna checkpoints $state"
+    scp -o BatchMode=yes -r "LabServer63:~/NeuralShaderDemo/results/8dna_replication/rna_teaset/ckpt/rna-teaset-$state-common-light" `
+        (Join-Path $res "rna_teaset/ckpt/")
+    if ($LASTEXITCODE -ne 0) { Note "FAIL fetch rna checkpoints $state"; exit 1 }
 }
 
 # --- 1. GPU-bound Mitsuba work, serial ---------------------------------------
@@ -65,15 +89,20 @@ Step 'static_seal_wavefront' 'static_baseline/seal_scene2_official_wavefront/bas
 Step 'static_teaset_wavefront' 'static_baseline/teaset_T0_512_wavefront/baseline.json' `
     @('run_static_baseline.py', '--asset', 'teaset', '--scene-fn', 'get_scene', '--res', '512', '--spp', '256', '--ref-spp', '2048', '--ref-chunk', '32', '--tag', 'teaset_T0_512_wavefront')
 
-# --- 2. Training, serial ------------------------------------------------------
-TrainRna 'T0'
+# --- 2. Training --------------------------------------------------------------
+# RNA trains on LabServer63 (no Mitsuba needed) while the Mitsuba-bound 8DNA
+# refits run here, so the two do not compete for this GPU.
+# One server GPU, so the two RNA runs go one after the other in a single
+# detached shell; both still overlap the local 8DNA training.
+StartRnaOnServer 'T0' 'T3'
 Step 'train_8dna_T0_retrain' 'refit/T0_retrain/last.ckpt' `
     @('train_8dna_state.py', '--state', 'T0', '--protocol', 'protocol/teaset_frozen_locked.json', '--device', '0',
       '--max_epochs', '30', '--seed', '9', '--log_path', "$res/refit", '--experiment_name', 'T0_retrain')
 Step 'train_8dna_T3_refit' 'refit/T3_refit/last.ckpt' `
     @('train_8dna_state.py', '--state', 'T3', '--protocol', 'protocol/teaset_frozen_locked.json', '--device', '0',
       '--max_epochs', '30', '--seed', '9', '--log_path', "$res/refit", '--experiment_name', 'T3_refit')
-TrainRna 'T3'
+WaitRnaOnServer 'T0'
+WaitRnaOnServer 'T3'
 
 # --- 3. Evaluation ------------------------------------------------------------
 Step 'render_8dna_refits' 'refit/renders/renders.json' @('render_8dna_refits.py')
