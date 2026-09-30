@@ -63,6 +63,9 @@ def main() -> int:
     rec["train_h5_sha256"] = L.sha256(train_h5)
 
     jobs = [(s, m, ck, train_h5, f"{s}_{m}") for s in proto["states"] for m in inf["modes"]]
+    # T0 again with independent area-light samples (features T0_B.npz): RNA's own
+    # seed-to-seed noise for the decision rule's noise precondition
+    jobs.append(("T0_B", "canonical", ck, train_h5, "T0_canonical_B"))
     refit_dir = L.RESULTS / "rna_teaset" / "ckpt" / "rna-teaset-T3-common-light"
     if refit_dir.exists():
         ck3, psnr3 = best_checkpoint("rna-teaset-T3-common-light")
@@ -82,7 +85,7 @@ def main() -> int:
             f" --training-light-intensity {inf['training_light_intensity']}"
             f" --out {WSL_ROOT}/{L.rel(prefix)}")
         img = np.load(str(prefix) + ".npy")
-        rec["renders"][tag] = {"state": state, "mode": mode, "mean": float(img.mean()),
+        rec["renders"][tag] = {"state": state, "features": L.rel(feats), "mode": mode, "mean": float(img.mean()),
                                "finite": bool(np.isfinite(img).all()), "shape": list(img.shape)}
         print(tag, stdout.strip().splitlines()[-1] if stdout.strip() else "", flush=True)
     L.write_json(out / "rna_render.json", rec)

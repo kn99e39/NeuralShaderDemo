@@ -9,6 +9,13 @@
                  dtype and attributes (loaded by RNA's DataModule separately in WSL).
 4. pullback    : in T3 features every milk-pot sample's canonical position lies on
                  the canonical milk-pot mesh; T0 canonical == current.
+5. area light  : surface irradiance from the features' area-light samples
+                 (sum of weight * visibility * n.w) matches Mitsuba's own emitter
+                 sampling of the same rectangle: mean within 0.5%, per-pixel
+                 difference at Monte Carlo level, same unlit fraction.
+Tests 1-2 use a directional light explicitly (the training-data semantics);
+features for tests 4-5 go to a bridge_tests protocol copy at 128^2, never to
+the evaluation features directory.
 """
 
 from __future__ import annotations
@@ -35,9 +42,10 @@ def main() -> int:
     to_light = np.asarray(proto["lighting"]["to_light"], float)
     to_light /= np.linalg.norm(to_light)
     E = proto["lighting"]["irradiance"]
+    directional = {"type": "directional", "to_light": proto["lighting"]["to_light"], "irradiance": E}
 
     # 1. estimator identity
-    scene = mi.load_dict(T.scene_dict(res, {}, proto["lighting"]))
+    scene = mi.load_dict(T.scene_dict(res, {}, directional))
     sensor = scene.sensors()[0]
     mine = B.render_view(scene, sensor, res, np.repeat(to_light[None], res * res, 0), spp, 64, 1, E)["color"].reshape(res, res, 3)
     prb_a = np.array(mi.render(scene, spp=spp, seed=5), dtype=np.float32)  # scene reference integrator, wavefront
@@ -84,10 +92,13 @@ def main() -> int:
                      and {"aabb_min", "aabb_max", "resolution"} <= set(attrs)}
 
     # 4. pullback
+    small = dict(proto, res=res, rna_features_dir="rna_teaset/bridge_tests/features")
+    small_path = out / "protocol_128.json"
+    L.write_json(small_path, small)
     for s in ("T0", "T3"):
-        B.features(argparse.Namespace(protocol=args.protocol, state=s))
-    z0 = np.load(L.RESULTS / proto["rna_features_dir"] / "T0.npz")
-    z3 = np.load(L.RESULTS / proto["rna_features_dir"] / "T3.npz")
+        B.features(argparse.Namespace(protocol=str(small_path), state=s, light_seed="A"))
+    z0 = np.load(L.RESULTS / small["rna_features_dir"] / "T0.npz")
+    z3 = np.load(L.RESULTS / small["rna_features_dir"] / "T3.npz")
     same0 = float(np.abs(z0["canonical_position"] - z0["position"])[z0["hit"]].max())
     mover = list(z3["part_names"]).index("teapot2")
     sel = z3["hit"] & (z3["part"] == mover)
@@ -101,6 +112,29 @@ def main() -> int:
     rec["pullback"] = {"T0_canonical_minus_current_max": same0, "T3_mover_samples": int(sel.sum()),
                        "T3_mover_rehit_fraction": float(ok.mean()),
                        "pass": same0 == 0.0 and ok.mean() > 0.999}
+    # 5. area-light samples vs Mitsuba emitter sampling (pixel-centre hits)
+    rec["area_light"] = {}
+    for s in ("T0", "T3"):
+        scene = mi.load_dict(T.scene_dict(96, proto["states"][s], proto["lighting"]))
+        si, feat = B.surface_features(scene, B.camera_rays(scene.sensors()[0], 96, np.array([[0.5, 0.5]])))
+        n, hit = feat["normal"], feat["hit"]
+        ours = np.zeros(len(n))
+        for r in range(8):
+            ls = B.area_light_samples(scene, proto, si, n, np.random.default_rng(100 + r))
+            ours += (ls["light_weight"] * ls["light_vis"] * np.maximum(0, np.einsum("lmk,lk->lm", ls["light_dir"], n))).mean(1) / 8
+        ref = np.zeros(len(n))
+        sampler = mi.load_dict({"type": "independent"})
+        sampler.seed(7, len(n))
+        for _ in range(256):
+            ds, w = scene.sample_emitter_direction(si, sampler.next_2d(), True, si.is_valid())
+            ref += np.array(w.x) * np.maximum(0, np.sum(n * B._vec(ds.d), -1)) / 256
+        a, b = ours[hit], ref[hit]
+        rec["area_light"][s] = {"mean_ours": float(a.mean()), "mean_mitsuba": float(b.mean()),
+                                "rel_pixel_mae": float(np.abs(a - b).mean() / b.mean()),
+                                "unlit_ours": float((a == 0).mean()), "unlit_mitsuba": float((b == 0).mean())}
+    rec["area_light"]["pass"] = all(abs(v["mean_ours"] / v["mean_mitsuba"] - 1) < 0.005 and v["rel_pixel_mae"] < 0.03
+                                    and abs(v["unlit_ours"] - v["unlit_mitsuba"]) < 0.005
+                                    for v in rec["area_light"].values() if isinstance(v, dict))
     rec["pass"] = all(v["pass"] for v in rec.values() if isinstance(v, dict))
     L.write_json(out / "bridge_tests.json", rec)
     print(json.dumps({k: (v if not isinstance(v, dict) else {kk: vv for kk, vv in v.items() if kk not in ("shapes", "attrs")}) for k, v in rec.items()}, indent=1, default=str))

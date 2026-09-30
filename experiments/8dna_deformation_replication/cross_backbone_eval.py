@@ -32,10 +32,31 @@ def rule(ev: dict, label: str, mode: str) -> dict:
                       "dG": r[k]["physical_change_GT_vs_GT0"]["display_mae"],
                       "dN": r[k][f"model_change_{label}_vs_{label}0"]["display_mae"]}
         row[s] = per
-    fail = [s for s in RELATION_STATES if row[s]["interaction"]["rise"] >= 0.25 and (row[s]["interaction"]["gain"] or 0) < 0.5]
+    # noise precondition (protocol decision_rule.noise_precondition): a state is
+    # interpreted only if its interaction dG exceeds 3x the model's own T0 seed
+    # repeat and 3x the reference repeat in that ROI.
+    noise = ev["noise"]["interaction"]
+    ref_noise = noise["gt_repeat_A_vs_B"]["display_mae"]
+    model_noise = noise.get("neural_seed_repeat_T0", {}).get("display_mae")
+    for s in row:
+        dg = row[s]["interaction"]["dG"]
+        row[s]["interaction"]["noise_precondition"] = {
+            "dG_over_reference_noise": dg / ref_noise,
+            "dG_over_model_noise": None if model_noise is None else dg / model_noise,
+            "pass": model_noise is not None and dg > 3 * model_noise and dg > 3 * ref_noise}
+    meets = [s for s in RELATION_STATES if row[s]["interaction"]["rise"] >= 0.25 and (row[s]["interaction"]["gain"] or 0) < 0.5]
+    fail = [s for s in meets if row[s]["interaction"]["noise_precondition"]["pass"]]
+    supporting = [s for s in meets if s not in fail]
+    interpretable = [s for s in RELATION_STATES if row[s]["interaction"]["noise_precondition"]["pass"]]
     control = row["T1"]["interaction"]["rise"] < 0.25
-    verdict = ("FROZEN FAILURE" if fail and control else "NO MEANINGFUL FAILURE" if not fail else "FAILURE, CONTROL CONFOUNDED")
-    return {"mode": mode, "per_state": row, "failing_states": fail, "control_T1_ok": control, "classification": verdict}
+    if not interpretable:
+        verdict = "NOT INTERPRETABLE (no relation state above the noise floors)"
+    else:
+        verdict = ("FROZEN FAILURE" if fail and control else "NO MEANINGFUL FAILURE" if not fail else "FAILURE, CONTROL CONFOUNDED")
+    return {"mode": mode, "per_state": row, "noise_floors": {"reference": ref_noise, "model": model_noise},
+            "interpretable_states": interpretable, "failing_states": fail,
+            "meets_failure_criterion_below_noise_precondition": supporting,
+            "control_T1_ok": control, "classification": verdict}
 
 
 def paired_error(img, gt_img, m, idx=None):
@@ -84,8 +105,9 @@ def main() -> int:
     # RNA (common light)
     rna_modes = ("canonical", "current")
     rna = {(s, m): np.load(rdir / f"{s}_{m}.npy").astype(np.float32) for s in states for m in rna_modes}
+    rna_b = np.load(rdir / "T0_canonical_B.npy").astype(np.float32)  # independent light samples: RNA's own noise
     proto_rna = dict(proto, modes={s: list(rna_modes) for s in states})
-    evr = evaluate(proto_rna, gt, rna, None, rois, model_label="RNA")
+    evr = evaluate(proto_rna, gt, rna, rna_b, rois, model_label="RNA")
     rec["rna_eval"] = evr
     rec["rna"] = {"rule_canonical": rule(evr, "RNA", "canonical"), "rule_current": rule(evr, "RNA", "current")}
 

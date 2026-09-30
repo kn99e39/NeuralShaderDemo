@@ -221,39 +221,103 @@ def generate_h5(args) -> None:
     print("wrote", L.rel(out))
 
 
+def area_light_samples(scene, proto: dict, si, normal: np.ndarray, rng) -> dict:
+    """Stratified samples of the protocol's area light for every lane of `si`.
+
+    RNA's own light model (rna/lights.py RectangularLight): a point y uniform on
+    the emitter rectangle, direction w = (y - x)/|y - x| from the current hit x
+    and weight E = L_r * cos_light / (|y - x|^2 * pdf_area), the perpendicular
+    irradiance that sample stands for; the network's directional response is
+    scaled by E / training_light_intensity.  Visibility is the binary test of
+    the segment x -> y (and n.w > 0), the per-direction semantics of the
+    training data's diffuse_direct.  The rectangle is read from the loaded
+    scene, so it is exactly the emitter the reference was rendered with.
+    Returns (lanes, M, .) arrays.
+    """
+    mi, dr = L.init_upstream()
+    ls = proto["rna_inference"]["light_sampling"]
+    nx, ny = ls["strata"]
+    m = ls["samples_per_subpixel"]
+    if nx * ny != m:
+        raise ValueError("strata must cover samples_per_subpixel")
+    emitters = [s for s in scene.shapes() if s.is_emitter()]
+    if len(emitters) != 1 or proto["lighting"]["type"] != "area":
+        raise RuntimeError("expected exactly one area emitter")
+    rect = emitters[0]
+    radiance = T.scene_dict(8, None, proto["lighting"])["sun"]["emitter"]["radiance"]["value"]
+    lanes = len(normal)
+    x = _vec(si.p)
+    valid = si.is_valid()
+    dirs = np.zeros((lanes, m, 3), np.float32)
+    weight = np.zeros((lanes, m), np.float32)
+    vis = np.zeros((lanes, m), bool)
+    for j in range(m):
+        a, b = j % nx, j // nx
+        u = ((a + rng.random(lanes)) / nx).astype(np.float32)
+        v = ((b + rng.random(lanes)) / ny).astype(np.float32)
+        ps = rect.sample_position(0.0, mi.Point2f(u, v))
+        y = _vec(ps.p)
+        d = y - x
+        dist = np.linalg.norm(d, axis=-1)
+        w = d / np.maximum(dist, 1e-12)[:, None]
+        cos_l = np.maximum(0.0, -np.sum(_vec(ps.n) * w, -1))
+        e = radiance * cos_l / (np.maximum(dist, 1e-12) ** 2 * np.array(ps.pdf))
+        blocked = np.array(scene.ray_test(si.spawn_ray_to(ps.p), valid))
+        dirs[:, j] = w
+        weight[:, j] = e
+        vis[:, j] = (np.sum(normal * w, -1) > 0) & ~blocked & np.array(valid)
+    return {"light_dir": dirs, "light_weight": weight, "light_vis": vis}
+
+
 def features(args) -> None:
-    """Inference buffers at the evaluation camera for one state (K stratified sub-pixel samples)."""
+    """Inference buffers at the evaluation camera for one state.
+
+    K stratified sub-pixel samples, each with M stratified area-light samples
+    (protocol rna_inference.light_sampling); light arrays are stored for hit
+    samples only, in hit order.  --light-seed B draws independent light samples
+    (same camera samples) for RNA's own seed-to-seed noise.
+    """
     mi, dr = L.init_upstream()
     proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
     tr = proto["states"][args.state]
     res, k = proto["res"], proto["rna_inference"]["subpixel_grid"]
+    ls = proto["rna_inference"]["light_sampling"]
     scene = mi.load_dict(T.scene_dict(res, tr, proto["lighting"]))
     ids = T.part_shape_ids(scene, tr)
     g = (np.arange(k) + 0.5) / k
     offsets = np.stack(np.meshgrid(g, g, indexing="xy"), -1).reshape(-1, 2)
     ray = camera_rays(scene.sensors()[0], res, offsets)
     si, feat = surface_features(scene, ray)
-    to_light = np.asarray(proto["lighting"]["to_light"], float)
-    to_light /= np.linalg.norm(to_light)
-    tl = np.broadcast_to(to_light, feat["position"].shape)
-    vis = visibility(scene, si, feat["normal"], tl)
+    seed = ls["seeds"][args.light_seed] + 7919 * list(proto["states"]).index(args.state)
+    light = area_light_samples(scene, proto, si, feat["normal"], np.random.default_rng(seed))
+    hit = feat["hit"]
+    light = {key: val[hit] for key, val in light.items()}
     canonical = feat["position"].copy()
     part = np.full(len(canonical), -1, np.int8)
     for pi, (name, sid) in enumerate(ids.items()):
         sel = feat["shape_id"] == sid
         part[sel] = pi
         canonical[sel] -= np.asarray(tr.get(name, (0, 0, 0)), float)
-    if np.any(feat["hit"] & (part < 0)):
+    if np.any(hit & (part < 0)):
         raise RuntimeError("asset sample on an undeclared part")
-    cb = scene.shapes()[0].bbox()
-    out = L.RESULTS / proto["rna_features_dir"] / f"{args.state}.npz"
+    asset = [s for s in scene.shapes() if not s.is_emitter()]
+    if len(asset) != 1:
+        raise RuntimeError(f"expected one asset shape, found {len(asset)}")
+    cb = asset[0].bbox()
+    suffix = "" if args.light_seed == "A" else f"_{args.light_seed}"
+    out = L.RESULTS / proto["rna_features_dir"] / f"{args.state}{suffix}.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(out, res=res, samples=k * k, hit=feat["hit"], part=part, part_names=np.array(list(ids)),
+    np.savez_compressed(out, res=res, samples=k * k, hit=hit, part=part, part_names=np.array(list(ids)),
                         position=feat["position"].astype(np.float32), canonical_position=canonical.astype(np.float32),
                         normal=feat["normal"].astype(np.float32), camera_dir=feat["camera_dir"].astype(np.float32),
-                        visibility=vis, to_light=to_light.astype(np.float32), irradiance=proto["lighting"]["irradiance"],
+                        light_dir=light["light_dir"].astype(np.float16), light_weight=light["light_weight"],
+                        light_vis=light["light_vis"], light_seed=args.light_seed,
+                        lighting=json.dumps(proto["lighting"], sort_keys=True),
+                        light_sampling=json.dumps(ls, sort_keys=True), project_commit=L.git_head(L.ROOT) or "",
                         current_aabb_min=np.array(cb.min, np.float32), current_aabb_max=np.array(cb.max, np.float32))
-    print("wrote", L.rel(out), "hit fraction", float(feat["hit"].mean()))
+    e = light["light_weight"].mean(1)
+    print("wrote", L.rel(out), "hit fraction", float(hit.mean()), "lit fraction", float(light["light_vis"].mean()),
+          "mean weight", float(e.mean()), "irradiance", proto["lighting"]["irradiance"])
 
 
 def main() -> int:
@@ -266,6 +330,7 @@ def main() -> int:
     f = sub.add_parser("features")
     f.add_argument("--protocol", required=True)
     f.add_argument("--state", required=True)
+    f.add_argument("--light-seed", choices=("A", "B"), default="A")
     args = ap.parse_args()
     generate_h5(args) if args.cmd == "h5" else features(args)
     return 0

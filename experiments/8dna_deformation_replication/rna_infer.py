@@ -5,12 +5,15 @@
         --checkpoint <ckpt> --train-h5 <teaset_T0_train.h5> --features <state.npz> \
         --mode canonical|current --out <prefix>
 
-Mirrors rna/renderers.py render_frame_neural for a directional light:
+Mirrors rna/renderers.py render_frame_neural with a RectangularLight:
 module(position_aabb01, camera_dir, light_dir, normal) -> 6 channels, the
-lit (visibility > 0) or shadowed branch, clamp >= 0, times
-irradiance / training_light_intensity.  The module is loaded as the official
-renderer does (load_from_checkpoint, strict=False, blur sigma 1).  Pixel value
-= mean over the buffer's sub-pixel samples, misses count 0.
+lit (visibility > 0) or shadowed branch, clamp >= 0, times the light sample's
+irradiance / training_light_intensity.  Each sub-pixel sample carries M
+area-light samples from rna_bridge.features (direction, weight, binary
+segment visibility); the sample's radiance is their mean.  The module is
+loaded as the official renderer does (load_from_checkpoint, strict=False,
+blur sigma 1).  Pixel value = mean over the buffer's sub-pixel samples,
+misses count 0.
 
 mode canonical : position = pulled-back canonical hit, normalized by the
                  training H5 AABB (primary correspondence contract)
@@ -37,7 +40,7 @@ def main() -> int:
     ap.add_argument("--training-light-intensity", type=float, default=5.0)
     ap.add_argument("--module", default="NeuralSurfaceTriplaneModule")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--batch", type=int, default=1 << 20)
+    ap.add_argument("--batch", type=int, default=1 << 20, help="network queries per batch")
     args = ap.parse_args()
     sys.path.insert(0, os.getcwd())
     import h5py
@@ -62,23 +65,34 @@ def main() -> int:
         pos, lo, hi = z["position"], z["current_aabb_min"], z["current_aabb_max"]
     hit = z["hit"].astype(bool)
     idx = np.flatnonzero(hit)
-    to_light = np.broadcast_to(z["to_light"], (len(idx), 3)).astype(np.float32)
-    scale = float(z["irradiance"]) / args.training_light_intensity
+    if "light_dir" not in z.files:
+        raise SystemExit("features lack area-light samples (superseded delta-light contract)")
+    light_dir = z["light_dir"].astype(np.float32)   # (hits, M, 3), in hit order
+    light_w = z["light_weight"].astype(np.float32)  # (hits, M)
+    light_vis = z["light_vis"]                      # (hits, M)
+    m = light_dir.shape[1]
+    if light_dir.shape[0] != len(idx):
+        raise SystemExit("light samples do not match the hit samples")
+    pos_h, cam_h, nrm_h = pos[idx], z["camera_dir"][idx], z["normal"][idx]
     rad = np.zeros((len(hit), 3), np.float32)
+    step = max(1, args.batch // m)
+    t = lambda a: th.tensor(np.ascontiguousarray(a), dtype=th.float32, device=dev)
     with th.no_grad():
-        for s in range(0, len(idx), args.batch):
-            sel = idx[s:s + args.batch]
-            t = lambda a: th.tensor(np.ascontiguousarray(a), dtype=th.float32, device=dev).unsqueeze(0)
-            p = ops.normalize_positions(t(pos[sel]), t(lo), t(hi))
-            pred = module(p, t(z["camera_dir"][sel]), t(to_light[:len(sel)]), t(z["normal"][sel]))
-            vis = t(z["visibility"][sel].astype(np.float32)[:, None])
+        for s in range(0, len(idx), step):
+            e = min(s + step, len(idx))
+            rep = lambda a: t(a[s:e]).unsqueeze(1).expand(-1, m, -1).reshape(-1, a.shape[-1])
+            p = ops.normalize_positions(rep(pos_h).unsqueeze(0), t(lo).unsqueeze(0), t(hi).unsqueeze(0))
+            pred = module(p, rep(cam_h).unsqueeze(0), t(light_dir[s:e]).reshape(1, -1, 3), rep(nrm_h).unsqueeze(0))
+            vis = t(light_vis[s:e].astype(np.float32)).reshape(1, -1, 1)
             pred = th.where(vis > 0.0, pred[..., :3], pred[..., 3:]).clamp(min=0.0)
-            rad[sel] = (pred * scale).squeeze(0).cpu().numpy()
+            w = t(light_w[s:e]).reshape(1, -1, 1) / args.training_light_intensity
+            rad[idx[s:e]] = (pred * w).reshape(e - s, m, 3).mean(1).cpu().numpy()
     img = rad.reshape(res * res, k, 3).mean(1).reshape(res, res, 3)
     np.save(args.out + ".npy", img)
     json.dump({"checkpoint": args.checkpoint, "features": args.features, "mode": args.mode, "train_h5_aabb": [train_min.tolist(), train_max.tolist()],
-               "aabb_used": [np.asarray(lo).tolist(), np.asarray(hi).tolist()], "irradiance_scale": scale,
-               "hit_samples": int(len(idx))}, open(args.out + ".json", "w"), indent=1)
+               "aabb_used": [np.asarray(lo).tolist(), np.asarray(hi).tolist()],
+               "training_light_intensity": args.training_light_intensity, "light_samples_per_sample": int(m),
+               "light_seed": str(z["light_seed"]), "hit_samples": int(len(idx))}, open(args.out + ".json", "w"), indent=1)
     print("wrote", args.out + ".npy", "mean", float(img.mean()))
     return 0
 
