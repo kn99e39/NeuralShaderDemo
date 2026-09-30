@@ -16,9 +16,21 @@ $chain = Join-Path $log 'cross_backbone_chain.log'
 function Note([string] $m) { "$(Get-Date -Format o) $m" | Tee-Object -Append $chain | Write-Host }
 Note "CHAIN START commit $(git -C $root rev-parse --short HEAD)"
 
-# Run a project script unless $done already exists.
+# Run a project script unless $done already exists and is current for this
+# protocol. An existing file is not enough on its own: a dataset or render left
+# by a superseded regime would otherwise be skipped over and silently reused.
+function Current([string] $done) {
+    $path = Join-Path $res $done
+    if (-not (Test-Path $path)) { return $false }
+    if ($done -notlike '*rna_teaset/datasets/*.h5') { return $true }
+    $check = pwsh -NoProfile -File $run 'check_dataset_current.py' '--protocol' $P '--h5' $path 2>&1
+    if ($LASTEXITCODE -eq 0) { return $true }
+    Note "STALE $done ($check)"
+    return $false
+}
+
 function Step([string] $name, [string] $done, [string[]] $argv) {
-    if ($done -and (Test-Path (Join-Path $res $done))) { Note "SKIP $name (have $done)"; return }
+    if ($done -and (Current $done)) { Note "SKIP $name (have $done)"; return }
     Note "START $name"
     pwsh -NoProfile -File $run @argv *> (Join-Path $log "$name.log")
     if ($LASTEXITCODE -ne 0) { Note "FAIL $name ($LASTEXITCODE)"; exit 1 }

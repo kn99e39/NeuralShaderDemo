@@ -211,6 +211,11 @@ def generate_h5(args) -> None:
         f.attrs["aabb_max"] = np.array(bbox.max, dtype=np.float32)
         f.attrs["bridge"] = "experiments/8dna_deformation_replication/rna_bridge.py (Mitsuba, teaset common-light)"
         f.attrs["state"] = args.state
+        # Provenance so a dataset from a superseded regime cannot be mistaken for a
+        # current one: the lighting and the generation settings it was rendered under.
+        f.attrs["lighting"] = json.dumps(proto["lighting"], sort_keys=True)
+        f.attrs["generation"] = json.dumps(gen, sort_keys=True)
+        f.attrs["project_commit"] = L.git_head(L.ROOT) or ""
     L.write_json(out.with_suffix(".cameras.json"), {"state": args.state, "split": args.split, "cameras": cams,
                                                     "aabb": [list(bbox.min), list(bbox.max)], "sha256": L.sha256(out)})
     print("wrote", L.rel(out))
