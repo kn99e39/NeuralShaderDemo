@@ -195,9 +195,55 @@ clear 3×; **T2 does not** and is reported as supporting evidence only. T1 is th
 control, where a small change is expected. ROI pixel sets are identical to
 worklog 21's. RNA's noise ratio is measured once RNA exists.
 
-### RNA static gate *(pending)*
+### RNA training (LabServer63)
 
-### Frozen response, both models *(pending)*
+Rain HQ configuration, unchanged; T0 datasets of lighting rev 3. 250 epochs in
+34 min (17:48–18:22). Validation PSNR plateaued near 18.8 dB from about epoch
+70; the validation-best checkpoint (the locked selection rule) is epoch 187,
+**18.87 dB**. No setting was changed after seeing it.
+
+### Static gate G1 (T0 interaction error below the T3 physical signal)
+
+| model | T0 interaction error | reference T3 change | pass |
+|---|---|---|---|
+| 8DNA (attached) | 0.0718 | 0.0939 | yes |
+| RNA (canonical) | 0.0900 | 0.0939 | yes, **thin margin (4%)** |
+
+### Frozen response, common-light regime (each model against its own T0)
+
+Interaction ROI, display MAE; gain = ⟨dN, dG⟩/⟨dG, dG⟩ (linear). Noise
+floors (T0 seed repeat): reference 0.0049, 8DNA 0.0207, RNA 0.0060.
+
+| state | dG | 8DNA rise | 8DNA gain | 8DNA dN | dG/8DNA noise | RNA rise | RNA gain | RNA dN | dG/RNA noise |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 (control) | 0.0442 | −1.3% | 0.70 | 0.0483 | 2.1 | +1.5% | 0.78 | 0.0428 | 7.4 |
+| T1b | 0.1069 | +105% | 0.00 | 0.0015 | 5.2 | +69% | 0.00 | 0.0062 | 17.8 |
+| T2 | 0.0581 | +26% | 0.00 | 0.0009 | 2.8 ✗ | +17% | −0.01 | 0.0059 | 9.7 |
+| T3 | 0.0939 | +59% | 0.00 | 0.0018 | 4.5 | +38% | 0.00 | 0.0068 | 15.7 |
+
+Rule outcome (locked rule + noise precondition):
+
+| model / mode | classification | failing | meets criterion below noise floor |
+|---|---|---|---|
+| 8DNA attached (primary) | FROZEN FAILURE | T1b, T3 | T2 |
+| 8DNA fixed | FROZEN FAILURE | T1b, T3 | T2 |
+| 8DNA upstream (diagnostic) | failure, control confounded | T1b, T3 | T2 |
+| RNA canonical (primary) | FROZEN FAILURE | T1b, T3 | — |
+| RNA current (diagnostic) | FROZEN FAILURE | T1b, T3 | — |
+
+RNA T2 is above its noise floor but its rise (+17%) is below the 25% threshold,
+so it is not a failing state (its gain is still ≈ 0).
+
+Other ROIs (rise %, gain), T1b / T2 / T3:
+
+| ROI | 8DNA | RNA |
+|---|---|---|
+| mover | +27/0.21, +17/0.21, +30/0.17 | +28/0.19, +21/0.11, +36/0.10 |
+| tray | +15/0.01, +7/0.00, +11/0.00 | +2/0.01, +2/0.00, +3/0.00 |
+| far | +5/0.00, +1/0.00, +6/0.00 | +3/0.00, +3/0.00, +6/0.00 |
+
+Record: `results/8dna_replication/cross_backbone/cross_backbone_frozen.json`
+(RNA renders `rna_teaset/frozen/`, 8DNA `frozen/teaset_common_light_8dna/`).
 
 ### Refits *(pending)*
 
