@@ -75,6 +75,11 @@ function WaitRnaOnServer([string] $state) {
 
 # --- 1. GPU-bound Mitsuba work, serial ---------------------------------------
 Step 'w21_reference_correction' 'w21_reference_correction/w21_reference_correction.json' @('w21_reference_correction.py')
+# GT-only design: references, ROIs and the physical-signal gate for this regime.
+# --require-pass stops the chain if the gate fails, so no neural work is done on
+# a regime whose signal is not above the noise floors.
+Step 'gt_design_common_light' 'gt_design/common_light/gt_states.json' `
+    @('teaset_gt_states.py', '--protocol', 'protocol/teaset_common_light_gt_design.json', '--out', 'gt_design/common_light', '--require-pass')
 Step 'frozen_8dna_common_light' 'frozen/teaset_common_light_8dna/frozen_eval.json' @('teaset_frozen_eval.py', '--protocol', $P)
 foreach ($s in 'T0', 'T1', 'T1b', 'T2', 'T3') {
     Step "features_$s" "rna_teaset/features/$s.npz" @('rna_bridge.py', 'features', '--protocol', $P, '--state', $s)
