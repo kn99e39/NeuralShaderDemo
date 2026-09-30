@@ -127,8 +127,8 @@
       "train": 200,
       "val": 40
     },
-    "spp": 1024,
-    "chunk": 32,
+    "spp": 512,
+    "chunk": 128,
     "camera_radius": 2.5,
     "camera_lookat": [
       0.0,
@@ -143,7 +143,7 @@
       "train": 11,
       "val": 12
     },
-    "policy": "Rain HQ view count (200/40) at 512^2; 1024 spp as the official Lego config (official range 256-1024)"
+    "policy": "Rain HQ view count (200/40) at 512^2. 512 spp, chosen before any RNA training from a GT-only cost/quality measurement on one representative training view against a 4096-spp reference (results/8dna_replication/rna_teaset/spp_cost_quality.json): display MAE vs 4096 spp is 0.0029 at 512 and 0.0023 at 1024, both 20-40x below this batch's interaction-ROI physical signal (0.062-0.099), while 512 halves generation cost. The official range is 256-1024 and the project's Rain datasets used 256. chunk 128 is a performance setting only (GPU lanes per kernel), not part of the estimator."
   },
   "rna_training": {
     "config": "experiments/8dna_deformation_replication/configs/rna_teaset_T0.yml (Rain HQ static config with teaset datasets: NeuralSurfaceTriPlane 512^2 x 8 channels, MLP 4 x 512, 250 epochs, lr 1e-3 step 0.5/50, log-L2, visibility weight 10, blur 8 -> 1 over 20k it)",
