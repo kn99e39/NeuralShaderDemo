@@ -54,12 +54,24 @@ def scene_dict(res: int, translations: dict | None = None, lighting: dict | None
 
     Parts with zero translation get no `to_world` key, so the canonical state is
     the unmodified upstream dictionary.  `lighting=None` keeps the upstream
-    envmap (worklog 21).  `lighting={"type": "directional", "to_light": [x, y, z],
-    "irradiance": E}` replaces it with a black world and one directional light
-    (the cross-backbone common-light regime); geometry, camera and materials
-    are unchanged.  An optional "reference_integrator" replaces the scene's
-    reference integrator (prb) for that regime; `integrator` overrides it for
-    any regime.
+    envmap (worklog 21); geometry, camera and materials are always unchanged.
+    Otherwise `lighting` replaces the envmap with a black world and one light,
+    for the cross-backbone common-light regime:
+
+      {"type": "directional", "to_light": [x, y, z], "irradiance": E}
+      {"type": "area", "to_light": [x, y, z], "irradiance": E,
+       "distance": d, "half_angle_deg": a}
+
+    The area light is a square emitter centred at `distance * to_light` from
+    the asset origin, facing it, sized to subtend `2 * half_angle_deg` and
+    scaled so the irradiance it delivers at the origin equals the directional
+    light's E.  It removes the delta light's specular fireflies (which made the
+    neural estimator's own noise 60-93% of the physical signal) while keeping
+    one incident direction per shading sample, which is what RNA's network and
+    its RectangularLight both assume.
+
+    An optional "reference_integrator" replaces the scene's reference
+    integrator (prb) for that regime; `integrator` overrides it for any regime.
     """
     mi, _ = L.init_upstream()
     from scenes.teaset import get_scene
@@ -70,13 +82,33 @@ def scene_dict(res: int, translations: dict | None = None, lighting: dict | None
         if np.any(t != 0):
             d["group0"][part]["to_world"] = mi.ScalarTransform4f.translate([float(v) for v in t])
     if lighting is not None:
-        if lighting["type"] != "directional":
-            raise ValueError(lighting)
         del d["background"]
         to_light = np.asarray(lighting["to_light"], float)
         to_light /= np.linalg.norm(to_light)
-        d["sun"] = {"type": "directional", "direction": [float(v) for v in -to_light],
-                    "irradiance": {"type": "rgb", "value": float(lighting["irradiance"])}}
+        E = float(lighting["irradiance"])
+        if lighting["type"] == "directional":
+            d["sun"] = {"type": "directional", "direction": [float(v) for v in -to_light],
+                        "irradiance": {"type": "rgb", "value": E}}
+        elif lighting["type"] == "area":
+            dist = float(lighting["distance"])
+            half = np.deg2rad(float(lighting["half_angle_deg"]))
+            half_size = dist * np.tan(half)          # half edge length of the square
+            # A Lambertian square of radiance Lr and area A at distance dist,
+            # facing the origin, delivers Lr * A / dist^2 there; solve for E.
+            radiance = E * dist ** 2 / (2 * half_size) ** 2
+            centre = to_light * dist
+            d["sun"] = {
+                "type": "rectangle",
+                # unit rectangle spans [-1,1]^2 in xy with +z normal, so scale by the half size
+                "to_world": mi.ScalarTransform4f.look_at(
+                    origin=[float(v) for v in centre], target=[0.0, 0.0, 0.0],
+                    up=[0.0, 0.0, 1.0] if abs(to_light[1]) > 0.9 else [0.0, 1.0, 0.0]
+                ) @ mi.ScalarTransform4f.scale([float(half_size), float(half_size), 1.0]),
+                "emitter": {"type": "area", "radiance": {"type": "rgb", "value": float(radiance)}},
+                "bsdf": {"type": "diffuse", "reflectance": {"type": "rgb", "value": 0.0}},
+            }
+        else:
+            raise ValueError(lighting)
         if "reference_integrator" in lighting:
             d["integrator"] = dict(lighting["reference_integrator"])
     if integrator is not None:

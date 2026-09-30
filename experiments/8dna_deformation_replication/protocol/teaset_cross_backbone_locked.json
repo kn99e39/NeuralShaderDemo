@@ -6,13 +6,15 @@
   "res": 512,
   "camera": "upstream teaset get_scene(512) camera, identical to worklog 21",
   "lighting": {
-    "type": "directional",
+    "type": "area",
     "to_light": [
       -0.6647,
       0.7071,
       0.2418
     ],
     "irradiance": 5.0,
+    "distance": 8.0,
+    "half_angle_deg": 15.0,
     "reference_integrator": {
       "type": "path",
       "max_depth": -1,
@@ -173,7 +175,8 @@
     "failure_in_state": "for T1b, T2, T3: interaction-ROI display-MAE error rises by at least 25% over the same-surface T0 error AND tracking gain <dN,dG>/<dG,dG> (linear RGB) < 0.5",
     "control_check": "the same error rise in T1 must be below 25% of the T0 error",
     "per_model_classification": "FROZEN FAILURE if failure_in_state holds for at least one relation-change state and control_check holds; NO MEANINGFUL FAILURE if for none; failure with a failed control is reported as confounded",
-    "applied_to": "8DNA primary mode 'attached' and RNA primary mode 'canonical', each against its own T0"
+    "applied_to": "8DNA primary mode 'attached' and RNA primary mode 'canonical', each against its own T0",
+    "noise_precondition": "Before any state is interpreted, the interaction-ROI physical signal dG must exceed 3x the model's own seed-to-seed noise in that ROI as well as 3x the reference repeat noise. The earlier gate checked only the reference noise and could not detect an inadequate model-side floor."
   },
   "refits": {
     "8dna": "protocol/teaset_8dna_refit_locked.json checkpoints, also evaluated in this regime (8DNA is lighting-independent)",
@@ -183,5 +186,45 @@
   "reference_integrator_note": "Reference: Mitsuba C++ path (max_depth -1, rr_depth 5) in wavefront mode (DrJit LoopRecord off). With LoopRecord on, path and prb both lose 1-5% of the radiance on this GPU depending on kernel lane count, and do not reproduce (probe_loop_record.py); in wavefront mode both match Mitsuba's CPU LLVM backend (sun 0.11033 +- 0.00006, envmap 0.11628 +- 0.00003 at 128^2 x 1024 spp; probe_llvm_reference.py) and agree with each other. path replaces the upstream scene's prb only because wavefront prb (a Python integrator) is ~35x slower here. Decided before any neural output in this regime.",
   "reuse_design_gt": true,
   "reference_reuse_note": "The GT-only design run supplies the references. teaset_frozen_eval verifies, before reusing them, that the design run came from a clean tree and that no file producing those renders (teaset_parts.py, ednalib.py, teaset_gt_states.py and the design protocol) changed between that commit and this one, and that the gt/lighting/states/res settings match.",
-  "gt_design_protocol": "protocol/teaset_common_light_gt_design.json"
+  "gt_design_protocol": "protocol/teaset_common_light_gt_design.json",
+  "lighting_revision_3": "Revision 3, decided from a GT-only + T0-only measurement before any moved-state neural output in this regime. The delta directional light of revisions 1-2 left the frozen-8DNA estimator's own seed-to-seed noise at 0.0585 display MAE in the interaction ROI, only 1.63x the physical signal it must resolve (dG(T3)=0.095) and 5.8x the reference noise. The cause is heavy-tailed specular fireflies on near-mirror nickel under a delta source, not sample count: 4x the samples cut that noise only 1.33x (vs 2.00x, i.e. sqrt(spp), in the worklog-21 envmap regime), and 2.5% of pixels carried half the seed difference (p99.9 = 13.9 linear) against 13.5% and 0.20 under the envmap. Replacing it with an area light of the same direction and the same irradiance at the asset origin removes those spikes without touching the signal: dG(T3) stays 0.095-0.100 from 3 to 25 deg while the neural noise falls monotonically. 15 deg half-angle is the smallest size clearing the 3x neural-noise margin (dG/neural = 4.40, dG/reference = 7.0); it is still a clearly directional source (a 4.2-unit square at 8 units, about a studio softbox), so the regime stays distinct from the envmap, and it is well short of 40 deg where dG itself starts to fall (0.087) as the light washes out the interreflection under test. RNA supports RectangularLight natively and draws one direction per shading sample, so this stays inside both models' official contracts.",
+  "light_size_scan": {
+    "measurement": "interaction ROI, display MAE; neural = frozen-8DNA seed-to-seed at T0 (1024 spp), dG = GT(T3) vs GT(T0) paired through the ROI correspondence, ref = GT seed A vs B (4096 spp)",
+    "delta": {
+      "neural": 0.0585,
+      "dG": 0.0954,
+      "ref": 0.0303,
+      "dG_over_neural": 1.63
+    },
+    "area_3deg": {
+      "neural": 0.052,
+      "dG": 0.0966,
+      "ref": 0.0305,
+      "dG_over_neural": 1.86
+    },
+    "area_8deg": {
+      "neural": 0.0327,
+      "dG": 0.0953,
+      "ref": 0.0237,
+      "dG_over_neural": 2.92
+    },
+    "area_15deg": {
+      "neural": 0.0217,
+      "dG": 0.0952,
+      "ref": 0.0136,
+      "dG_over_neural": 4.4
+    },
+    "area_25deg": {
+      "neural": 0.0137,
+      "dG": 0.1,
+      "ref": 0.0079,
+      "dG_over_neural": 7.29
+    },
+    "area_40deg": {
+      "neural": 0.0093,
+      "dG": 0.0865,
+      "ref": 0.0044,
+      "dG_over_neural": 9.32
+    }
+  }
 }
