@@ -10,6 +10,7 @@ with the corrected references, and common light); RNA T3 refit in common light.
 
 from __future__ import annotations
 
+import argparse
 import json
 
 import numpy as np
@@ -87,6 +88,10 @@ def refit_block(gt, rois, n_t0, n_t3, released_t0_err=None) -> dict:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--frozen-only", action="store_true",
+                    help="frozen RNA x 8DNA comparison only (before the refits exist); writes cross_backbone_frozen.json")
+    args = ap.parse_args()
     proto = json.loads(open(L.EXPERIMENT / "protocol/teaset_cross_backbone_locked.json", encoding="utf-8").read())
     w21 = json.loads(open(L.EXPERIMENT / "protocol/teaset_frozen_locked.json", encoding="utf-8").read())
     L.init_upstream()
@@ -120,6 +125,12 @@ def main() -> int:
                              "rna_T0_interaction_error": e_rna0, "rna_pass": e_rna0 < signal,
                              "8dna_T0_interaction_error": e_8d0, "8dna_pass": e_8d0 < signal}
 
+    if args.frozen_only:
+        rec["refits"] = "not evaluated in this record (frozen-only run); see cross_backbone.json"
+        L.write_json(L.RESULTS / "cross_backbone" / "cross_backbone_frozen.json", rec)
+        summarize(rec, states)
+        return 0
+
     # refits
     rr = L.RESULTS / "refit" / "renders"
     rec["refit_8dna_common_light"] = refit_block(
@@ -139,6 +150,11 @@ def main() -> int:
         rec["refit_rna_common_light"] = "not run"
 
     L.write_json(L.RESULTS / "cross_backbone" / "cross_backbone.json", rec)
+    summarize(rec, states)
+    return 0
+
+
+def summarize(rec: dict, states) -> None:
     print(json.dumps({"8dna": rec["8dna"]["rule_attached"]["classification"], "rna": rec["rna"]["rule_canonical"]["classification"],
                       "gate": rec["static_gate_G1"]}, indent=1))
     for s in states:
@@ -146,7 +162,6 @@ def main() -> int:
         b = rec["rna"]["rule_canonical"]["per_state"][s]["interaction"]
         print(f"{s:4s} dG {a['dG']:.4f} | 8DNA rise {a['rise']:+.0%} gain {a['gain'] if a['gain'] is None else round(a['gain'], 2)} | "
               f"RNA rise {b['rise']:+.0%} gain {b['gain'] if b['gain'] is None else round(b['gain'], 2)}")
-    return 0
 
 
 if __name__ == "__main__":

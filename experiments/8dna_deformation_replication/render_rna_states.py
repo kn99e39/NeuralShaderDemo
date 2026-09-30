@@ -50,28 +50,32 @@ def best_checkpoint(name: str) -> tuple[str, float]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--protocol", required=True)
+    ap.add_argument("--part", choices=("frozen", "refit"), required=True,
+                    help="frozen: T0 model at every state and mode (+ T0 seed-B repeat); refit: T3 model at T3")
     args = ap.parse_args()
     proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
     out = L.RESULTS / proto["rna_output"]
     out.mkdir(parents=True, exist_ok=True)
     inf = proto["rna_inference"]
-    rec = {"protocol": L.rel(L.EXPERIMENT / args.protocol), "environment": L.environment_record(), "renders": {}}
+    rec = {"protocol": L.rel(L.EXPERIMENT / args.protocol), "part": args.part, "environment": L.environment_record(),
+           "renders": {}}
 
-    ck, psnr = best_checkpoint("rna-teaset-T0-common-light")
-    rec["checkpoint_T0"] = {"path": ck, "val_psnr_db": psnr, "sha256": L.sha256(ck)}
-    train_h5 = L.RESULTS / proto["rna_dataset_dir"] / "teaset_T0_train.h5"
-    rec["train_h5_sha256"] = L.sha256(train_h5)
-
-    jobs = [(s, m, ck, train_h5, f"{s}_{m}") for s in proto["states"] for m in inf["modes"]]
-    # T0 again with independent area-light samples (features T0_B.npz): RNA's own
-    # seed-to-seed noise for the decision rule's noise precondition
-    jobs.append(("T0_B", "canonical", ck, train_h5, "T0_canonical_B"))
-    refit_dir = L.RESULTS / "rna_teaset" / "ckpt" / "rna-teaset-T3-common-light"
-    if refit_dir.exists():
+    if args.part == "frozen":
+        ck, psnr = best_checkpoint("rna-teaset-T0-common-light")
+        rec["checkpoint_T0"] = {"path": ck, "val_psnr_db": psnr, "sha256": L.sha256(ck)}
+        train_h5 = L.RESULTS / proto["rna_dataset_dir"] / "teaset_T0_train.h5"
+        rec["train_h5_sha256"] = L.sha256(train_h5)
+        jobs = [(s, m, ck, train_h5, f"{s}_{m}") for s in proto["states"] for m in inf["modes"]]
+        # T0 again with independent area-light samples (features T0_B.npz): RNA's own
+        # seed-to-seed noise for the decision rule's noise precondition
+        jobs.append(("T0_B", "canonical", ck, train_h5, "T0_canonical_B"))
+    else:
         ck3, psnr3 = best_checkpoint("rna-teaset-T3-common-light")
         rec["checkpoint_T3_refit"] = {"path": ck3, "val_psnr_db": psnr3, "sha256": L.sha256(ck3)}
+        train_h5 = L.RESULTS / proto["rna_dataset_dir"] / "teaset_T3_train.h5"
+        rec["train_h5_sha256"] = L.sha256(train_h5)
         # the refit's canonical frame is T3 itself, so its own state needs no pullback
-        jobs.append(("T3", "current", ck3, L.RESULTS / proto["rna_dataset_dir"] / "teaset_T3_train.h5", "refit_T3_current"))
+        jobs = [("T3", "current", ck3, train_h5, "refit_T3_current")]
 
     for state, mode, ckpt, h5, tag in jobs:
         feats = L.RESULTS / proto["rna_features_dir"] / f"{state}.npz"
@@ -88,8 +92,9 @@ def main() -> int:
         rec["renders"][tag] = {"state": state, "features": L.rel(feats), "mode": mode, "mean": float(img.mean()),
                                "finite": bool(np.isfinite(img).all()), "shape": list(img.shape)}
         print(tag, stdout.strip().splitlines()[-1] if stdout.strip() else "", flush=True)
-    L.write_json(out / "rna_render.json", rec)
-    print("written", L.rel(out / "rna_render.json"))
+    name = "rna_render.json" if args.part == "frozen" else "rna_refit_render.json"
+    L.write_json(out / name, rec)
+    print("written", L.rel(out / name))
     return 0
 
 
