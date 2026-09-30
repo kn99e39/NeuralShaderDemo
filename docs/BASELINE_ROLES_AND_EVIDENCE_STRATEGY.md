@@ -1,402 +1,254 @@
 # Baseline Roles and Evidence Strategy — Dynamic Neural Shading / Neural Light Transport
 
-**Decision date:** 2026-09-28  
+**Original decision date:** 2026-09-28  
+**Last updated:** 2026-10-01  
 **Status:** Active research operating decision
 
 ## Document Role
 
-This document records the current decision on:
+This document records the current baseline roles, evidence scope, and research-process rules for the project. It complements `RESEARCH_CENTRIC_TOPIC.md` and `RESEARCH_ROADMAP.md`.
 
-- how RNA, 8DNA, and geometry-conditioned rendering systems should be used;
-- how inductive problem discovery and deductive mechanism testing must be separated;
-- what level of evidence is required before the project-level hypothesis may be weakened or falsified;
-- why a negative result on Rain/RNA alone must not be generalized to the whole research direction.
+The central distinction remains:
 
-This document complements:
-
-- `RESEARCH_CENTRIC_TOPIC.md`
-- `RESEARCH_ROADMAP.md`
-
-It should be treated as the authoritative reference when deciding whether a model is being used as:
-
-- an implementation/development base,
-- a scientific replication baseline,
-- an architecture-contrast baseline,
-- or a future method substrate.
+- **inductive breadth** establishes whether a phenomenon recurs;
+- **deductive controls** identify why it occurs;
+- neither one should be mistaken for the other.
 
 ---
 
 # 1. Current Research State
 
-The project has so far studied one configuration in substantial depth:
+The project now has two major evidence lineages.
 
-```text
-RNA × Rain × scarf deformation
-```
+## 1.1 RNA × Rain
 
-This work has been useful for developing:
+RNA/Rain remains the mechanism-development bench that established:
 
-- canonical correspondence controls;
-- current-geometry input auditing;
+- a real frozen deformation failure;
+- correspondence and canonical-query controls;
 - direct-visibility diagnostics;
-- production-asset deformation experiments;
-- failure attribution methodology;
-- fixed-target causal-probe design.
+- strong local-input/spatial confounds;
+- a fixed-target causal-probe design.
 
-However, this is still one model family and one main asset/deformation environment.
+The Rain fixed-target probe closed as **PHYSICAL EFFECT TOO WEAK**. It did not provide a positive or negative result for nonlocal transport failure because the target GT radiance did not change above render noise.
 
-Therefore:
+Therefore Rain remains useful historical evidence, but it is no longer the cleanest mechanism case.
 
-> **Rain/RNA is currently a mechanism-development bench, not sufficient evidence for a project-level generalization or falsification.**
+## 1.2 Teaset cross-part configuration
 
-A negative result in Rain/RNA may falsify a narrow Rain/RNA mechanism hypothesis.
+Worklogs 21 and 22 provide the current strongest controlled evidence.
 
-It does **not** by itself falsify the broader research question:
+- In Worklog 21, a stationary teaset interaction surface kept its canonical query while another rigid part moved.
+- The physical interreflection changed strongly above render noise.
+- Frozen 8DNA barely followed that change, while relation-preserving whole-asset motion remained stable.
+- A same-state T3 refit under the original envmap regime recovered close to T0 quality, strongly supporting stale persistent state rather than insufficient architecture capacity in that tested regime.
+- In Worklog 22, RNA reproduced the same frozen-response signature on the same teaset states under a common-light regime.
+- Both backbones fail the predeclared rule at T1b and T3 and pass the relation-preserving T1 control.
 
-> **Do high-quality learned shading / neural light-transport representations lose validity when geometry relationships change, and does this expose a representation-lifecycle problem between persistent information and current geometry-dependent transport state?**
+This is the project's first controlled **cross-backbone** support for the representation-lifecycle hypothesis.
 
----
+Important limitation:
 
-# 2. Research Process: Inductive Breadth Before Deductive Closure
-
-The intended scientific process has two distinct stages.
-
-## 2.1 Inductive Phenomenon Discovery
-
-First ask:
-
-> **Across different model and deformation families, what failure patterns recur?**
-
-The purpose is breadth, not perfect causal attribution.
-
-Representative failure categories include:
-
-- local appearance collapse;
-- directional-input OOD;
-- spatial feature contamination / ownership ambiguity;
-- stale cavity illumination;
-- missing or stale contact shadow;
-- stale interreflection or color bleeding;
-- self-contact / contact-release failure;
-- disocclusion or coverage failure.
-
-At this stage, one model-specific failure is informative but not sufficient for a broad claim.
-
-## 2.2 Deductive Mechanism Testing
-
-After a recurring transport-like phenomenon is identified, construct strong controls that isolate the hypothesized mechanism.
-
-Example strong control:
-
-```text
-same target surface identity
-same target position
-same target normal
-same view direction
-same light direction
-same direct-visibility branch
-
-but
-
-different surrounding geometry
-different physical nonlocal transport
-```
-
-This is the role of the current Rain fixed-target experiment.
-
-The fixed-target experiment is a **rigorous causal probe**, not the sole project-level kill test.
+> The cleanest evidence is still one asset family and one main relation-change mechanism. It is strong mechanism evidence, not broad generality.
 
 ---
 
-# 3. Two Hypothesis Layers Must Remain Separate
+# 2. Hypothesis Layers
 
-## 3.1 Phenomenon Hypothesis
+## 2.1 Phenomenon Hypothesis
 
-> **High-quality learned shading / light-transport representations can lose validity under meaningful intrinsic geometry change.**
+> **A high-quality frozen neural shading / light-transport representation can lose validity when geometry relations change.**
 
-This should be evaluated primarily through cross-model and cross-asset observation.
+This hypothesis now has controlled support in teaset across two representation families.
 
-It is an inductive hypothesis.
+## 2.2 Mechanism Hypothesis
 
-## 3.2 Mechanism Hypothesis
+> **Some failures occur because persistent learned state owns transport information whose validity depends on the current nonlocal geometry configuration.**
 
-> **Some failures occur because persistent learned representation owns transport information whose validity depends on the current nonlocal geometry configuration.**
+The teaset evidence strongly supports this mechanism in the tested regime, but the exact transport component and generality remain open.
 
-This requires controlled attribution.
-
-It is a deductive hypothesis.
-
-A failure of one mechanism test does not automatically falsify the phenomenon hypothesis.
-
-Likewise, observing degradation does not prove the mechanism hypothesis.
+Do not generalize this to all neural transport methods, all materials, or all deformation families.
 
 ---
 
-# 4. Baseline Role Taxonomy
+# 3. Baseline Role Taxonomy
 
-The word "baseline" must not be used without specifying its role.
+## 3.1 RNA — Implementation / Development Base
 
-## 4.1 RNA — Implementation / Development Base
+RNA remains the primary experimental workbench and likely first method-development substrate because its geometry/network boundary is inspectable and its correspondence semantics are practical to control.
 
-**Current role:** primary experimental workbench and implementation substrate.
+RNA is useful for:
 
-Why it is useful:
+- diagnostics;
+- controlled correspondence experiments;
+- future H1/H2 sufficiency tests;
+- early architecture prototyping if evidence justifies it.
 
-- explicit surface representation;
-- inspectable geometry-to-network interface;
-- practical deformation instrumentation;
-- canonical correspondence can be controlled;
-- current normal/view/light inputs can be audited;
-- renderer-derived direct visibility can be separated from persistent learned state.
+RNA being the current development base does not mean the final method must be RNA-based.
 
-RNA is therefore the current best environment for:
+## 3.2 8DNA — Scientific Replication Baseline
 
-- developing diagnostics;
-- testing correspondence semantics;
-- prototyping controlled deformation experiments;
-- implementing early architecture hypotheses if later evidence justifies them.
+8DNA has now completed its first intended scientific role:
 
-Important:
+> **independent replication of the frozen geometry-configuration validity failure outside RNA.**
 
-> **RNA being the current development base does not mean the final method must be RNA-based.**
+It remains valuable for:
 
-The future method substrate remains undecided.
+- controlled replication;
+- same-state refit/capacity controls;
+- later testing of whether a proposed principle transfers beyond RNA.
 
----
+Do not automatically promote 8DNA to the main method-development backbone.
 
-## 4.2 8DNA — Scientific Replication Baseline
+## 3.3 RenderFormer-Type / Current-Geometry Systems — Architecture Contrast
 
-**Current role:** independent high-quality asset-specific neural-transport replication baseline.
+These remain future contrast baselines.
 
-8DNA should not currently replace RNA as the development base.
+The intended question is:
 
-Its purpose is to answer:
+> **What changes when transport is derived from or conditioned on current geometry instead of relying on persistent canonical asset state?**
 
-> **Does a comparable failure recur in another high-quality asset-specific neural light-transport representation, or is the observed phenomenon mainly RNA-specific?**
+Use such a system only when it answers a concrete evidence question. Do not add it merely to increase the baseline count.
 
-Initial 8DNA work should prioritize:
+## 3.4 Future Method Base — Undecided
 
-1. faithful reproduction of the official high-quality setup;
-2. a small number of meaningful material-preserving geometry changes;
-3. broad qualitative/quantitative failure observation;
-4. only then, if a transport-like failure exists, deeper correspondence and causal controls.
+No final substrate has been selected.
 
-Do **not** begin by porting every RNA diagnostic into 8DNA.
-
-Do **not** use 8DNA as the implementation base merely because it is newer or more transport-centric.
-
----
-
-## 4.3 RenderFormer-Type Systems — Architecture Contrast Baseline
-
-**Current role:** current-geometry-conditioned architectural contrast.
-
-The purpose is not to rank models by image quality.
-
-The contrast question is:
-
-> **What changes when the representation is recomputed or conditioned directly from the current scene geometry instead of relying on a frozen canonical neural asset state?**
-
-A geometry-explicit/current-scene system can help separate:
-
-```text
-"deformation is difficult for neural rendering in general"
-```
-
-from:
-
-```text
-"frozen/persistent asset-specific transport state loses validity when geometry changes"
-```
-
-This is an architecture contrast, not necessarily a drop-in implementation baseline.
-
----
-
-## 4.4 Geometry-Aware / Dynamic Transport Methods — Future Positive Controls
-
-Methods that explicitly rebuild, update, or condition transport state from current geometry may become useful positive controls.
-
-Their role is to test the opposite side of the lifecycle hypothesis:
-
-```text
-persistent frozen state
-vs
-current geometry-conditioned state
-```
-
-Do not integrate these methods merely to expand the model list.
-
-Use them only when they answer a concrete evidence question.
-
----
-
-## 4.5 Future Method Base — Undecided
-
-No final implementation substrate has been selected.
-
-Possible outcomes include:
+Possible outcomes still include:
 
 - extending RNA;
-- adapting another existing transport system;
-- implementing the research contract in a minimal independent framework;
+- adapting another transport framework;
+- implementing the research contract in a small independent framework;
 - combining ideas across systems.
 
-The final method base must be selected **after** the representation problem is sufficiently established.
+---
+
+# 4. Evidence Interpretation Rules
+
+## Rule 1 — Do not over-generalize one asset
+
+The teaset result is a clean controlled case, not a universal claim.
+
+Current defensible statement:
+
+> **The representation-lifecycle hypothesis has controlled support across RNA and 8DNA on one shared geometry-configuration benchmark.**
+
+Not yet defensible:
+
+> **All neural transport representations fail under dynamic geometry.**
+
+## Rule 2 — Separate problem replication from method validation
+
+Worklog 22 is cross-backbone **problem evidence**.
+
+Future cross-backbone testing of a proposed solution is a different milestone and should not be conflated with the evidence already obtained.
+
+## Rule 3 — Keep stale-state and capacity questions separate
+
+If frozen state fails and same-state refit succeeds, stale state is strongly supported.
+
+If refit also fails, capacity / optimization remains plausible.
+
+The original 8DNA envmap refit is a strong stale-state control. The common-light 8DNA/RNA refits are both near the predeclared threshold and should be treated as partial recovery, not as evidence that one backbone has more capacity.
+
+## Rule 4 — Breadth and depth still have different jobs
+
+Depth has now produced a clean mechanism case.
+
+Breadth is still needed across:
+
+- another asset family;
+- another geometry-change mechanism;
+- less mirror-like transport/material regimes;
+- ideally non-rigid or contact/release cases.
+
+## Rule 5 — Negative results remain valid
+
+A negative result should only weaken the hypothesis at the scope actually tested.
 
 ---
 
-# 5. Immediate Experimental Sequence
+# 5. Current Evidence Matrix
 
-The current intended sequence is:
-
-## Step A — Finish the Rain Fixed-Target Causal Probe
-
-Purpose:
-
-> Test whether physical radiance at fixed, canonically observed target points changes because surrounding geometry changes while frozen RNA receives effectively identical local inputs.
-
-Interpretation rule:
-
-- positive result: a clean Rain/RNA causal case is obtained;
-- negative result: the mechanism is not observed in that Rain/RNA regime.
-
-A negative result must **not** be reported as project-level falsification.
-
-## Step B — Add 8DNA as an Independent Replication Baseline
-
-First reproduce the official high-quality setup.
-
-Then perform a bounded broad failure sweep on meaningful geometry changes.
-
-Do not begin with deep architecture modification.
-
-## Step C — Add a Geometry-Conditioned Contrast
-
-Use a RenderFormer-type/current-geometry-conditioned system where practical.
-
-The goal is to compare representation lifecycle assumptions, not to declare a winner.
-
-## Step D — Expand Asset and Deformation Breadth
-
-Do not remain on Rain alone.
-
-At minimum include another asset family such as an articulated/body-like case.
-
-Useful deformation families include:
-
-- large bend/twist;
-- fold creation/disappearance;
-- cross-part approach;
-- near-contact/self-contact;
-- contact release.
-
----
-
-# 6. Minimum Evidence Before Project-Level Falsification
-
-The broad research hypothesis should not be killed from one Rain/RNA case.
-
-Before making a strong project-level negative judgment, seek evidence across at least:
-
-- **2 or more representation families**;
-- **2 or more asset families**;
-- **2 or more deformation mechanisms**;
-- **1 or more strong controlled cases** where local state and nonlocal geometry effects are explicitly separated.
-
-A strong negative body of evidence would look like:
-
-1. comparable high-quality representations remain robust under meaningful geometry change; or
-2. observed failures repeatedly reduce to local directional OOD, coverage, spatial lookup, or straightforward engineering causes; and
-3. fixed-target/current-local-state-controlled tests fail to reveal missing nonlocal transport behavior; and
-4. transport-like failure patterns do not recur across independent models/assets.
-
-Only then should the broader representation-lifecycle research direction be considered substantially weakened.
-
----
-
-# 7. Evidence Matrix
-
-The project should gradually populate a matrix like:
-
-| Model / Role | Cloth fold / self-approach | Articulated cross-part | Fixed-target nonlocal interaction |
+| Model / role | Rain non-rigid scarf | Teaset cross-part relation | Same-state refit |
 |---|---|---|---|
-| RNA — development base | In progress / historical Rain evidence | Einar or replacement asset later | Current causal probe |
-| 8DNA — scientific replication | Required candidate | Candidate if practical | Only after a transport-like failure is observed |
-| Current-geometry contrast | Required where practical | Required where practical | Architecture-level contrast |
+| RNA — development base | Failure observed; mechanism confounded | **Frozen failure reproduced** under common light; thin static-quality margin | Partial recovery near threshold |
+| 8DNA — scientific replication | Not tested | **Controlled frozen failure observed** | **Envmap T3 refit recovers**; common-light partial recovery |
+| Current-geometry contrast | Not tested | Future | Future |
 
-The matrix is not a requirement to fill every cell.
+Additional dimensions still missing:
 
-The objective is sufficient diversity to avoid concluding from one model/asset pair.
-
----
-
-# 8. Interpretation Rules
-
-## Rule 1 — Do not over-generalize a Rain result
-
-Say:
-
-> "The mechanism was not observed in the tested Rain/RNA regime."
-
-Do not automatically say:
-
-> "The dynamic neural transport hypothesis is falsified."
-
-## Rule 2 — Do not confuse baseline roles
-
-RNA:
-- implementation/development base.
-
-8DNA:
-- scientific replication baseline.
-
-RenderFormer-type system:
-- architecture contrast baseline.
-
-Future method base:
-- undecided.
-
-## Rule 3 — Breadth and depth have different jobs
-
-Broad sweep:
-
-> discover recurring phenomena.
-
-Deep control:
-
-> identify mechanism.
-
-Do not require full causal proof from every exploratory model.
-
-Do not build a new architecture from a single unexplained failure.
-
-## Rule 4 — Negative results remain valuable
-
-A model-specific negative result can eliminate:
-
-- one mechanism;
-- one deformation regime;
-- one representation-specific explanation.
-
-It should be recorded at the scope actually tested.
+- another asset family;
+- another deformation/relation mechanism;
+- diffuse/glossy rather than near-mirror-dominated interaction;
+- contact/release or true non-rigid interaction.
 
 ---
 
-# 9. Current Decision
+# 6. Minimum Evidence Before Broad Project Claims
 
-As of 2026-09-28:
+The project now satisfies:
+
+- at least two representation families in one shared controlled regime;
+- one strong case separating stationary local state from changed nonlocal geometry;
+- one strong same-state refit control in 8DNA.
+
+It does **not** yet satisfy broad generality across:
+
+- two or more clean asset families;
+- two or more clean deformation/relation mechanisms.
+
+Therefore the correct current position is:
+
+> **The mechanism has strong controlled support in the tested teaset regime and has replicated across two backbones, but broad generality remains open.**
+
+---
+
+# 7. Current Experimental Sequence
+
+## Step A — Rain fixed-target probe
+
+**CLOSED:** PHYSICAL EFFECT TOO WEAK.
+
+## Step B — 8DNA independent replication
+
+**CLOSED for first objective:** controlled teaset failure observed.
+
+## Step C — Same-scene cross-backbone replication
+
+**CLOSED for first objective:** RNA reproduces the frozen failure signature on the same teaset state protocol under common light.
+
+## Step D — Close attribution enough for a representation test
+
+Current task.
+
+Priorities:
+
+1. qualitatively review the Worklog 22 exports;
+2. determine whether reference-only transport decomposition is needed before M2 closure;
+3. decide whether the next bounded batch should test H1/H2 sufficiency or add another asset/deformation family.
+
+## Step E — Current-geometry contrast / additional breadth
+
+Future, when it answers a concrete decision.
+
+---
+
+# 8. Current Decision
+
+As of 2026-10-01:
 
 1. **Keep RNA as the implementation/development base.**
-2. **Finish the current Rain fixed-target causal probe.**
-3. **Use 8DNA next as a scientific replication baseline, not as the immediate method-development backbone.**
-4. **Use a current-geometry-conditioned system such as RenderFormer as an architecture contrast when the experimental interface is practical.**
-5. **Do not select the final method substrate yet.**
-6. **Do not infer project-level falsification from Rain/RNA alone.**
-7. **Return to inductive breadth after the current Rain causal probe, regardless of whether that probe is positive or negative.**
+2. **Treat the Worklog 21/22 teaset case as the current canonical controlled failure case.**
+3. **Treat 8DNA as a successful scientific replication baseline, not the default method-development substrate.**
+4. **Do not reopen the old Rain mechanism as the main evidence path unless a new question specifically requires it.**
+5. **Do not select the final method architecture yet.**
+6. **Do not spend a large batch resolving the common-light 1.28 vs 1.22 refit split unless that distinction changes the next architecture decision.**
+7. **Before a large architecture implementation, close M2 enough to state what information the next representation experiment must provide.**
+8. **Continue to separate cross-backbone problem evidence from future cross-backbone method validation.**
 
 ---
 
-# 10. One-Line Operating Rule
+# 9. One-Line Operating Rule
 
-> **Use breadth to establish that the phenomenon is real and recurring; use depth to prove why it happens; do not let one deeply studied model/asset pair decide the existence of the entire research problem.**
+> **The phenomenon now has a clean cross-backbone controlled case; the next job is to identify the minimal missing current-state information without over-generalizing from one asset or prematurely committing to a solution architecture.**
