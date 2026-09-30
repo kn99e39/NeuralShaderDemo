@@ -11,9 +11,17 @@ $track = 'rna-frozen'
 . (Join-Path $PSScriptRoot 'chain_common.ps1')
 Note "TRACK START commit $(git -C $root rev-parse --short HEAD)"
 
-# Wait for the main chain to finish the T0 datasets.
-while (-not ((Current 'rna_teaset/datasets/teaset_T0_train.h5') -and (Current 'rna_teaset/datasets/teaset_T0_val.h5'))) {
-    Start-Sleep -Seconds 60
+# Wait for the main chain to finish the T0 datasets. rna_bridge writes a
+# dataset's .cameras.json only after the H5 is complete, so the provenance check
+# runs only then (and is not logged as STALE on every poll while one is written).
+function Finished([string] $split) {
+    $h5 = Join-Path $res "rna_teaset/datasets/teaset_T0_$split.h5"
+    $cams = Join-Path $res "rna_teaset/datasets/teaset_T0_$split.cameras.json"
+    return (Test-Path $h5) -and (Test-Path $cams) -and ((Get-Item $cams).LastWriteTime -ge (Get-Item $h5).LastWriteTime)
+}
+while (-not ((Finished 'train') -and (Finished 'val'))) { Start-Sleep -Seconds 60 }
+if (-not ((Current 'rna_teaset/datasets/teaset_T0_train.h5') -and (Current 'rna_teaset/datasets/teaset_T0_val.h5'))) {
+    Note 'FAIL T0 datasets finished but are not current for the protocol'; exit 1
 }
 StartRnaOnServer 'T0'
 foreach ($s in 'T0', 'T1', 'T1b', 'T2', 'T3') {
