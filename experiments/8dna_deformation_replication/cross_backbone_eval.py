@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 
 import numpy as np
 
@@ -165,4 +167,9 @@ def summarize(rec: dict, states) -> None:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    rc = main()
+    # Outputs are complete here; skip the interpreter teardown, which crashes with
+    # an access violation on this Windows setup once DrJit and torch are loaded.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(rc)
