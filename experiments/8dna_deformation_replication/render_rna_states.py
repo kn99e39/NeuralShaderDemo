@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
+import sys
 
 import numpy as np
 
@@ -100,4 +102,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    rc = main()
+    # Every output is written by now. The interpreter's teardown after DrJit and
+    # torch have both been loaded crashes with an access violation on this
+    # Windows setup (seen once the renders and the JSON were complete), which
+    # would turn a finished step into a failed one; leave without teardown.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(rc)
