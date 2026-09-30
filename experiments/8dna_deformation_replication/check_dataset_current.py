@@ -1,9 +1,10 @@
-"""Is an RNA H5 dataset current for a protocol? Exit 0 if yes, 1 with a reason if not.
+"""Is an RNA H5 dataset or feature buffer current for a protocol? Exit 0 if yes, 1 with a reason if not.
 
-Used by the chain before skipping a dataset step. A dataset rendered under a
-superseded lighting revision, or with different generation settings, must be
-regenerated rather than silently reused; datasets written before this check
-existed carry no provenance and are treated as stale.
+Used by the chain before skipping a dataset or features step. A file rendered
+under a superseded lighting revision, or with different generation or
+light-sampling settings, must be regenerated rather than silently reused;
+files written before this check existed carry no provenance and are treated
+as stale.
 """
 
 from __future__ import annotations
@@ -22,6 +23,8 @@ def main() -> int:
     import h5py
 
     proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
+    if args.h5.endswith(".npz"):
+        return check_features(proto, args.h5)
     try:
         with h5py.File(args.h5, "r") as f:
             attrs = {k: f.attrs[k] for k in f.attrs}
@@ -43,6 +46,27 @@ def main() -> int:
     split = "val" if args.h5.endswith("_val.h5") else "train"
     if views != proto["rna_dataset"]["views"][split]:
         print(f"incomplete: {views} views, expected {proto['rna_dataset']['views'][split]}")
+        return 1
+    return 0
+
+
+def check_features(proto: dict, path: str) -> int:
+    import numpy as np
+
+    try:
+        z = np.load(path)
+        keys = set(z.files)
+    except Exception as exc:
+        print(f"unreadable: {type(exc).__name__}")
+        return 1
+    if not {"lighting", "light_sampling", "light_dir", "light_weight", "light_vis"} <= keys:
+        print("no area-light samples or provenance (delta-light contract)")
+        return 1
+    if json.loads(str(z["lighting"])) != proto["lighting"]:
+        print("lighting differs from the protocol")
+        return 1
+    if json.loads(str(z["light_sampling"])) != proto["rna_inference"]["light_sampling"]:
+        print("light sampling differs from the protocol")
         return 1
     return 0
 

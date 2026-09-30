@@ -161,7 +161,22 @@
       "canonical": "primary: triplane position = pulled-back canonical hit, normalized by the training H5 AABB; normal, camera_dir, light_dir and visibility from the current state",
       "current": "diagnostic: official renderer behaviour, current-world hit normalized by the current scene AABB (not a transport result)"
     },
-    "pixel": "mean over 16 stratified sub-pixel samples, misses count 0 (the reference uses a box pixel filter)"
+    "pixel": "mean over 16 stratified sub-pixel samples x 16 light samples, misses count 0 (the reference uses a box pixel filter)",
+    "light_sampling": {
+      "type": "area",
+      "samples_per_subpixel": 16,
+      "strata": [
+        4,
+        4
+      ],
+      "seeds": {
+        "A": 21,
+        "B": 22
+      },
+      "estimator": "per sub-pixel sample, 16 stratified uniform points y on the protocol's area-light rectangle; direction w=(y-x)/|y-x| from the current-state hit x, binary visibility of the segment x->y (and n.w>0), weight E_i = L_r * A * cos_light / |y-x|^2 (perpendicular irradiance of that sample); radiance = mean_i RNA(w_i, vis_i) * E_i / training_light_intensity. This is RNA's own light model (a directional response integrated over the emitter, as rna/lights.py RectangularLight) applied to the same 15-degree area light the reference and 8DNA see.",
+      "repeat": "seed B renders T0 again with independent light samples; RNA's only stochastic input, so this is RNA's own seed-to-seed noise for the decision rule's noise_precondition",
+      "added": "2026-09-30, before any RNA training or inference. The first features step (13:40) still used the delta-light contract (centre direction, infinite visibility ray) after lighting revision 3; its infinite ray hit the emitter rectangle, so every visibility was 0. Superseded, archived, not used."
+    }
   },
   "rna_output": "rna_teaset/frozen",
   "static_gate_rna": {
