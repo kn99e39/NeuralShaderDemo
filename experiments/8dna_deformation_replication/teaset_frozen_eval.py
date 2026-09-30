@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 
 import numpy as np
 
@@ -117,11 +118,27 @@ def main() -> int:
     base = integ.asset_models[0]
 
     reuse = proto.get("reuse_design_gt", False)
+    reuse_provenance = None
     if reuse:
-        # the GT-only design run is the reference, provided it ran from this clean commit
-        design_env = json.loads(open(gt_dir / "gt_states.json", encoding="utf-8").read()).get("environment", {})
-        if design_env.get("project_commit") != env["project_commit"] or design_env.get("project_dirty"):
-            raise SystemExit("design references were not rendered from this clean commit; cannot reuse them")
+        # The GT-only design run supplies the references.  They stay valid as long as
+        # the code and settings that produced them are unchanged, so compare those
+        # files between the design commit and now rather than requiring the same
+        # commit; unrelated later commits must not force a re-render.
+        design = json.loads(open(gt_dir / "gt_states.json", encoding="utf-8").read())
+        design_env = design.get("environment", {})
+        design_commit = design_env.get("project_commit")
+        if not design_commit or design_env.get("project_dirty"):
+            raise SystemExit("design references were not rendered from a clean tree; cannot reuse them")
+        inputs = [f"experiments/8dna_deformation_replication/{f}" for f in
+                  ("teaset_parts.py", "ednalib.py", "teaset_gt_states.py", proto["gt_design_protocol"])]
+        changed = subprocess.run(["git", "-C", str(L.ROOT), "diff", "--name-only", design_commit, env["project_commit"], "--", *inputs],
+                                 capture_output=True, text=True).stdout.split()
+        if changed:
+            raise SystemExit(f"reference-producing code changed since the design run ({design_commit[:7]}): {changed}")
+        for key, expect in (("gt", proto["gt"]), ("lighting", proto["lighting"]), ("states", proto["states"]), ("res", proto["res"])):
+            if design["protocol"].get(key) != expect:
+                raise SystemExit(f"design run used a different {key}; cannot reuse its references")
+        reuse_provenance = {"design_commit": design_commit, "verified_inputs": inputs}
     gt, neural, times = {}, {}, {}
     for name, tr in states.items():
         scene = mi.load_dict(T.scene_dict(res, tr, proto.get("lighting")))
@@ -147,7 +164,8 @@ def main() -> int:
 
     rec = {"protocol": proto, "environment": env, "checkpoint_sha256": ck,
            "gt_rerender_max_abs_diff_vs_design": {s: gt[s][2] for s in states},
-           "reference_source": "design run reused (same clean commit)" if reuse else "re-rendered",
+           "reference_source": "design run reused" if reuse else "re-rendered",
+           "reference_reuse_provenance": reuse_provenance,
            "neural_seconds": {f"{s}/{m}": t for (s, m), t in times.items()},
            "noise": {}, "states": {}}
     rec.update(evaluate(proto, gt, neural, neural_b, rois))

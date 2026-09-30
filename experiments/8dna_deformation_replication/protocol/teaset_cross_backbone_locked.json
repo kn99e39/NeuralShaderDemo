@@ -182,5 +182,6 @@
   },
   "reference_integrator_note": "Reference: Mitsuba C++ path (max_depth -1, rr_depth 5) in wavefront mode (DrJit LoopRecord off). With LoopRecord on, path and prb both lose 1-5% of the radiance on this GPU depending on kernel lane count, and do not reproduce (probe_loop_record.py); in wavefront mode both match Mitsuba's CPU LLVM backend (sun 0.11033 +- 0.00006, envmap 0.11628 +- 0.00003 at 128^2 x 1024 spp; probe_llvm_reference.py) and agree with each other. path replaces the upstream scene's prb only because wavefront prb (a Python integrator) is ~35x slower here. Decided before any neural output in this regime.",
   "reuse_design_gt": true,
-  "reference_reuse_note": "The GT-only design run (first chain step, same clean commit) supplies the references; teaset_frozen_eval verifies the commit before reusing them."
+  "reference_reuse_note": "The GT-only design run supplies the references. teaset_frozen_eval verifies, before reusing them, that the design run came from a clean tree and that no file producing those renders (teaset_parts.py, ednalib.py, teaset_gt_states.py and the design protocol) changed between that commit and this one, and that the gt/lighting/states/res settings match.",
+  "gt_design_protocol": "protocol/teaset_common_light_gt_design.json"
 }
