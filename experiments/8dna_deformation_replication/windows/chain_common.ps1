@@ -14,6 +14,7 @@ $chain = Join-Path $log 'cross_backbone_chain.log'
 $gitSsh = 'C:\Program Files\Git\usr\bin'
 $ssh = if (Test-Path "$gitSsh\ssh.exe") { "$gitSsh\ssh.exe" } else { (Get-Command ssh -ErrorAction Stop).Source }
 $scp = if (Test-Path "$gitSsh\scp.exe") { "$gitSsh\scp.exe" } else { (Get-Command scp -ErrorAction Stop).Source }
+$timeoutExe = "$gitSsh\timeout.exe"
 $remote = '~/NeuralShaderDemo'
 if (-not $track) { $track = 'chain' }
 function Note([string] $m) { "$(Get-Date -Format o) [$track] $m" | Tee-Object -Append $chain | Write-Host }
@@ -83,12 +84,16 @@ function WaitRnaOnServer([string] $state) {
     Note "WAIT rna_train_$state"
     $unreach = 0
     while ($true) {
-        $status = & $ssh -o BatchMode=yes -o ConnectTimeout=30 LabServer63 "cat $remote/results/8dna_replication/logs/rna_teaset_$state.status 2>/dev/null"
-        if ($LASTEXITCODE -eq 255) {
-            # ssh itself failed (e.g. Tailscale SSH asking for re-authentication):
-            # say so in the chain log instead of waiting silently.
+        # Bounded: a Tailscale SSH re-authentication check keeps ssh waiting on
+        # the server side indefinitely instead of failing, so cap each poll and
+        # put the authentication link it printed into the chain log.
+        $errFile = Join-Path $log "ssh_poll_$state.err"
+        $status = & $timeoutExe 90 $ssh -o BatchMode=yes -o ConnectTimeout=30 LabServer63 "cat $remote/results/8dna_replication/logs/rna_teaset_$state.status 2>/dev/null" 2> $errFile
+        if ($LASTEXITCODE -eq 255 -or $LASTEXITCODE -eq 124) {
             $unreach++
-            if ($unreach -eq 3 -or $unreach % 30 -eq 0) { Note "WARN LabServer63 unreachable ($unreach polls) while waiting for rna_train_$state" }
+            $auth = Select-String -Path $errFile -Pattern 'https://login\.tailscale\.com/\S+' | Select-Object -Last 1
+            if ($auth) { Note "WARN Tailscale SSH needs re-authentication for LabServer63: $($auth.Matches[0].Value)" }
+            elseif ($unreach -eq 3 -or $unreach % 30 -eq 0) { Note "WARN LabServer63 unreachable ($unreach polls) while waiting for rna_train_$state" }
         } else { $unreach = 0 }
         if ($status) { break }
         Start-Sleep -Seconds 120

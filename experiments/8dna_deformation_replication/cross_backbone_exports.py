@@ -56,7 +56,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     manifest = {"worklog": args.worklog, "protocol": L.rel(L.EXPERIMENT / args.protocol),
                 "project_commit": L.git_head(L.ROOT), "display": "clamp(x^(1/2.2),0,1)",
-                "regime": "teaset_cross_backbone_common_light: one Mitsuba scene, material set, camera and directional light shared by both models; a single GT column is therefore valid",
+                "regime": "teaset_cross_backbone_common_light (lighting rev 3): one Mitsuba scene, material set, camera and 15-degree square area light shared by both models; a single GT column is therefore valid. Panels 07 (w21_envmap) use the worklog-21 envmap regime with its corrected references.",
                 "error_maps": "per-pixel mean |display difference|, inferno, fixed scale 0..0.2", "files": {}}
     sources: dict[str, list] = {}
 
@@ -128,12 +128,17 @@ def main() -> int:
              np.concatenate([L.label(ldr(g3), f"T3 GT ({label})"), L.label(ldr(n3), "T3 frozen (released)"),
                              L.label(ldr(L.load_exr(t3)), "T3 same-state refit"),
                              L.label(err(L.load_exr(t3), g3), "|refit - GT| (0..0.2)")], 1),
-             [t0, t3])
+             [t0, t3] + ([fdir / "T3" / "gt_A.exr", fdir / "T3" / "gt_B.exr", fdir / "T3" / "8dna_attached.exr"]
+                         if regime == "common_light" else
+                         [L.RESULTS / "w21_reference_correction" / "T3" / "gt_A.exr",
+                          L.RESULTS / "w21_reference_correction" / "T3" / "gt_B.exr",
+                          L.RESULTS / "frozen" / "teaset_locked" / "T3" / "8dna_attached.exr"]))
     rna_refit = rdir / "refit_T3_current.npy"
     if rna_refit.exists():
         save("08_RNA_T3_frozen_vs_refit.png",
              np.concatenate([L.label(ldr(gt["T3"]), "T3 GT"), L.label(ldr(rna["T3"]), "T3 frozen RNA"),
-                             L.label(ldr(np.load(rna_refit).astype(np.float32)), "T3 RNA same-state refit")], 1),
+                             L.label(ldr(np.load(rna_refit).astype(np.float32)), "T3 RNA same-state refit"),
+                             L.label(err(np.load(rna_refit).astype(np.float32), gt["T3"]), "|refit - GT| (0..0.2)")], 1),
              [rna_refit, rdir / "T3_canonical.npy"] + gexr("T3"))
     # 9. ROI overlay
     from PIL import Image
@@ -151,7 +156,8 @@ def main() -> int:
                 "8dna": [ev["8dna"]["rule_attached"]["per_state"][s]["interaction"]["rise"],
                          ev["8dna"]["rule_attached"]["per_state"][s]["interaction"]["gain"]],
                 "rna": [ev["rna"]["rule_canonical"]["per_state"][s]["interaction"]["rise"],
-                        ev["rna"]["rule_canonical"]["per_state"][s]["interaction"]["gain"]]} for s in STATES}}
+                        ev["rna"]["rule_canonical"]["per_state"][s]["interaction"]["gain"]]} for s in STATES},
+        "refits": {k: ev[k] for k in ("refit_8dna_common_light", "refit_8dna_w21_envmap_corrected", "refit_rna_common_light")}}
     for name in sources:
         manifest["files"][name] = {"sha256": L.sha256(out / name), "sources": sources[name]}
     L.write_json(out / "manifest.json", manifest)
