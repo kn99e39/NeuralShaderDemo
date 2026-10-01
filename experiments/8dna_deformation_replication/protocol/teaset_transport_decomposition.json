@@ -1,0 +1,63 @@
+{
+  "purpose": "Reference-only M2 attribution: which physical light-transport paths carry the GT change in the stationary interaction ROI of the accepted worklog-21/22 teaset states. No neural network is executed for the central measurement.",
+  "declared": "2026-10-01, before any decomposition render",
+  "states": "T0, T1, T1b, T2, T3 exactly as protocol/teaset_frozen_locked.json (mover teapot2 = milk pot; interaction ROI = pixels on teapot4 = tea pot within 0.15 of the mover in T3)",
+  "regimes": {
+    "common_light": {
+      "scene": "teaset_parts.scene_dict(512, state, teaset_cross_backbone_locked lighting) - lighting revision 3, 15-degree area light, black world",
+      "reference": "frozen/teaset_common_light_8dna/<state>/gt_A.exr, gt_B.exr (Mitsuba C++ path, wavefront, 32768 spp)",
+      "rois": "gt_design/common_light/rois_<state>.npz",
+      "role": "worklog-22 cross-backbone regime"
+    },
+    "w21_envmap": {
+      "scene": "teaset_parts.scene_dict(512, state, None) - upstream envmap",
+      "reference": "w21_reference_correction/<state>/gt_A.exr, gt_B.exr (Mitsuba C++ path, wavefront, 2048 spp)",
+      "rois": "gt_design/v2/rois_<state>.npz",
+      "role": "worklog-21 8DNA anchor regime"
+    }
+  },
+  "estimator": "transport_decomposition.py: a project-owned primal re-implementation of Mitsuba 3.5.1's prb/path estimator (emitter sampling with visibility + BSDF sampling, power-heuristic MIS, Russian roulette from depth 5, unbounded depth), run in wavefront mode. Every radiance contribution is added to exactly one class, so the classes partition the estimate. It does not replace the canonical reference renderer.",
+  "classes": {
+    "definition": "v = number of scattering vertices x1..xv on the path between the camera and the emitter (x1 = the visible surface point). Part identity from the hit mesh pointer (teaset_parts.part_shape_ids), never from image-space or XYZ proximity.",
+    "camera_emitter": "v = 0: the camera sample sees the emitter or environment directly",
+    "direct": "v = 1: light reaching x1 directly (emitter sample or BSDF-sampled emitter hit), including its current shadowing",
+    "x2_<part>": "v = 2: exactly one inter-surface reflection, classified by the part of x2 (plate, teapot2 = mover, teapot3, teapot4 = the ROI's own part, other = non-asset such as the emitter quad)",
+    "higher_mover": "v >= 3 and the mover appears among x2..xv",
+    "higher_other": "v >= 3 and the mover does not appear among x2..xv"
+  },
+  "groups": {
+    "direct": ["camera_emitter", "direct"],
+    "mover_single": ["x2_teapot2"],
+    "stationary_single": ["x2_plate", "x2_teapot3", "x2_teapot4", "x2_other"],
+    "higher_mover": ["higher_mover"],
+    "higher_other": ["higher_other"],
+    "mover_mediated": ["x2_teapot2", "higher_mover"],
+    "higher_order": ["higher_mover", "higher_other"]
+  },
+  "sampling": {
+    "roi_spp": {"common_light": 32768, "w21_envmap": 8192},
+    "seeds": {"A": 7001, "B": 7002},
+    "images": "full 512x512 component images of T0 and T3 in both regimes at 1024 spp, seed A, for review only"
+  },
+  "metrics": {
+    "pairing": "state pixels mask_interaction paired with T0 pixels idx0_interaction, as in teaset_frozen_eval",
+    "change": "dC_k = C_k(state) - C_k(T0) per paired pixel, linear RGB, seeds A and B averaged",
+    "share": "s_k = <dC_k, dG> / <dG, dG> over ROI pixels and channels, dG = sum_k dC_k; shares sum to 1 exactly",
+    "share_repeat": "s_k computed from seed A alone and from seed B alone",
+    "magnitude": "mean |dC_k| (linear, RGB mean) and its ratio to the component's own repeat noise, mean |C_k^A(T0) - C_k^B(T0)|"
+  },
+  "validity": {
+    "reference_agreement": "per regime and state: ROI linear mean of the diagnostic total within max(1%, 3 x |refA/refB - 1|) of the canonical reference mean, and display MAE(diagnostic, refA) <= 1.5 x display MAE(refB, refA)",
+    "share_stability": "for every group used in a decision, |s^A - s^B| <= 0.10",
+    "if_violated": "outcome E (decomposition not reliable) for that regime"
+  },
+  "decision": {
+    "per_state": "for T1b, T2, T3; a group is significant if its mean |dC| > 3 x its own repeat noise",
+    "A": "MOVED-PART INTERREFLECTION DOMINANT: mover_mediated share >= 0.60 and significant (sub-label single-bounce if mover_single >= higher_mover, else higher-order)",
+    "B": "DIRECT / VISIBILITY CHANGE DOMINANT: direct share >= 0.60 and significant",
+    "C": "HIGHER-ORDER TRANSPORT DOMINANT: higher_order share >= 0.60 and significant, and not A",
+    "D": "MIXED: none of A, B, C; report the two largest groups",
+    "E": "DECOMPOSITION NOT RELIABLE: a validity condition fails",
+    "batch_answer": "the T3 (strong approach) outcome in each regime, with T1b and T2 reported for agreement; T1 is decomposed as the relation-preserving control, without a label"
+  }
+}
