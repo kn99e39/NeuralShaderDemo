@@ -44,8 +44,9 @@ def main() -> int:
         path = mi.load_dict({"type": "path", "max_depth": -1, "rr_depth": 5})
         # chunked like the canonical references: one 512^2 x 1024 spp wavefront
         # launch would exhaust GPU memory
+        # render_chunked seeds its chunks seed, seed+1, ...: keep the two ranges disjoint
         pa = np.asarray(L.render_chunked(scene, path, spp, 32, 11)[0], np.float32).reshape(-1, 3)[pix]
-        pb = np.asarray(L.render_chunked(scene, path, spp, 32, 12)[0], np.float32).reshape(-1, 3)[pix]
+        pb = np.asarray(L.render_chunked(scene, path, spp, 32, 100_011)[0], np.float32).reshape(-1, 3)[pix]
         mae_d = float(np.abs(L.tonemap(r["total"]) - L.tonemap(pa)).mean())
         mae_p = float(np.abs(L.tonemap(pb) - L.tonemap(pa)).mean())
         ratio = float(r["total"].mean() / (0.5 * (pa + pb)).mean())
