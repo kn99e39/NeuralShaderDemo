@@ -42,8 +42,10 @@ def main() -> int:
         spp = 1024
         r = D.render_pixels(regime, "T3", pix, spp, 9001)
         path = mi.load_dict({"type": "path", "max_depth": -1, "rr_depth": 5})
-        pa = np.array(mi.render(scene, integrator=path, spp=spp, seed=11), np.float32).reshape(-1, 3)[pix]
-        pb = np.array(mi.render(scene, integrator=path, spp=spp, seed=12), np.float32).reshape(-1, 3)[pix]
+        # chunked like the canonical references: one 512^2 x 1024 spp wavefront
+        # launch would exhaust GPU memory
+        pa = np.asarray(L.render_chunked(scene, path, spp, 32, 11)[0], np.float32).reshape(-1, 3)[pix]
+        pb = np.asarray(L.render_chunked(scene, path, spp, 32, 12)[0], np.float32).reshape(-1, 3)[pix]
         mae_d = float(np.abs(L.tonemap(r["total"]) - L.tonemap(pa)).mean())
         mae_p = float(np.abs(L.tonemap(pb) - L.tonemap(pa)).mean())
         ratio = float(r["total"].mean() / (0.5 * (pa + pb)).mean())
