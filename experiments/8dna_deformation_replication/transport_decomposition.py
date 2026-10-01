@@ -348,6 +348,8 @@ def cmd_analyze(args) -> int:
     for regime, r in rec["regimes"].items():
         print(f"== {regime}: answer {r['batch_answer']}  validity", {s: v["pass"] for s, v in r["validity"].items()})
         for s, st in r["states"].items():
+            if s == "T0":
+                continue
             print(f"  {s:4s} dG|.| {st['dG_mean_abs']:.4f} " + "  ".join(
                 f"{g} {st['groups'][g]['share']:+.2f}" for g in ("direct", "mover_single", "stationary_single", "higher_mover", "higher_other")))
         print("  decision", r["decision"])
