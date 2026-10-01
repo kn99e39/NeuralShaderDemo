@@ -20,6 +20,11 @@ rm -f "$STATUS"
 cd "$WT/experiments/8dna_deformation_replication"
 echo "START $(date -Is) commit $(git rev-parse --short HEAD)" > "$LOG/area_trained_server.log"
 for split in val train; do
+    # A split already finished here, or generated on the 5080 and copied in with
+    # its cameras file, is kept (the two machines produce identical views).
+    if [ -f "$OUT/teaset_T0_$split.cameras.json" ] && [ "$OUT/teaset_T0_$split.cameras.json" -nt "$OUT/teaset_T0_$split.h5" ]; then
+        echo "h5_$split present, kept" >> "$LOG/area_trained_server.log"; continue
+    fi
     s=$(date +%s)
     "$PY" -X faulthandler rna_bridge.py h5 --protocol "$P" --state T0 --split "$split" > "$LOG/h5_area_T0_$split.log" 2>&1
     # The cameras file is written only after the H5 is complete; trust it, not the
