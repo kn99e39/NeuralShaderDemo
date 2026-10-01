@@ -15,7 +15,10 @@ STATUS=$LOG/smoke_8dna_server.status
 OUT=$WT/results/8dna_replication/server_smoke
 mkdir -p "$LOG"
 rm -f "$STATUS"
-while [ ! -f "$LOG/area_trained_server.status" ]; do sleep 60; done
+# QUEUE=0 starts at once (the RNA run moved to the 5080, so nothing to wait for)
+if [ "${QUEUE:-1}" = 1 ]; then
+    while [ ! -f "$LOG/area_trained_server.status" ]; do sleep 60; done
+fi
 while pgrep -f 'train_rna[.]sh [A-Za-z0-9_]+$' > /dev/null; do sleep 60; done
 cd "$WT/experiments/8dna_deformation_replication"
 s=$(date +%s)
