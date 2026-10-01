@@ -1,0 +1,260 @@
+{
+  "purpose": "POST-HOC SENSITIVITY of worklog 22 (declared 2026-10-01, after the frozen RNA output was seen). RNA's frozen render showed surface-fixed sparkle; diagnosis: its delta-light training targets on near-mirror nickel are firefly-dominated (top 0.1% of on-asset pixels carry 28-57% of the energy). This run retrains RNA T0 on the same cameras and light directions with a 15-degree square area light per pixel (the official generator's light_radius > 0 case, with the evaluation emitter's shape) and repeats the frozen comparison. The locked worklog-22 result stays primary; 8DNA, references, ROIs, rules and features are unchanged.",
+  "regime": "teaset_cross_backbone_common_light",
+  "asset": "teaset",
+  "checkpoint_sha256": "6feb5e1b00e17d662596fcc0e6abde686ebbbd48d5233a2100caa407780f5bbc",
+  "res": 512,
+  "camera": "upstream teaset get_scene(512) camera, identical to worklog 21",
+  "lighting": {
+    "type": "area",
+    "to_light": [
+      -0.6647,
+      0.7071,
+      0.2418
+    ],
+    "irradiance": 5.0,
+    "distance": 8.0,
+    "half_angle_deg": 15.0,
+    "reference_integrator": {
+      "type": "path",
+      "max_depth": -1,
+      "rr_depth": 5
+    }
+  },
+  "renderer": {
+    "reference": "Mitsuba 3.5.1 C++ path, max_depth -1, rr_depth 5, wavefront (see reference_integrator_note), black world, released Ni_palik materials; one reference shared by both models",
+    "8dna": "upstream neuralpath via teaset_parts modes, as worklog 21",
+    "rna": "official RNA NeuralSurfaceTriPlane network fed by rna_bridge.py feature buffers (Mitsuba first hits), prediction branch by binary visibility, radiance = prediction * irradiance / training_light_intensity"
+  },
+  "gt": {
+    "spp": 32768,
+    "chunk": 32,
+    "seed_A": 1000000,
+    "seed_B": 2000000
+  },
+  "gt_output": "gt_design/common_light",
+  "states": {
+    "T0": {},
+    "T1": {
+      "plate": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot2": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot3": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "teapot4": [
+        0.0,
+        0.0,
+        0.15
+      ]
+    },
+    "T1b": {
+      "teapot2": [
+        0.0,
+        0.0,
+        0.15
+      ]
+    },
+    "T2": {
+      "teapot2": [
+        0.1,
+        0.0,
+        0.0
+      ]
+    },
+    "T3": {
+      "teapot2": [
+        0.16,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "roles": {
+    "T0": "canonical",
+    "T1": "relation-preserving motion control",
+    "T1b": "lateral relation change",
+    "T2": "moderate approach",
+    "T3": "strong approach"
+  },
+  "rois": "gt_design/common_light/rois_<state>.npz (pixel-identical to worklog-21 gt_design/v2 ROIs)",
+  "neural": {
+    "spp": 1024,
+    "chunk": 4,
+    "seed": 0,
+    "seed_repeat": 100000
+  },
+  "modes": {
+    "T0": [
+      "upstream",
+      "attached",
+      "fixed"
+    ],
+    "T1": [
+      "attached",
+      "fixed",
+      "upstream"
+    ],
+    "T1b": [
+      "attached",
+      "fixed",
+      "upstream"
+    ],
+    "T2": [
+      "attached",
+      "fixed",
+      "upstream"
+    ],
+    "T3": [
+      "attached",
+      "fixed",
+      "upstream"
+    ]
+  },
+  "frozen_output": "frozen/teaset_common_light_8dna",
+  "rna_dataset_dir": "rna_teaset/datasets_area_trained",
+  "rna_dataset": {
+    "producer": "rna_bridge.py h5",
+    "resolution": 512,
+    "views": {
+      "train": 200,
+      "val": 40
+    },
+    "spp": 512,
+    "chunk": 128,
+    "camera_radius": 2.5,
+    "camera_lookat": [
+      0.0,
+      0.2,
+      0.0
+    ],
+    "fov": 45.0,
+    "camera_distribution": "uniform on the upper hemisphere (height = U * 0.9999), as the official generator's 'hemisphere' mode, +y up",
+    "light_distribution": "train: independent per pixel; val: one per image; uniform on the upper hemisphere with height = U * 0.999, as training_dataset/generator.py",
+    "irradiance": 5.0,
+    "seeds": {
+      "train": 11,
+      "val": 12
+    },
+    "policy": "Rain HQ view count (200/40) at 512^2. 512 spp, chosen before any RNA training from a GT-only cost/quality measurement on one representative training view against a 4096-spp reference (results/8dna_replication/rna_teaset/spp_cost_quality.json): display MAE vs 4096 spp is 0.0029 at 512 and 0.0023 at 1024, both 20-40x below this batch's interaction-ROI physical signal (0.062-0.099), while 512 halves generation cost. The official range is 256-1024 and the project's Rain datasets used 256. chunk 128 is a performance setting only (GPU lanes per kernel), not part of the estimator. Sensitivity run: same views, seeds, spp and chunk; only the light shape differs.",
+    "light": {
+      "type": "area",
+      "distance": 8.0,
+      "half_angle_deg": 15.0,
+      "visibility": "any of the square unoccluded and above the surface (4x4 stratum centres)",
+      "estimator": "rna_bridge trace_directional with squares: uniform point on the lane's square, weight L_r*A*cos_light/r^2, segment shadow test; no MIS. Validated against Mitsuba C++ path on the evaluation scene: mean ratio 1.0046, noise 1.6x Mitsuba's own seed repeat at equal spp."
+    }
+  },
+  "rna_training": {
+    "config": "experiments/8dna_deformation_replication/configs/rna_teaset_T0.yml (Rain HQ static config with teaset datasets: NeuralSurfaceTriPlane 512^2 x 8 channels, MLP 4 x 512, 250 epochs, lr 1e-3 step 0.5/50, log-L2, visibility weight 10, blur 8 -> 1 over 20k it)",
+    "seed": 0,
+    "checkpoint_rule": "validation-best val_psnr checkpoint from the official ModelCheckpoint callback",
+    "launch": "official scripts/train.py from the RNA root in WSL, through wsl_run_detached.sh"
+  },
+  "rna_features_dir": "rna_teaset/features",
+  "rna_inference": {
+    "subpixel_grid": 4,
+    "training_light_intensity": 5.0,
+    "modes": {
+      "canonical": "primary: triplane position = pulled-back canonical hit, normalized by the training H5 AABB; normal, camera_dir, light_dir and visibility from the current state",
+      "current": "diagnostic: official renderer behaviour, current-world hit normalized by the current scene AABB (not a transport result)"
+    },
+    "pixel": "mean over 16 stratified sub-pixel samples x 16 light samples, misses count 0 (the reference uses a box pixel filter)",
+    "light_sampling": {
+      "type": "area",
+      "samples_per_subpixel": 16,
+      "strata": [
+        4,
+        4
+      ],
+      "seeds": {
+        "A": 21,
+        "B": 22
+      },
+      "estimator": "per sub-pixel sample, 16 stratified uniform points y on the protocol's area-light rectangle; direction w=(y-x)/|y-x| from the current-state hit x, binary visibility of the segment x->y (and n.w>0), weight E_i = L_r * A * cos_light / |y-x|^2 (perpendicular irradiance of that sample); radiance = mean_i RNA(w_i, vis_i) * E_i / training_light_intensity. This is RNA's own light model (a directional response integrated over the emitter, as rna/lights.py RectangularLight) applied to the same 15-degree area light the reference and 8DNA see.",
+      "repeat": "seed B renders T0 again with independent light samples; RNA's only stochastic input, so this is RNA's own seed-to-seed noise for the decision rule's noise_precondition",
+      "added": "2026-09-30, before any RNA training or inference. The first features step (13:40) still used the delta-light contract (centre direction, infinite visibility ray) after lighting revision 3; its infinite ray hit the emitter rectangle, so every visibility was 0. Superseded, archived, not used."
+    },
+    "light_model": "area-trained",
+    "light_model_note": "The model is trained on this area-light family, so it is queried once per sub-pixel sample at the light's centre direction with any-of-it visibility (from the same feature buffers' 16 light samples), times E/5 - the official renderer with a sun of angular size. The locked run integrated a delta-trained model over 16 light samples instead."
+  },
+  "rna_output": "rna_teaset/frozen_area_trained",
+  "static_gate_rna": {
+    "G1": "RNA T0 interaction-ROI display-MAE error (canonical mode, vs the locked common-light reference) is below the reference's own interaction-ROI change at T3 (display MAE vs T0, seed set A), i.e. the static error floor is below the physical signal to be tracked",
+    "G2": "the T0 interaction crop visibly represents the milk-pot interreflection structure on the tea pot (review recorded in the worklog)",
+    "fail": "STATIC BASELINE INSUFFICIENT / NOT EVALUABLE; no moved-state interpretation",
+    "also_reported": "RNA validation PSNR on its 40 held-out views, and G1 computed for 8DNA in the same regime"
+  },
+  "decision_rule": {
+    "primary_roi": "interaction",
+    "failure_in_state": "for T1b, T2, T3: interaction-ROI display-MAE error rises by at least 25% over the same-surface T0 error AND tracking gain <dN,dG>/<dG,dG> (linear RGB) < 0.5",
+    "control_check": "the same error rise in T1 must be below 25% of the T0 error",
+    "per_model_classification": "FROZEN FAILURE if failure_in_state holds for at least one relation-change state and control_check holds; NO MEANINGFUL FAILURE if for none; failure with a failed control is reported as confounded",
+    "applied_to": "8DNA primary mode 'attached' and RNA primary mode 'canonical', each against its own T0",
+    "noise_precondition": "Before any state is interpreted, the interaction-ROI physical signal dG must exceed 3x the model's own seed-to-seed noise in that ROI as well as 3x the reference repeat noise. The earlier gate checked only the reference noise and could not detect an inadequate model-side floor."
+  },
+  "refits": {
+    "8dna": "protocol/teaset_8dna_refit_locked.json checkpoints, also evaluated in this regime (8DNA is lighting-independent)",
+    "rna": "same config, seed and generation settings on the T3 state (dataset teaset_T3_train/val.h5), checkpoint rule as above; evaluated at T3 with its own T3 frame (no pullback)",
+    "recovery_rule": "refit(T3) interaction-ROI error at T3 <= 1.25 x the same pipeline's T0 model error on the same surfaces at T0, AND gain <N_refit(T3) - N_T0(T0), dG>/<dG,dG> >= 0.5; case A frozen fails + refit recovers, case B frozen fails + refit does not recover, case C frozen does not fail"
+  },
+  "reference_integrator_note": "Reference: Mitsuba C++ path (max_depth -1, rr_depth 5) in wavefront mode (DrJit LoopRecord off). With LoopRecord on, path and prb both lose 1-5% of the radiance on this GPU depending on kernel lane count, and do not reproduce (probe_loop_record.py); in wavefront mode both match Mitsuba's CPU LLVM backend (sun 0.11033 +- 0.00006, envmap 0.11628 +- 0.00003 at 128^2 x 1024 spp; probe_llvm_reference.py) and agree with each other. path replaces the upstream scene's prb only because wavefront prb (a Python integrator) is ~35x slower here. Decided before any neural output in this regime.",
+  "reuse_design_gt": true,
+  "reference_reuse_note": "The GT-only design run supplies the references. teaset_frozen_eval verifies, before reusing them, that the design run came from a clean tree and that no file producing those renders (teaset_parts.py, ednalib.py, teaset_gt_states.py and the design protocol) changed between that commit and this one, and that the gt/lighting/states/res settings match.",
+  "gt_design_protocol": "protocol/teaset_common_light_gt_design.json",
+  "lighting_revision_3": "Revision 3, decided from a GT-only + T0-only measurement before any moved-state neural output in this regime. The delta directional light of revisions 1-2 left the frozen-8DNA estimator's own seed-to-seed noise at 0.0585 display MAE in the interaction ROI, only 1.63x the physical signal it must resolve (dG(T3)=0.095) and 5.8x the reference noise. The cause is heavy-tailed specular fireflies on near-mirror nickel under a delta source, not sample count: 4x the samples cut that noise only 1.33x (vs 2.00x, i.e. sqrt(spp), in the worklog-21 envmap regime), and 2.5% of pixels carried half the seed difference (p99.9 = 13.9 linear) against 13.5% and 0.20 under the envmap. Replacing it with an area light of the same direction and the same irradiance at the asset origin removes those spikes without touching the signal: dG(T3) stays 0.095-0.100 from 3 to 25 deg while the neural noise falls monotonically. 15 deg half-angle is the smallest size clearing the 3x neural-noise margin (dG/neural = 4.40, dG/reference = 7.0); it is still a clearly directional source (a 4.2-unit square at 8 units, about a studio softbox), so the regime stays distinct from the envmap, and it is well short of 40 deg where dG itself starts to fall (0.087) as the light washes out the interreflection under test. RNA supports RectangularLight natively and draws one direction per shading sample, so this stays inside both models' official contracts.",
+  "light_size_scan": {
+    "measurement": "interaction ROI, display MAE; neural = frozen-8DNA seed-to-seed at T0 (1024 spp), dG = GT(T3) vs GT(T0) paired through the ROI correspondence, ref = GT seed A vs B (4096 spp)",
+    "delta": {
+      "neural": 0.0585,
+      "dG": 0.0954,
+      "ref": 0.0303,
+      "dG_over_neural": 1.63
+    },
+    "area_3deg": {
+      "neural": 0.052,
+      "dG": 0.0966,
+      "ref": 0.0305,
+      "dG_over_neural": 1.86
+    },
+    "area_8deg": {
+      "neural": 0.0327,
+      "dG": 0.0953,
+      "ref": 0.0237,
+      "dG_over_neural": 2.92
+    },
+    "area_15deg": {
+      "neural": 0.0217,
+      "dG": 0.0952,
+      "ref": 0.0136,
+      "dG_over_neural": 4.4
+    },
+    "area_25deg": {
+      "neural": 0.0137,
+      "dG": 0.1,
+      "ref": 0.0079,
+      "dG_over_neural": 7.29
+    },
+    "area_40deg": {
+      "neural": 0.0093,
+      "dG": 0.0865,
+      "ref": 0.0044,
+      "dG_over_neural": 9.32
+    }
+  },
+  "status": "post-hoc sensitivity; does not replace teaset_cross_backbone_locked.json",
+  "rna_checkpoint_names": {
+    "frozen": "rna-teaset-T0-area-trained"
+  },
+  "frozen_record_name": "cross_backbone_frozen_area_trained.json",
+  "execution": "T0 datasets generated on LabServer63's GPU (validated: server and 5080 produce bit-identical views for the same seeds and code), RNA trained there; features, inference and evaluation on the 5080."
+}

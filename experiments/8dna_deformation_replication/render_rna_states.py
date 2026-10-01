@@ -63,8 +63,11 @@ def main() -> int:
     rec = {"protocol": L.rel(L.EXPERIMENT / args.protocol), "part": args.part, "environment": L.environment_record(),
            "renders": {}}
 
+    names = proto.get("rna_checkpoint_names", {"frozen": "rna-teaset-T0-common-light", "refit": "rna-teaset-T3-common-light"})
+    light_model = inf.get("light_model", "area-sampled")
+    rec["light_model"] = light_model
     if args.part == "frozen":
-        ck, psnr = best_checkpoint("rna-teaset-T0-common-light")
+        ck, psnr = best_checkpoint(names["frozen"])
         rec["checkpoint_T0"] = {"path": ck, "val_psnr_db": psnr, "sha256": L.sha256(ck)}
         train_h5 = L.RESULTS / proto["rna_dataset_dir"] / "teaset_T0_train.h5"
         rec["train_h5_sha256"] = L.sha256(train_h5)
@@ -73,7 +76,7 @@ def main() -> int:
         # seed-to-seed noise for the decision rule's noise precondition
         jobs.append(("T0_B", "canonical", ck, train_h5, "T0_canonical_B"))
     else:
-        ck3, psnr3 = best_checkpoint("rna-teaset-T3-common-light")
+        ck3, psnr3 = best_checkpoint(names["refit"])
         rec["checkpoint_T3_refit"] = {"path": ck3, "val_psnr_db": psnr3, "sha256": L.sha256(ck3)}
         train_h5 = L.RESULTS / proto["rna_dataset_dir"] / "teaset_T3_train.h5"
         rec["train_h5_sha256"] = L.sha256(train_h5)
@@ -90,6 +93,7 @@ def main() -> int:
             f" --features {WSL_ROOT}/{L.rel(feats)}"
             f" --mode {mode}"
             f" --training-light-intensity {inf['training_light_intensity']}"
+            f" --light-model {light_model}"
             f" --out {WSL_ROOT}/{L.rel(prefix)}")
         img = np.load(str(prefix) + ".npy")
         rec["renders"][tag] = {"state": state, "features": L.rel(feats), "mode": mode, "mean": float(img.mean()),

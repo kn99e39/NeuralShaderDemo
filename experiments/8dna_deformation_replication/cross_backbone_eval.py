@@ -91,10 +91,11 @@ def refit_block(gt, rois, n_t0, n_t3, released_t0_err=None) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--protocol", default="protocol/teaset_cross_backbone_locked.json")
     ap.add_argument("--frozen-only", action="store_true",
                     help="frozen RNA x 8DNA comparison only (before the refits exist); writes cross_backbone_frozen.json")
     args = ap.parse_args()
-    proto = json.loads(open(L.EXPERIMENT / "protocol/teaset_cross_backbone_locked.json", encoding="utf-8").read())
+    proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
     w21 = json.loads(open(L.EXPERIMENT / "protocol/teaset_frozen_locked.json", encoding="utf-8").read())
     L.init_upstream()
     states = proto["states"]
@@ -129,7 +130,7 @@ def main() -> int:
 
     if args.frozen_only:
         rec["refits"] = "not evaluated in this record (frozen-only run); see cross_backbone.json"
-        L.write_json(L.RESULTS / "cross_backbone" / "cross_backbone_frozen.json", rec)
+        L.write_json(L.RESULTS / "cross_backbone" / proto.get("frozen_record_name", "cross_backbone_frozen.json"), rec)
         summarize(rec, states)
         return 0
 

@@ -13,6 +13,11 @@
                  (sum of weight * visibility * n.w) matches Mitsuba's own emitter
                  sampling of the same rectangle: mean within 0.5%, per-pixel
                  difference at Monte Carlo level, same unlit fraction.
+6. area mode   : the bridge's per-pixel square area light (training light of the
+                 post-hoc area-trained sensitivity run), with every pixel at the
+                 protocol direction, matches Mitsuba's C++ path on the evaluation
+                 scene (mean within 1%); pixels its any-visibility marks shadowed
+                 receive no direct light from the square.
 Tests 1-2 use a directional light explicitly (the training-data semantics);
 features for tests 4-5 go to a bridge_tests protocol copy at 128^2, never to
 the evaluation features directory.
@@ -135,6 +140,33 @@ def main() -> int:
     rec["area_light"]["pass"] = all(abs(v["mean_ours"] / v["mean_mitsuba"] - 1) < 0.005 and v["rel_pixel_mae"] < 0.03
                                     and abs(v["unlit_ours"] - v["unlit_mitsuba"]) < 0.005
                                     for v in rec["area_light"].values() if isinstance(v, dict))
+    # 6. area mode of the tracer (sensitivity run's training light)
+    lt = proto["lighting"]
+    area = {"type": "area", "distance": lt["distance"], "half_angle_deg": lt["half_angle_deg"]}
+    ref_scene = mi.load_dict(T.scene_dict(res, {}, lt))
+    ra = np.array(mi.render(ref_scene, spp=spp, seed=5), dtype=np.float32)
+    rb = np.array(mi.render(ref_scene, spp=spp, seed=6), dtype=np.float32)
+    geo = mi.load_dict(T.scene_dict(res, {}, None))
+    tl = np.repeat(to_light[None], res * res, 0)
+    mine = B.render_view(geo, ref_scene.sensors()[0], res, tl, spp, 64, 1, E, area=area)["color"].reshape(res, res, 3)
+    centre = B.camera_rays(ref_scene.sensors()[0], res, np.array([[0.5, 0.5]]))
+    si, fc = B.surface_features(geo, centre)
+    sq = B.area_squares(tl, E, area)
+    vis = B.visibility_any(geo, si, fc["normal"], sq)
+    direct = np.zeros(res * res)
+    for k in range(64):
+        sampler = mi.load_dict({"type": "independent"})
+        sampler.seed(100 + k, res * res)
+        direct += B._vec(B.trace_directional(geo, sampler, centre, mi.Vector3f(*[float(v) for v in to_light]), E,
+                                             max_depth=1, squares=sq)).sum(-1)
+    hit = fc["hit"]
+    ref_mean = float(0.5 * (ra + rb).mean())
+    rec["area_mode"] = {"mean_bridge": float(mine.mean()), "mean_path": ref_mean,
+                        "display_mae_bridge_vs_path": float(np.abs(L.tonemap(mine) - L.tonemap(ra)).mean()),
+                        "display_mae_path_seed_repeat": float(np.abs(L.tonemap(rb) - L.tonemap(ra)).mean()),
+                        "shadowed_with_nonzero_direct": int(((~vis) & hit & (direct > 0)).sum()),
+                        "visible_pixels": int((vis & hit).sum())}
+    rec["area_mode"]["pass"] = (abs(mine.mean() / ref_mean - 1) < 0.01 and rec["area_mode"]["shadowed_with_nonzero_direct"] == 0)
     rec["pass"] = all(v["pass"] for v in rec.values() if isinstance(v, dict))
     L.write_json(out / "bridge_tests.json", rec)
     print(json.dumps({k: (v if not isinstance(v, dict) else {kk: vv for kk, vv in v.items() if kk not in ("shapes", "attrs")}) for k, v in rec.items()}, indent=1, default=str))

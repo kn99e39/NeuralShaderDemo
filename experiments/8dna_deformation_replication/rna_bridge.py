@@ -43,15 +43,44 @@ def _vec(v) -> np.ndarray:
     return np.stack([np.array(v.x), np.array(v.y), np.array(v.z)], -1)
 
 
-def trace_directional(scene, sampler, ray, to_light, irradiance: float, rr_depth: int = 5, max_depth: int = 1024):
-    """Path tracer with one delta directional light whose direction is per lane.
+def area_squares(to_light: np.ndarray, irradiance: float, area: dict) -> dict:
+    """Per-lane square emitters built like teaset_parts.scene_dict's area light.
+
+    For lane direction d: centre distance*d, facing the origin, half edge
+    distance*tan(half_angle), in-plane axes from Mitsuba's look_at with the same
+    up-vector rule, radiance scaled so the irradiance at the origin is E. For the
+    protocol direction this is exactly the evaluation emitter.
+    """
+    d = to_light / np.linalg.norm(to_light, axis=-1, keepdims=True)
+    dist = float(area["distance"])
+    half = dist * np.tan(np.deg2rad(float(area["half_angle_deg"])))
+    up = np.where(np.abs(d[:, 1:2]) > 0.9, np.array([[0.0, 0.0, 1.0]]), np.array([[0.0, 1.0, 0.0]]))
+    fwd = -d
+    left = np.cross(up, fwd)
+    left /= np.linalg.norm(left, axis=-1, keepdims=True)
+    new_up = np.cross(fwd, left)
+    return {"centre": d * dist, "e1": left * half, "e2": new_up * half, "normal": fwd,
+            "radiance": irradiance * dist ** 2 / (2 * half) ** 2, "area": (2 * half) ** 2}
+
+
+def trace_directional(scene, sampler, ray, to_light, irradiance: float, rr_depth: int = 5, max_depth: int = 1024,
+                      squares: dict | None = None):
+    """Path tracer with one light per lane: a delta directional light, or a square area light.
 
     Same estimator as Mitsuba's prb for a directional emitter and a black
     world: next-event estimation towards the light at every smooth vertex,
-    BSDF-sampled continuation, Russian roulette from rr_depth.
+    BSDF-sampled continuation, Russian roulette from rr_depth.  With `squares`
+    (from area_squares; the scene must not contain the emitters) next-event
+    estimation samples a uniform point y on the lane's square instead: weight
+    L_r * A * cos_light / |y - x|^2 and a segment shadow test, as Mitsuba's
+    emitter sampling of the same rectangle.  The delta path is unchanged.
     """
     mi, dr = L.init_upstream()
     ctx = mi.BSDFContext()
+    if squares is not None:
+        v3 = lambda a: mi.Vector3f(*np.asarray(a, np.float32).T)
+        centre, e1, e2, n_l = (v3(squares[k]) for k in ("centre", "e1", "e2", "normal"))
+        power = float(squares["radiance"] * squares["area"])
     ray = mi.Ray3f(ray)
     Lr = mi.Spectrum(0.0)
     beta = mi.Spectrum(1.0)
@@ -65,9 +94,20 @@ def trace_directional(scene, sampler, ray, to_light, irradiance: float, rr_depth
         active &= si.is_valid()
         bsdf = si.bsdf(ray)
         emit = active & mi.has_flag(bsdf.flags(), mi.BSDFFlags.Smooth)
-        f = bsdf.eval(ctx, si, si.to_local(to_light), emit)
-        unoccluded = ~scene.ray_test(si.spawn_ray(to_light), emit)
-        Lr[emit & unoccluded] += beta * f * irradiance
+        if squares is None:
+            f = bsdf.eval(ctx, si, si.to_local(to_light), emit)
+            unoccluded = ~scene.ray_test(si.spawn_ray(to_light), emit)
+            Lr[emit & unoccluded] += beta * f * irradiance
+        else:
+            u = sampler.next_2d(emit)
+            y = mi.Point3f(centre + (2 * u.x - 1) * e1 + (2 * u.y - 1) * e2)
+            dv = y - si.p
+            dist2 = dr.squared_norm(dv)
+            wl = dv * dr.rsqrt(dist2)
+            weight = power * dr.maximum(dr.dot(n_l, -wl), 0.0) / dist2
+            f = bsdf.eval(ctx, si, si.to_local(wl), emit)
+            unoccluded = ~scene.ray_test(si.spawn_ray_to(y), emit)
+            Lr[emit & unoccluded] += beta * f * weight
         bs, w = bsdf.sample(ctx, si, sampler.next_1d(active), sampler.next_2d(active), active)
         beta[active] *= w
         eta[active] *= bs.eta
@@ -121,6 +161,25 @@ def visibility(scene, si, normal: np.ndarray, to_light: np.ndarray) -> np.ndarra
     return (np.sum(normal * to_light, -1) > 0) & ~blocked & np.array(si.is_valid())
 
 
+def visibility_any(scene, si, normal: np.ndarray, squares: dict, k: int = 4) -> np.ndarray:
+    """Official binary visibility under an area light: 1 if any part of the lane's
+    square is unoccluded and above the surface (k x k stratum centres), as
+    RNA's Cycles diffuse_direct pass thresholded > 0 with a soft light."""
+    mi, dr = L.init_upstream()
+    x = _vec(si.p)
+    valid = np.array(si.is_valid())
+    out = np.zeros(len(x), bool)
+    g = (np.arange(k) + 0.5) / k * 2 - 1
+    for a in g:
+        for b in g:
+            y = squares["centre"] + a * squares["e1"] + b * squares["e2"]
+            w = y - x
+            w /= np.maximum(np.linalg.norm(w, axis=-1, keepdims=True), 1e-12)
+            blocked = np.array(scene.ray_test(si.spawn_ray_to(mi.Point3f(*y.T.astype(np.float32))), si.is_valid()))
+            out |= (np.sum(normal * w, -1) > 0) & ~blocked & valid
+    return out
+
+
 def hemisphere_dirs(rng, n: int, height_scale: float) -> np.ndarray:
     h = rng.random(n) * height_scale
     r = np.sqrt(np.maximum(0.0, 1.0 - h * h))
@@ -129,8 +188,14 @@ def hemisphere_dirs(rng, n: int, height_scale: float) -> np.ndarray:
 
 
 def render_view(scene, sensor, res: int, to_light: np.ndarray, spp: int, chunk: int, seed: int, irradiance: float,
-                record: bool = False):
+                record: bool = False, area: dict | None = None):
     """color, alpha and hit-averaged AOVs for one view; to_light: (res*res, 3).
+
+    area=None: one delta directional light per pixel (RNA's default, light_radius
+    0).  area={"distance", "half_angle_deg"}: a square area light per pixel
+    centred on that direction (the official generator's light_radius > 0 case,
+    with the evaluation emitter's shape); diffuse_direct is then "any of it
+    visible".
 
     record=False (wavefront) is the validated default; record=True is used only
     where probe_bridge_record.py has shown it matches the CPU backend.
@@ -150,7 +215,9 @@ def render_view(scene, sensor, res: int, to_light: np.ndarray, spp: int, chunk: 
             sampler = mi.load_dict({"type": "independent"})
             sampler.seed((seed * 4096 + c) & 0xFFFFFFFF, npx * chunk)
             tl = np.repeat(to_light, chunk, 0)
-            Lr = _vec(trace_directional(scene, sampler, ray, mi.Vector3f(*tl.T.astype(np.float32)), irradiance))
+            sq = None if area is None else area_squares(tl, irradiance, area)
+            Lr = _vec(trace_directional(scene, sampler, ray, mi.Vector3f(*tl.T.astype(np.float32)), irradiance,
+                                        squares=sq))
             color += Lr.reshape(npx, chunk, 3).sum(1)
             h = feat["hit"].reshape(npx, chunk)
             hits += h.sum(1)
@@ -165,7 +232,9 @@ def render_view(scene, sensor, res: int, to_light: np.ndarray, spp: int, chunk: 
             out[k][hits == 0] = 0
         centre = camera_rays(sensor, res, np.array([[0.5, 0.5]]))
         si, fc = surface_features(scene, centre)
-        out["diffuse_direct"] = visibility(scene, si, fc["normal"], to_light).astype(np.float32)[:, None]
+        vis = (visibility(scene, si, fc["normal"], to_light) if area is None
+               else visibility_any(scene, si, fc["normal"], area_squares(to_light, irradiance, area)))
+        out["diffuse_direct"] = vis.astype(np.float32)[:, None]
         out["light_dir"] = to_light
         return out
     finally:
@@ -178,6 +247,8 @@ def generate_h5(args) -> None:
     mi, dr = L.init_upstream()
     proto = json.loads(open(L.EXPERIMENT / args.protocol, encoding="utf-8").read())
     gen = proto["rna_dataset"]
+    # optional training light shape (absent: delta directional light per pixel)
+    area = gen["light"] if gen.get("light", {}).get("type") == "area" else None
     tr = proto["states"][args.state]
     scene = mi.load_dict(T.scene_dict(64, tr, None))  # geometry/materials only; no emitter is used
     bbox = scene.shapes()[0].bbox()
@@ -200,7 +271,8 @@ def generate_h5(args) -> None:
                 to_light = hemisphere_dirs(rng, res * res, 0.999)
             else:
                 to_light = np.repeat(hemisphere_dirs(rng, 1, 0.999), res * res, 0)
-            view = render_view(scene, sensor, res, to_light, gen["spp"], gen["chunk"], int(rng.integers(1 << 20)), gen["irradiance"])
+            view = render_view(scene, sensor, res, to_light, gen["spp"], gen["chunk"], int(rng.integers(1 << 20)), gen["irradiance"],
+                               area=area)
             for k in chans:
                 ds[k][v] = np.nan_to_num(view[k]).astype(np.float16)
             cams.append({"origin": origin.tolist(), "target": gen["camera_lookat"], "fov": gen["fov"]})

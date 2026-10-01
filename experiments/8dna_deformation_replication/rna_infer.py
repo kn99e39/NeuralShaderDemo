@@ -41,6 +41,10 @@ def main() -> int:
     ap.add_argument("--module", default="NeuralSurfaceTriplaneModule")
     ap.add_argument("--out", required=True)
     ap.add_argument("--batch", type=int, default=1 << 20, help="network queries per batch")
+    ap.add_argument("--light-model", choices=("area-sampled", "area-trained"), default="area-sampled",
+                    help="area-sampled: model trained on delta lights, the area light integrated over its samples; "
+                         "area-trained: model trained on this area light family, queried once at its centre direction "
+                         "with any-of-it visibility (official renderer with a sun of angular size)")
     args = ap.parse_args()
     sys.path.insert(0, os.getcwd())
     import h5py
@@ -70,6 +74,13 @@ def main() -> int:
     light_dir = z["light_dir"].astype(np.float32)   # (hits, M, 3), in hit order
     light_w = z["light_weight"].astype(np.float32)  # (hits, M)
     light_vis = z["light_vis"]                      # (hits, M)
+    if args.light_model == "area-trained":
+        lighting = json.loads(str(z["lighting"]))
+        centre = np.asarray(lighting["to_light"], np.float32)
+        centre /= np.linalg.norm(centre)
+        light_dir = np.broadcast_to(centre, (len(light_vis), 1, 3)).copy()
+        light_w = np.full((len(light_vis), 1), float(lighting["irradiance"]), np.float32)
+        light_vis = light_vis.any(1, keepdims=True)
     m = light_dir.shape[1]
     if light_dir.shape[0] != len(idx):
         raise SystemExit("light samples do not match the hit samples")
@@ -92,7 +103,7 @@ def main() -> int:
     json.dump({"checkpoint": args.checkpoint, "features": args.features, "mode": args.mode, "train_h5_aabb": [train_min.tolist(), train_max.tolist()],
                "aabb_used": [np.asarray(lo).tolist(), np.asarray(hi).tolist()],
                "training_light_intensity": args.training_light_intensity, "light_samples_per_sample": int(m),
-               "light_seed": str(z["light_seed"]), "hit_samples": int(len(idx))}, open(args.out + ".json", "w"), indent=1)
+               "light_seed": str(z["light_seed"]), "light_model": args.light_model, "hit_samples": int(len(idx))}, open(args.out + ".json", "w"), indent=1)
     print("wrote", args.out + ".npy", "mean", float(img.mean()))
     return 0
 
