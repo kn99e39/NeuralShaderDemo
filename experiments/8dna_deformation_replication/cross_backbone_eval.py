@@ -45,7 +45,10 @@ def rule(ev: dict, label: str, mode: str) -> dict:
         dg = row[s]["interaction"]["dG"]
         row[s]["interaction"]["noise_precondition"] = {
             "dG_over_reference_noise": dg / ref_noise,
-            "dG_over_model_noise": None if model_noise is None else dg / model_noise,
+            # a model whose T0 repeat is identical in this ROI (deterministic output,
+            # e.g. the area-trained RNA queried once per sample) has no ratio to report
+            "dG_over_model_noise": None if not model_noise else dg / model_noise,
+            "model_noise_zero": model_noise == 0,
             "pass": model_noise is not None and dg > 3 * model_noise and dg > 3 * ref_noise}
     meets = [s for s in RELATION_STATES if row[s]["interaction"]["rise"] >= 0.25 and (row[s]["interaction"]["gain"] or 0) < 0.5]
     fail = [s for s in meets if row[s]["interaction"]["noise_precondition"]["pass"]]
