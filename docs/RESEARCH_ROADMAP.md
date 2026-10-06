@@ -1,25 +1,26 @@
 # Research Roadmap — Dynamic Neural Shading / Neural Light Transport
 
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-06
 
 ## Document Role
 
-This document defines the research roadmap, milestone gates, stop conditions, and decision sequence for the project.
+This document defines the research roadmap, milestone gates, stop conditions, and current decision frontier for the project.
 
 It complements:
 
 - `RESEARCH_CENTRIC_TOPIC.md` — what problem the project is fundamentally about;
-- `BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md` — how baseline roles, evidence breadth, and attribution scope are separated.
+- `BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md` — how baseline roles, evidence breadth, and attribution scope are separated;
+- `Architecture.md` — the current working method architecture and representation-ownership contract.
 
 This is a living research document. Worklogs remain append-only historical evidence; this document records the current interpretation and next decision frontier.
 
-Do not treat future milestones as pre-approved implementation tasks.
+Do not treat a working architecture direction as a validated method.
 
 ---
 
 # 0. Central Research Intent
 
-The project investigates whether high-quality neural shading / neural light-transport representations mix information with different validity lifecycles.
+The project investigates how high-quality neural light-transport representations should separate information with different validity lifecycles.
 
 ## Persistent information
 
@@ -27,37 +28,44 @@ Information that may remain reusable across geometry changes, for example:
 
 - material identity;
 - surface identity;
-- local appearance priors;
-- some microstructure information;
+- local appearance / microstructure;
+- reusable local scattering behavior;
 - reusable transport rules.
 
-## Configuration-dependent information
+## Configuration-dependent transport
 
-Information whose validity depends on current geometry configuration, for example:
+Information whose validity depends on the current geometry configuration, including:
 
 - mutual visibility;
-- cross-part proximity;
-- cavity/contact structure;
+- cross-surface occlusion;
+- proximity/contact relationships;
+- radiance arriving from other surfaces;
 - inter-part interreflection;
-- geometry-conditioned multiple scattering.
+- geometry-conditioned higher-order transport.
 
 The core question is:
 
-> **What information should remain persistent, and what information must be conditioned on, updated from, or recomputed from the current geometry configuration?**
+> **What information should remain persistent, and what transport information must be updated from the current geometry configuration so that high-quality neural transport remains reusable without full regeneration?**
 
-Do not reduce this prematurely to MLP vs geometry, graph vs transformer, local vs global, or any one implementation trick.
+Do not reduce this prematurely to MLP vs geometry, graph vs transformer, SH vs learned basis, or any one implementation mechanism.
 
 ---
 
 # 1. Current Working Hypothesis
 
-> **High-quality neural transport contains information with different validity lifecycles. Persistent asset information may remain reusable, while transport dependencies whose validity changes with surface configuration require current geometry state.**
+The evidence now supports a more concrete working hypothesis:
 
-A stronger sub-hypothesis is now experimentally motivated:
+> **Persistent neural assets become invalid when configuration-dependent inter-surface transport is stored as persistent state learned from one fixed internal geometry configuration.**
 
-> **For some geometry-relation changes, current local surface state and direct/current visibility are insufficient; nonlocal configuration-dependent transport state becomes stale.**
+The current method hypothesis is:
 
-This sub-hypothesis is supported in the current teaset regime but is not yet established broadly.
+> **Reusable surface/material information should remain persistent, while configuration-sensitive inter-surface transport should be represented by a compact current state that can be updated from current geometry and interpreted by a shared transport/scattering operator.**
+
+Internal shorthand:
+
+> **Persistent appearance, dynamic transport state, reusable transport rule.**
+
+This is now the working architecture direction, not yet a validated method.
 
 ---
 
@@ -65,26 +73,57 @@ This sub-hypothesis is supported in the current teaset regime but is not yet est
 
 ## Established
 
-- RNA/Rain showed a real frozen-deformation failure but retained local/spatial confounds.
+### Failure existence
+
+- RNA/Rain showed a real frozen-deformation failure, though with local/spatial confounds.
 - The Rain fixed-target causal probe closed as **PHYSICAL EFFECT TOO WEAK** and did not decide the nonlocal mechanism.
-- Worklog 21 produced the first clean controlled 8DNA teaset case:
-  - stationary/canonical target query;
-  - changed surrounding part relation;
-  - strong GT interreflection change above noise;
-  - frozen 8DNA near-zero tracking of that change;
-  - stable relation-preserving control.
-- Worklog 22 reproduced the same frozen-failure signature with RNA on the same teaset state protocol under a shared common-light reference.
-- In Worklog 22, frozen 8DNA and frozen RNA fail the locked rule at T1b and T3 and pass the relation-preserving T1 control.
-- 8DNA same-state T3 refit under the original envmap regime recovers close to T0 quality, strongly supporting stale persistent state rather than insufficient architecture capacity in that tested regime.
+- Worklog 21 produced the first clean controlled 8DNA teaset case with a stationary target query, changed surrounding part relation, strong physical transport change above noise, frozen near-zero tracking, and a stable relation-preserving control.
+- Worklog 22 reproduced the same frozen-failure signature with RNA on the same teaset protocol under common light.
+- 8DNA same-state T3 refit under the original envmap regime recovers close to T0 quality, strongly supporting stale persistent state rather than insufficient representation capacity in that tested regime.
+
+### Physical attribution
+
+Worklog 24 closed the main physical attribution question for the canonical teaset ROI.
+
+The missing GT change is not primarily direct-light transport. At T3 it is explained mainly by:
+
+1. **nonlocal occlusion of stationary indirect transport** — approximately 0.72 of the change under common light and 0.58 under envmap;
+2. **radiance reflected from the moved milk pot** — approximately 0.28 under common light and 0.43 under envmap;
+3. direct transport contributes approximately 0.00 / 0.02.
+
+These shares are physical attribution measurements, not predictions of neural recovery.
+
+### Code / methodology attribution
+
+The subsequent RNA/8DNA code-level audit established that:
+
+- both methods train inter-surface transport from one fixed internal configuration;
+- RNA absorbs full-GI radiometric effects into position-indexed learned state plus MLP weights, with direct visibility used only as a current branch selector;
+- 8DNA learns fixed-configuration multi-vertex intra-asset transport in its persistent conditional distribution;
+- on the stable-first-hit subset of the canonical ROI, the learned query geometry is identical between T0 and T3;
+- current direct/current-geometry checks exist, but neither learned transport component receives the current internal configuration needed to update the missing cross-part transport.
+
+For the tested failure class:
+
+> **stationary query + changed cross-part relation inside one persistent learned asset**
+
+the failure is best treated as a **methodology / representation-contract consequence**, not an implementation bug.
+
+### Research-evidence gate
+
+The project now has enough controlled evidence to proceed to method design.
+
+This does **not** mean broad generality or paper-level closure has been established.
 
 ## Current limits
 
-- The cleanest controlled evidence is still one asset family (`teaset`).
-- The main clean mechanism is rigid cross-part translation/approach, not yet non-rigid deformation or contact/release.
-- RNA's teaset static gate is valid but thin, so its cross-backbone replication remains secondary to the cleaner 8DNA anchor case.
-- The exact transport component has not been decomposed beyond evidence that direct/current visibility alone does not explain the shared failure.
-- Broad generality across materials, assets, and deformation families is not established.
-- No final method architecture or method substrate is approved.
+- The strongest clean causal anchor is still one asset family (`teaset`).
+- The cleanest mechanism is rigid cross-part relation change, not yet non-rigid deformation/contact-release generality.
+- The material regime is near-mirror rough nickel.
+- RNA remains supporting rather than co-equal causal evidence because its static teaset reconstruction margin is weak.
+- The minimum sufficient dynamic transport representation has not been established.
+- The update-cost advantage over full recomputation/regeneration has not yet been measured.
+- The working architecture has not yet been implemented or validated.
 
 ---
 
@@ -95,24 +134,26 @@ M0  Research Contract                         CLOSED
  ↓
 M1  Failure Existence / Direct Evidence       CLOSED
  ↓
-M2  Failure Attribution                       ACTIVE
+M2  Failure Attribution                       CLOSED
  ↓
-M3  Representation Sufficiency Tests          NEXT AFTER M2
- ↓
-M4  Architecture Hypothesis Selection         FUTURE
+M3  Information Sufficiency + Cost Boundary   ACTIVE
+ ↘
+M4  Architecture Hypothesis Selection         ACTIVE — working contract selected
  ↓
 M5  End-to-End Method Implementation          FUTURE
  ↓
 M6  Cross-Representation Method Validation    FUTURE
  ↓
-M7  Efficiency / Regeneration Trade-off       FUTURE
+M7  Efficiency / Regeneration Trade-off       EARLY CALIBRATION ACTIVE
  ↓
 M8  Generalization Boundary                   FUTURE
  ↓
 M9  Paper-Level Evidence Closure              FUTURE
 ```
 
-Each transition requires evidence. Implementation convenience is not a gate.
+M3, M4, and the early calibration part of M7 may overlap.
+
+This overlap is intentional: attribution is sufficiently closed to select a working representation contract; the exact dynamic-state parameterization remains an M3 question; and the physical full-recomputation benchmark informs the runtime budget before implementation.
 
 ---
 
@@ -130,7 +171,7 @@ The target is:
 
 > **How should information with different geometry-validity lifecycles be represented so that high-quality neural transport remains reusable under geometry change?**
 
-Reopen only if literature or evidence invalidates this framing or a stronger formulation emerges.
+Reopen only if later evidence invalidates this framing.
 
 ---
 
@@ -142,19 +183,11 @@ Reopen only if literature or evidence invalidates this framing or a stronger for
 
 ## Closure Evidence
 
-The combined Worklog 21/22 teaset evidence establishes that a high-quality frozen neural transport representation can lose validity under a meaningful geometry-configuration change even when correspondence is controlled.
-
-Evidence includes:
-
-- GT physical transport change above measured reference/model noise;
-- exact/analytic correspondence rather than nearest-XYZ lookup;
-- stable relation-preserving control;
-- large error growth with near-zero tracking gain in relation-changing states;
-- replication in both 8DNA and RNA under the common-light regime.
+The combined teaset evidence establishes that a frozen high-quality neural transport representation can lose validity under a meaningful geometry-configuration change even when correspondence and the stationary query are controlled.
 
 M1 closes with:
 
-> **Yes — there is a reproducible, physically interpretable geometry-configuration failure worth investigating further.**
+> **Yes — there is a reproducible, physically interpretable geometry-configuration failure worth solving.**
 
 This is an existence result, not a broad generalization claim.
 
@@ -164,115 +197,105 @@ This is an existence result, not a broad generalization claim.
 
 ## Status
 
-**ACTIVE — stale-state attribution is strong in the controlled teaset case; exact transport component and breadth remain open**
+**CLOSED for the canonical teaset mechanism case**
 
-## Central Question
+## Closure Result
 
-> **What configuration-dependent information became stale, and what alternative explanations remain?**
+The missing information has been narrowed to:
 
-## Current evidence
+> **current cross-part relational transport state**
 
-The teaset controls weaken or remove several trivial explanations:
+specifically:
 
-- coordinate/query mismatch is separately diagnosed and is not the primary stationary-surface failure;
-- relation-preserving whole-asset motion is stable;
-- stationary interaction queries remain canonical/current-identical;
-- GT transport changes strongly only when the part relation changes;
-- RNA recomputes current visibility, so stale direct visibility alone cannot explain the shared failure;
-- 8DNA same-state T3 refit in the original envmap regime recovers close to T0 quality, showing that the architecture can represent T3 when state is rebuilt.
+- nonlocal visibility of indirect incidence;
+- radiance arriving from the moved/remote part.
 
-The common-light refits for 8DNA and RNA both land near the predeclared recovery threshold. Do not interpret their small split as a capacity difference without further evidence.
+Alternative explanations weakened or removed in the canonical case include:
 
-## Open attribution questions
+- correspondence failure;
+- canonical/current query mismatch;
+- stale direct visibility as the dominant mechanism;
+- simple 8DNA representation incapacity.
 
-- Which physical transport component dominates the missing change: inter-part interreflection, near-contact occlusion, higher-order transport, or a combination?
-- Is a reference-only transport decomposition needed before M2 closure?
-- Is current local geometry sufficient anywhere, or is explicit nonlocal relation/state required?
+The RNA/8DNA code audit further showed that the missing state is not supplied dynamically to the learned inter-surface transport component in either released method.
 
-## Completion Condition
+## Scope of Closure
 
-M2 is closed when the mechanism is narrow enough to define the information that the first M3 sufficiency experiment must add, without guessing a full architecture.
+M2 closure applies to the canonical teaset mechanism case.
+
+It does not establish universal failure, broad material/deformation generality, or the final minimum dynamic representation.
 
 ---
 
-# 7. M3 — Representation Sufficiency Tests
+# 7. M3 — Information Sufficiency and Cost Boundary
 
 ## Status
 
-**NEXT AFTER M2 CLOSURE — evidence-motivated, not yet approved for implementation**
+**ACTIVE**
 
-This milestone tests information sufficiency before selecting a full method.
+M3 now has two jobs:
+
+1. determine the minimum current transport information needed by the method;
+2. establish the cost boundary that makes selective reuse worthwhile.
 
 ## H0 — Frozen Static Representation
 
-Baseline already demonstrated:
+**CLOSED — insufficient**
 
-> Does the canonical persistent representation remain valid after geometry relation change?
+The canonical persistent representation remains stale under relation-changing teaset states.
 
-Answer in the controlled teaset case: **no**.
+## H1 — Current Local Surface State
 
-## H1 — Current Local Geometry Conditioning
+**CLOSED as insufficient for the canonical stationary ROI**
 
-Conceptually:
+On the stable stationary query subset, T0 and T3 provide the same surface identity, local position, normal, view, lighting, and same-part local state, while the correct radiance changes because another part changes the indirect transport relation.
 
-```text
-persistent state + current local surface state + lighting/view
-```
+Therefore local current state alone cannot distinguish the two configurations in this controlled case.
 
-Possible local information:
+This is a logical insufficiency result for the canonical ROI, not a broad claim about every surface or scene.
 
-- normal/tangent frame;
-- curvature/differential shape;
-- bounded local neighborhood descriptors.
+## H2 — Current Nonlocal / Relational Transport State
 
-Strict boundary: H1 must not silently include cross-part distance, remote visibility, cavity width, or other nonlocal relation data.
+**ACTIVE — required category identified, minimum representation not yet selected**
 
-Central question:
+The dynamic state must be capable of representing at least:
 
-> **Is current local surface state sufficient to repair the failure?**
+- current visibility/occlusion of indirect incidence;
+- current radiance arriving from other surfaces.
 
-If yes, do not continue claiming explicit nonlocal relation modeling is necessary.
+The working architectural interpretation is:
 
-## H2 — Current Nonlocal / Relational Geometry Conditioning
+> **compact current incident-transport context**
 
-Conceptually:
+rather than a full explicit inverse-rendering decomposition.
 
-```text
-persistent state + current local state + current cross-surface relation
-```
+Open questions include directional basis vs another compact parameterization, how much nonlocal geometry must be explicit, how to prevent canonical GI leakage into persistent state, and what transport excitation is required during multi-configuration training.
 
-Possible relation information may include:
+## H3 — Full Current-State Regeneration / Recompute
 
-- relative position/orientation;
-- proximity;
-- mutual visibility/contact state;
-- sparse transport context.
+**ACTIVE as a calibration baseline**
 
-No graph, transformer, message-passing, token, or cache design is approved yet.
+Before claiming selective reuse is useful, measure the cost of obtaining physically current GI after geometry change.
 
-Central question:
+The immediate calibration uses:
 
-> **Does providing current cross-surface relation recover failure that local state cannot explain?**
+- official BMW27 Cycles scene as the reproducible baseline;
+- BMW Garage XL only if the original scene is too light to expose useful scaling on RTX 5080;
+- SPP / scene-scale / geometry-change cost curves.
 
-## H3 — Full Current-State Regeneration
+Important distinction:
 
-Conceptually:
+> Cycles physical recomputation is not the same as neural full-state regeneration.
 
-```text
-current geometry -> rebuild transport state -> render
-```
-
-Central question:
-
-> **Is selective persistent reuse actually useful compared with rebuilding the current representation?**
+The later method evaluation must compare both where relevant.
 
 ## Completion Condition
 
-M3 is closed when we can answer:
+M3 is complete when we can answer:
 
-1. Is local current geometry sufficient?
-2. If not, what nonlocal/current relation is necessary?
-3. Is selective reuse worthwhile relative to full regeneration?
+1. What minimum current transport state can represent the canonical failure?
+2. How is that state prevented from collapsing back into persistent canonical GI?
+3. What order-of-magnitude update budget must the method beat to remain meaningful relative to full recomputation/regeneration?
 
 ---
 
@@ -280,22 +303,46 @@ M3 is closed when we can answer:
 
 ## Status
 
-**FUTURE**
+**ACTIVE — central representation contract selected; implementation choices remain open**
 
-Only begin after M1–M3 produce discriminating evidence.
+The working architecture is recorded in `docs/Architecture.md`.
 
-A possible abstract contract is:
+Central structure:
 
 ```text
-Neural Asset
-= Persistent State
-+ Configuration-Dependent State
-+ Transport Operator
+Persistent Surface / Material State
+            +
+Current Configuration-Dependent GI State
+            +
+Shared Scattering / Transport Operator
+            ↓
+Current Outgoing Radiance
 ```
 
-This is conceptual only. It does not prescribe the feature type, graph structure, attention mechanism, decoder, coordinate system, or cache.
+### Current design commitments
 
-Select one bounded architecture hypothesis, not several full architectures at once.
+- MLP/shared network should act primarily as a reusable rule, not as the storage location for one geometry configuration's GI.
+- Configuration-sensitive transport must have a separate current-state path.
+- Multi-configuration training is an identifiability mechanism, not the contribution by itself.
+- Training configurations should excite transport-relation changes, not merely large geometric displacement.
+- Dense all-to-all surface interaction is not acceptable as the default design.
+- Current working efficiency direction: sparse near-field relations + compressed far-field transport + incremental/dirty-region update.
+
+### Not yet committed
+
+- graph neural network;
+- transformer / sparse attention;
+- exact surface-anchor granularity;
+- exact latent size;
+- exact MLP depth/width;
+- spherical harmonics vs learned directional basis;
+- exact neighbor-selection rule;
+- exact multi-bounce update mechanism;
+- final implementation substrate.
+
+## Completion Condition
+
+M4 is closed when one bounded implementation hypothesis is selected with explicit information ownership, runtime update path, anti-leakage training contract, expected computational scaling, and falsifiable success/failure criteria.
 
 ---
 
@@ -305,11 +352,11 @@ Select one bounded architecture hypothesis, not several full architectures at on
 
 **FUTURE**
 
-RNA remains the current likely first development substrate because its geometry/network interface is inspectable, but the final method base is still undecided.
+Do not begin the full method merely because `Architecture.md` exists.
 
-Preserve the original upstream baseline as a reproducible path.
+Begin only after M3/M4 narrow the minimum dynamic-state representation, initial surface/anchor granularity, expected update-cost target, and first development substrate.
 
-The paper-level method should be expressed as an implementation-independent representation contract unless evidence shows that the contribution is genuinely RNA-specific.
+Preserve original RNA/8DNA baselines as reproducible historical controls.
 
 ---
 
@@ -319,36 +366,46 @@ The paper-level method should be expressed as an implementation-independent repr
 
 **FUTURE**
 
-Important distinction:
+Worklog 22 already supplies cross-backbone **problem replication**.
 
-> Worklog 22 already provides cross-backbone **problem replication**. M6 is future cross-backbone **method validation**.
+M6 asks a different question:
 
-Once a proposed solution principle exists, test whether it transfers beyond the first development backbone.
+> **Does the eventual solution principle transfer beyond the first development backbone?**
 
-Do not confuse a repeated failure with successful portability of the eventual solution.
+Do not confuse repeated failure evidence with portability of the proposed method.
 
 ---
 
-# 11. M7 — Efficiency and Reuse Trade-off
+# 11. M7 — Efficiency and Regeneration Trade-off
 
 ## Status
 
-**FUTURE**
+**EARLY CALIBRATION ACTIVE; method-level comparison FUTURE**
 
-Central question:
+## M7-A — Physical Full-Recomputation Calibration
 
-> **Does preserving reusable state provide a meaningful advantage over regenerating transport from current geometry?**
+Current task:
 
-Compare as relevant:
+- measure geometry-change → current Cycles GI cost on RTX 5080;
+- use BMW27 as the reproducible anchor;
+- expand to BMW Garage XL only when needed for meaningful large-scene scaling;
+- measure effective FPS and distance from 30/60 FPS budgets.
 
-- update latency;
-- full re-encoding cost;
-- memory;
-- training/update cost;
-- render cost;
-- quality.
+This establishes intuition and an order-of-magnitude target. It does **not** validate the neural architecture.
 
-If selective reuse costs approximately as much as full regeneration, the reuse-oriented architecture loses practical motivation.
+## M7-B — Method-Level Efficiency
+
+After the method exists, compare:
+
+1. physical full recomputation;
+2. neural full-state re-encoding/refit/regeneration;
+3. proposed incremental dynamic-state update.
+
+Measure update latency, render latency, memory, training cost, amount of state updated, quality, scene-size scaling, and changed-region scaling.
+
+## Kill Condition
+
+If the proposed dynamic-state update costs approximately as much as full regeneration, the reuse-oriented contribution loses practical motivation.
 
 ---
 
@@ -360,15 +417,7 @@ If selective reuse costs approximately as much as full regeneration, the reuse-o
 
 Expand only after a working method exists.
 
-Relevant future axes include:
-
-- another asset family;
-- diffuse/glossy rather than near-mirror-dominated interaction;
-- non-rigid bend/twist;
-- fold creation/disappearance;
-- self-contact / contact release;
-- compound deformation;
-- unseen deformation combinations.
+Relevant axes include another asset family, diffuse/glossy rather than near-mirror-dominated transport, non-rigid bend/twist, fold creation/disappearance, self-contact/contact release, compound deformation, and unseen configuration combinations.
 
 Do not introduce topology change prematurely.
 
@@ -380,32 +429,25 @@ Do not introduce topology change prematurely.
 
 **FUTURE**
 
-Paper-level closure requires a coherent evidence package across:
+Paper-level closure requires coherent evidence across problem evidence, attribution evidence, method evidence, efficiency evidence, generalization evidence, qualitative review, and quantitative accounting.
 
-- problem evidence;
-- attribution evidence;
-- method evidence;
-- efficiency evidence;
-- generalization evidence;
-- qualitative review;
-- quantitative accounting.
-
-One clean teaset case is a strong anchor, not a complete paper claim.
+The current teaset evidence is the canonical mechanism anchor, not the complete paper claim.
 
 ---
 
 # 14. Primary Kill / Reframing Conditions
 
-Reconsider the direction instead of patching indefinitely if:
+Reconsider or narrow the direction instead of patching indefinitely if:
 
-- comparable high-quality systems remain robust under the target changes;
-- the important failure reduces to coordinate/indexing or other straightforward engineering errors;
-- current local geometry alone resolves the failure, in which case the nonlocal framing should narrow;
-- full regeneration is cheap enough that persistent/dynamic separation offers little value;
-- the proposed relational state effectively requires full scene re-encoding;
-- the phenomenon proves backbone-specific under comparable tests.
+- current relational transport cannot be represented compactly enough to beat regeneration;
+- the dynamic path effectively requires whole-scene re-encoding every frame;
+- the architecture still leaks most canonical GI into persistent state under transport-exciting multi-configuration training;
+- dense pairwise interaction is required for acceptable quality;
+- the physical full-recompute baseline is already cheap enough in the target regime that selective reuse provides little practical value;
+- the eventual method works only on the canonical teaset and does not survive broader material/configuration tests;
+- another existing current-geometry method already provides the same ownership/update contract more directly.
 
-Negative results are valid when scoped to what was actually tested.
+Negative results remain valid when scoped to what was actually tested.
 
 ---
 
@@ -416,16 +458,9 @@ Before substantial research implementation, read:
 1. `RESEARCH_CENTRIC_TOPIC.md`
 2. this roadmap
 3. `BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md`
+4. `Architecture.md`
 
-For every meaningful batch identify:
-
-- Direction;
-- Purpose;
-- Central Intent;
-- preserved baseline;
-- variable changed;
-- explicit DO NOT list;
-- completion question.
+For every meaningful batch identify Direction, Purpose, Central Intent, preserved baseline, variable changed, explicit DO NOT list, and completion question.
 
 Report separately:
 
@@ -439,36 +474,45 @@ Do not optimize toward a desired conclusion.
 
 ---
 
-# 16. Current Immediate Next Step
+# 16. Current Immediate Next Steps
 
-The immediate next step is **not full architecture implementation**.
+Two bounded activities are now justified in parallel.
 
-The project has moved beyond failure-existence hunting. The current frontier is to close M2 strongly enough to justify the smallest discriminating M3 experiment.
+## A. Full-recomputation cost calibration
 
-Priority order:
+Run the BMW27 / BMW Garage XL Cycles benchmark batch.
 
-1. **Qualitatively review Worklog 22 exports**, especially whether RNA shows the same stale interaction pattern rather than merely poor static reconstruction.
-2. **Decide whether reference-only transport decomposition is needed** to identify what physical component the frozen models fail to track.
-3. **Do not spend a large batch chasing the common-light refit threshold split** unless that distinction changes the next architecture decision.
-4. Choose one next axis:
-   - **breadth** if generality is currently the limiting question; or
-   - **H1/H2 sufficiency** if attribution is already strong enough to specify the missing information.
+Purpose:
+
+> establish the physical recomputation cost curve and a realistic update-latency target for the proposed method.
+
+Do not treat this as neural-method validation.
+
+## B. Minimal dynamic-state design
+
+Without implementing the full architecture yet, determine the smallest current directional/relational transport representation that can express the already-measured teaset failure.
+
+The first design question is:
+
+> **How should current indirect visibility and remote-surface incident radiance be compressed without restoring dense pairwise transport or allowing canonical GI to leak back into persistent state?**
+
+Do not prematurely choose graph/attention/SH/latent dimensions before this information question is closed.
 
 ---
 
 # 17. Current Decision Queue
 
-1. Is one reference-only transport decomposition still needed before closing M2?
-2. Should the next bounded batch prioritize breadth or H1/H2 sufficiency?
-3. Is RNA retained as the first method-development substrate?
-4. What exact information must be mutable at runtime?
-5. Is explicit nonlocal relation modeling necessary?
-6. What is the minimal sufficient current-state representation?
-7. Does selective reuse beat full regeneration?
-8. When is a current-geometry-conditioned contrast baseline necessary?
-9. How broad should the eventual deformation/generalization claim become?
+1. What compact current-state parameterization should represent indirect visibility and remote-surface incident radiance?
+2. What surface/anchor granularity is the smallest useful persistent unit?
+3. How should near-field sparse relations and far-field compressed transport divide responsibility?
+4. How should multi-configuration training excite transport relations strongly enough to make the ownership split identifiable?
+5. What anti-leakage constraint prevents persistent state/shared weights from memorizing canonical GI?
+6. What physical full-recompute budget does BMW27 / BMW Garage XL establish?
+7. What update latency would count as a meaningful practical win?
+8. Which implementation substrate should host the first bounded prototype?
+9. After a working prototype exists, how broad is the generalization claim?
 
-Resolve these in evidence order, not implementation order.
+Resolve these in evidence order, not implementation convenience order.
 
 ---
 
@@ -478,12 +522,12 @@ Resolve these in evidence order, not implementation order.
 |---|---|---|
 | M0 — Research Contract | CLOSED | What problem are we solving? |
 | M1 — Failure Existence | CLOSED | Is the failure real and physically interpretable? |
-| M2 — Failure Attribution | ACTIVE | What configuration-dependent transport state became stale? |
-| M3 — Sufficiency Tests | NEXT AFTER M2 | Local state vs nonlocal relation vs full regeneration? |
-| M4 — Architecture Selection | FUTURE | What representation contract should we implement? |
+| M2 — Failure Attribution | CLOSED | What transport state became stale and why? |
+| M3 — Information Sufficiency + Cost Boundary | ACTIVE | What current state is minimally sufficient, and what must it beat? |
+| M4 — Architecture Selection | ACTIVE | What ownership/update contract should we implement? |
 | M5 — End-to-End Method | FUTURE | Does the architecture work as a full system? |
-| M6 — Cross-Representation Method Validation | FUTURE | Does the proposed solution transfer beyond one backbone? |
-| M7 — Efficiency Trade-off | FUTURE | Is reuse actually advantageous? |
+| M6 — Cross-Representation Method Validation | FUTURE | Does the solution transfer beyond one backbone? |
+| M7 — Efficiency Trade-off | EARLY CALIBRATION ACTIVE | Is selective reuse meaningfully cheaper than recomputation/regeneration? |
 | M8 — Generalization Boundary | FUTURE | How broad is the dynamic regime? |
 | M9 — Paper Evidence Closure | FUTURE | Is the contribution fully supported? |
 
@@ -491,4 +535,4 @@ Resolve these in evidence order, not implementation order.
 
 # 19. One-Line Rule for Future Work
 
-> **The failure now has a clean cross-backbone controlled case; the next step is to identify the minimal missing current-state information before committing to a solution architecture.**
+> **The problem and canonical failure mechanism are now sufficiently established; the current job is to turn the lifecycle split into the smallest useful dynamic transport state and prove that updating it is materially cheaper than rebuilding current transport from scratch.**
