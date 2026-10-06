@@ -117,7 +117,8 @@ def main() -> int:
         digests[name] = json.loads(p.stdout.strip().splitlines()[-1])
     lasts = {n: wsl_path(next((out / "rna" / n / "ckpt").rglob("last.ckpt"))) for n in digests}
     code = "\n".join([
-        "import torch, json",
+        "import sys, torch, json",
+        "sys.path.insert(0, '.')  # RNA checkpoints pickle RNA's classes; run from the RNA root",
         f"p = {json.dumps(lasts)}",
         "sd = {n: torch.load(f, map_location='cpu', weights_only=False)['state_dict'] for n, f in p.items()}",
         "def c(a, b):",
