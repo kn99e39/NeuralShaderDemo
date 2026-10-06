@@ -1,0 +1,152 @@
+{
+  "id": "nrc_t3_recompute_v1",
+  "worklog": 27,
+  "purpose": "Measure the end-to-end wall-clock cost of restoring a T3-valid neural light-transport representation after the accepted worklog-21/22 teaset T0 -> T3 change, using the existing RNA and 8DNA refit paths exactly as worklog 22 ran them. Measurement of the strongest existing alternative (neural full recomputation / refit), not a method. Written before any timing run of this batch.",
+  "written_before": "any smoke or evidence run of this batch; the only numbers seen beforehand are the historical ones in worklogs 21-26 and their logs (8DNA T3 refit 2 h 04 min wall in the worklog-22 chain log; RNA T3 datasets 2 h 21 min + 28 min; RNA T3 training 34 min on LabServer63, 25 min for the worklog-23 run on the 5080)",
+
+  "historical_refit_semantics": {
+    "8dna": {
+      "source": "protocol/teaset_8dna_refit_locked.json (experiments/8dna_deformation_replication), worklog 22",
+      "initialization": "from scratch (from_scratch: true); upstream train.py with pl.seed_everything(9); no T0 weights or other learned state reused",
+      "training_data": "online: PathSamplingDataset regenerates path samples from the T3 Mitsuba scene at the start of every epoch (dataset_reload 1); no stored dataset exists",
+      "schedule": "upstream configs/default.yaml unchanged, 30 epochs, batch 32768, 8192 steps/epoch, Adam lr 5e-4, clip 5",
+      "checkpoint_used": "last.ckpt at the end of the schedule (no selection on validation loss)",
+      "lighting": "8DNA training is lighting-independent (BSDF-sampled paths, no emitter); the one T3_refit checkpoint was evaluated in both the worklog-21 envmap regime and the common-light regime",
+      "stages_skipped_historically_because_an_artifact_existed": "none for the T3 refit itself (scene built from the locked translations in-process); the T0_retrain pipeline control and the references existed before",
+      "stages_required_for_a_new_configuration": "scene preparation, online path generation every epoch, optimisation, per-epoch validation and checkpointing, conversion of last.ckpt to the load_asset-readable layout"
+    },
+    "rna": {
+      "source": "protocol/teaset_cross_backbone_locked.json refits.rna and configs/rna_teaset_T3.yml, worklog 22",
+      "initialization": "from scratch: official scripts/train.py with seed 0 and no init_from (the RNA code has 'TODO: Add init_from checkpoint support')",
+      "training_data": "offline: T3 training (200 views) and validation (40 views) H5 targets rendered by rna_bridge.py h5 on the 5080 at 512 spp, before training",
+      "schedule": "Rain HQ config, 250 epochs, lr 1e-3 halved every 50, log-L2, visibility weight 10",
+      "checkpoint_used": "validation-best val_psnr checkpoint of the official ModelCheckpoint (known only once the schedule ends)",
+      "host_historical": "datasets on the RTX 5080; training on LabServer63 (RTX 3080 Ti)",
+      "stages_skipped_historically_because_an_artifact_existed": "none for the T3 refit; inference feature buffers (rna_teaset/features/T3.npz) existed from the frozen track and are inference-time inputs, not part of the representation",
+      "stages_required_for_a_new_configuration": "T3 target rendering (train + val), H5 writing, H5 load, optimisation, per-epoch validation and checkpointing, validation-best selection"
+    },
+    "warm_start": "Neither method has an existing, supported warm-start path: RNA's train.py has no init_from, and 8DNA's --resume restores the trainer state of the same run (epoch counter included), which is not a fine-tune from the T0 asset. Both historical refits are scratch rebuilds. No secondary warm-start control is measured, because creating one would be new methodology (batch section 3)."
+  },
+
+  "definitions": {
+    "REPRESENTATION_REBUILD": "the method's normal untrained initialisation, built for T3 by its standard pipeline -- the primary measurement for both backbones, because it is the historical worklog-22 path",
+    "FULL_REFIT_WARM_RECOMPUTE": "not measured (see historical_refit_semantics.warm_start)",
+    "t0": "the chain driver's launch of a track's first stage process, i.e. the moment the locked T3 translations are handed to the pipeline. Everything after it is counted: interpreter start-up, imports, runtime init, scene preparation, data/path generation, optimisation, validation, checkpointing, export, and the gaps between stages.",
+    "usable": "8DNA: the checkpoint written for an epoch, converted to the load_asset-readable layout (the one-off export cost is added). RNA: the Lightning checkpoint written for an epoch (read directly by rna_infer.py).",
+    "time_to_first_recovery": "elapsed time from t0 until the first checkpoint that satisfies the historical recovery rule becomes usable. Oracle quantity: deciding that a checkpoint has recovered needs the path-traced T3 reference, which a deployed system does not have; it is a lower bound on practical latency.",
+    "time_to_historical_selection": "elapsed time until the checkpoint the historical protocol would select is usable (8DNA: last.ckpt at the end of the schedule; RNA: validation-best, known only once all 250 epochs ran)",
+    "total_fixed_schedule_time": "t0 until the track's last timed stage exits (the full historical schedule; no early stopping, none existed historically)",
+    "instrumentation_overhead": "snapshot_write (per-epoch weight copies for offline evaluation) and torch.cuda.synchronize at phase boundaries; snapshot_write is reported and subtracted in the 'excluding instrumentation' figures"
+  },
+
+  "tracks": {
+    "8dna_envmap_primary": {
+      "role": "PRIMARY timing anchor and successful-recovery case (worklog-22 envmap refit: ratio 1.07, gain 0.70)",
+      "initialization": "REPRESENTATION_REBUILD (scratch)",
+      "training": {
+        "launcher": "experiments/8dna_deformation_replication/train_8dna_state.py (unchanged) -> upstream train.py (unchanged)",
+        "state": "T3",
+        "states_protocol": "protocol/teaset_frozen_locked.json",
+        "max_epochs": 30,
+        "seed": 9,
+        "config": "upstream configs/default.yaml, no overrides",
+        "experiment_name": "T3_rebuild",
+        "snapshot_every": 1
+      },
+      "evaluation": {
+        "regime": "w21_envmap with the worklog-22 corrected references (results/8dna_replication/w21_reference_correction/<state>/gt_A|gt_B.exr), ROIs gt_design/v2",
+        "render": "upstream neuralpath, mode upstream (the rebuild's own frame is T3, no pullback), T3 scene of protocol/teaset_frozen_locked.json, res 512, 512 spp, chunk 4, seed 0 -- as render_8dna_refits.py",
+        "T0_model_render": "results/8dna_replication/refit/renders/w21_envmap/T0_retrain_at_T0.exr (historical T0_retrain pipeline control, unchanged)",
+        "rule": "cross_backbone_eval.refit_block, imported unchanged: refit T3 interaction error <= 1.25 x T0 model error on the same surfaces at T0 AND gain <N(T3) - N_T0(T0), dG>/<dG,dG> >= 0.5",
+        "historical_values": {"error_ratio": 1.0729883854968856, "gain": 0.697827160358429, "recovers": true}
+      },
+      "reproduction_gate": "the rebuild's last.ckpt (the historical selection) must satisfy the rule. If it does not, 8DNA timing is NOT interpreted as a recovery baseline and reproducibility is diagnosed first; the recipe is not changed."
+    },
+    "8dna_common_light_secondary": {
+      "role": "SECONDARY same-scene cross-backbone control; no extra training (the same 8DNA rebuild, evaluated in the common-light regime)",
+      "evaluation": {
+        "regime": "teaset_cross_backbone_common_light (lighting rev 3), references results/8dna_replication/frozen/teaset_common_light_8dna/<state>/gt_A|gt_B.exr, ROIs gt_design/common_light",
+        "render": "as render_8dna_refits.py: protocol/teaset_cross_backbone_locked.json, 1024 spp, chunk 4, seed 0, mode upstream",
+        "T0_model_render": "results/8dna_replication/refit/renders/common_light/T0_retrain_at_T0.exr",
+        "rule": "refit_block, unchanged",
+        "historical_values": {"error_ratio": 1.281028342499816, "gain": 0.5779861807823181, "recovers": false}
+      }
+    },
+    "rna_common_light": {
+      "role": "SECOND track; static-quality caveat (G1 margin 4%, worklogs 22-24) stays attached to every RNA reading",
+      "initialization": "REPRESENTATION_REBUILD (scratch)",
+      "dataset": {
+        "producer": "rna_bridge.py generate_h5 (unchanged)",
+        "locked_protocol": "protocol/teaset_cross_backbone_locked.json",
+        "derived_protocol": "the locked protocol with only rna_dataset_dir redirected to results/neural_recompute_cost/<run>/rna/datasets (historical datasets are not overwritten); every generation setting unchanged: 200 train / 40 val views, 512^2, 512 spp, chunk 128, seeds 11/12, delta directional light per pixel (train) / per image (val)",
+        "reproducibility_check": "the regenerated H5 files are compared channel by channel with the historical results/8dna_replication/rna_teaset/datasets/teaset_T3_{train,val}.h5"
+      },
+      "training": {
+        "locked_config": "configs/rna_teaset_T3.yml",
+        "derived_config": "identical except name (run_name below; it only names the logger directory and the validation EXRs RNA writes into its working directory) and the two dataset paths",
+        "run_name": "rna-teaset-T3-common-light-nrc27",
+        "seed": 0,
+        "epochs": 250,
+        "host": "RTX 5080, WSL Ubuntu-22.04, RNA .venv, launched through wsl_run_detached.sh (the worklog-23 5080 route; the cross-backbone protocol's rna_training.launch line names this route too)",
+        "snapshot_every": 5,
+        "snapshot_note": "a weights-only checkpoint after epoch 0 and after every 5th epoch (epochs 4, 9, ..., 249), written to a WSL-native directory and copied out after the stage; the official top-10 val_psnr checkpoints and last.ckpt are also evaluated"
+      },
+      "evaluation": {
+        "regime": "teaset_cross_backbone_common_light, shared references as 8DNA common light",
+        "render": "rna_infer.py (unchanged), mode current, light model area-sampled, features results/8dna_replication/rna_teaset/features/T3.npz (historical inference input), train-h5 = this run's T3 train H5 (read only for its AABB attributes, unused in current mode)",
+        "T0_model_render": "results/8dna_replication/rna_teaset/frozen/T0_canonical.npy (historical frozen T0 RNA, as worklog 22)",
+        "rule": "refit_block, unchanged",
+        "selection": "validation-best val_psnr among the official checkpoints (render_rna_states.best_checkpoint rule)",
+        "historical_values": {"error_ratio": 1.2161971186439977, "gain": 0.5588869452476501, "recovers": true}
+      }
+    }
+  },
+
+  "deviations_from_worklog_22": [
+    "RNA training runs on the RTX 5080 (WSL) instead of LabServer63, so all timing is on one host (batch section 2; user placement rule: 5080 first). Training is not bit-reproducible across hosts in any case (RNA's own code notes grid_sample on CUDA is non-deterministic); recovery is re-measured on this run's checkpoints, never borrowed from worklog 22.",
+    "Outputs (datasets, checkpoints, logs) go to results/neural_recompute_cost/<run>/; historical directories are read-only for this batch.",
+    "Timing instrumentation: event wrappers, one Lightning callback, per-epoch weight snapshots, torch.cuda.synchronize at phase boundaries. No change to model, loss, optimiser, data, schedule, seed or evaluation."
+  ],
+
+  "timing": {
+    "clock": "time.time() for wall-clock marks (comparable across processes on the host); perf_counter for durations inside one process; the WSL-vs-Windows clock offset is measured by the chain before and after the WSL stage",
+    "phases": ["process_setup", "scene_prep", "dataset_init", "model_init", "data_load", "view_render", "sensor_load", "sanity_validation", "path_generation", "resample", "optimization", "validation", "checkpoint_write", "snapshot_write", "export", "other", "inter_stage_gap"],
+    "memory": "per process: torch max_memory_allocated/reserved; whole-GPU nvidia-smi memory.used peak over the pre-job baseline (2 s poll; WDDM/WSL give no per-process figure); host peak working set (Windows) / max RSS (WSL)",
+    "serial_execution": "every stage runs alone on the GPU, no other GPU job in parallel"
+  },
+
+  "quality_time_trace": {
+    "8dna": "every epoch's snapshot rendered at T3 in both regimes and scored with refit_block; plus the per-epoch built-in validation loss (val/loss, render_simple at val_spp 128) logged by upstream train.py",
+    "rna": "snapshots (epoch 0 and every 5th) plus the official top-10 and last.ckpt rendered at T3 and scored with refit_block; plus per-epoch val_psnr / val_loss from the official validation",
+    "fields": ["elapsed_s", "epoch", "global_step", "error_ratio", "refit_T3_interaction_error", "gain", "validation_metric", "recovers"]
+  },
+
+  "inference_timing": {
+    "8dna": "final model (last.ckpt export) at T3, upstream neuralpath, 512^2: the evaluation renders' own wall time at the historical spp (512 envmap, 1024 common light), plus 5 warm repeats of a 1-spp render per regime (time only; no quality claim at 1 spp)",
+    "rna": "final (validation-best) model at T3, 512^2: (a) G-buffer + 16 area-light samples per sub-pixel (rna_bridge features, written to this run's directory) and (b) network evaluation of all 16 sub-pixel x 16 light-sample queries, 5 warm repeats after a warm-up, model load and feature-file read reported separately"
+  },
+
+  "budget_context": {
+    "frame_s": {"30fps": 0.0333333, "60fps": 0.0166667},
+    "categories_descriptive_only": {"A": "< 0.1 s (frame-scale or similarly small)", "B": "0.1 s - 10 s (human timescale: occasional edits)", "C": ">= 10 s (offline)"},
+    "worklog_26_context_only": "BMW27, 1080p, Cycles, persistent data, after a rigid change: 16 spp 0.22 s, 64 spp 0.76 s, 256 spp 3.0 s. Different scene and resolution, not quality matched: cost context only, never an equal-quality speed ratio."
+  },
+
+  "identity_check": {
+    "purpose": "instrumentation non-perturbation check at smoke scale (nrc_identity_check.py): historical launcher x2 plain vs once instrumented, final weights compared; never evidence",
+    "8dna_epochs": 2,
+    "8dna_overrides": ["dataset.N=32", "dataset.H=32"],
+    "rna_epochs": 3,
+    "tolerance_ratio": 2.0,
+    "tolerance_note": "set after the first smoke-scale check showed both trainers are not bit-deterministic run to run (8DNA plain-vs-plain max |dw| 0.021; RNA 3.7e-9), before any evidence run: an instrumented run passes if it differs from each plain run by at most 2x the plain-vs-plain difference"
+  },
+
+  "smoke": {
+    "purpose": "pipeline and accounting check only; never evidence",
+    "8dna_epochs": 2,
+    "8dna_overrides": ["dataset.N=16", "dataset.H=16"],
+    "rna_dataset": {"views": {"train": 3, "val": 2}, "spp": 16, "chunk": 16},
+    "8dna_eval_spp": 16,
+    "rna_epochs": 2
+  }
+}
