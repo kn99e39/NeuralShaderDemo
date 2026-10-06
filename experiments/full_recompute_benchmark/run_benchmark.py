@@ -36,6 +36,7 @@ PROTOCOL = os.path.join(HERE, "protocol", "bmw_full_recompute_v1.json")
 OUT_ROOT = os.path.join(ROOT, "results", "full_recompute_benchmark")
 BL = os.path.join(HERE, "blender")
 RAM_STOP_MB = 48 * 1024
+RESUME = False  # --resume: skip conditions whose record already exists
 
 
 def git_state() -> dict:
@@ -126,8 +127,13 @@ def run_timing(protocol, run_dir, cid, cond) -> dict:
     os.makedirs(run_dir, exist_ok=True)
     out_json = os.path.join(run_dir, cid + ".json")
     if os.path.exists(out_json):
+        if RESUME:
+            print(f"[{cid}] exists, skipped (resume)", flush=True)
+            return {"ok": True, "json": out_json}
         raise FileExistsError(f"{out_json} exists; use a new run id")
     log = os.path.join(run_dir, cid + ".log")
+    if os.path.exists(log):  # left by an interrupted process; keep it, never append to it
+        os.replace(log, log[:-4] + time.strftime(".interrupted_%H%M%S.log"))
     cond = dict(cond, log_path=log, condition_id=cid)
     cpath = os.path.join(run_dir, cid + ".condition.json")
     R.dump_json(cond, cpath)
@@ -249,11 +255,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("stage")
     ap.add_argument("--run-id", default=time.strftime("run_%Y%m%d_%H%M%S"))
+    ap.add_argument("--resume", action="store_true")
     a = ap.parse_args()
+    global RESUME
+    RESUME = a.resume
     protocol = R.load_json(PROTOCOL)
     run_dir = os.path.join(OUT_ROOT, "runs", a.run_id)
     os.makedirs(run_dir, exist_ok=True)
     man_path = os.path.join(run_dir, f"run_manifest_{a.stage}.json")
+    if os.path.exists(man_path):
+        man_path = man_path[:-5] + time.strftime("_resume_%H%M%S.json")
     R.dump_json({"stage": a.stage, "started": time.strftime("%Y-%m-%dT%H:%M:%S"), "git": git_state(),
                  "environment": environment(), "protocol_id": protocol["protocol_id"]}, man_path)
     stages = {"spp": stage_spp, "bounce": stage_bounce, "composite": stage_composite,
