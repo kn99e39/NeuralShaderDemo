@@ -1,0 +1,67 @@
+00:01.359  cycles           | Total time spent synchronizing data: 0.0003061
+00:01.359  cycles           | Using tile size of (1920, 1080)
+00:01.359  cycles           | Effective scene passes:
+00:01.359  cycles           | - type: combined, name: "Combined", mode: NOISY, is_written: True
+00:01.359  cycles           | - type: depth, name: "Depth", mode: NOISY, is_written: True
+00:01.359  cycles           | - type: object_id, name: "Object Index", mode: NOISY, is_written: True
+00:01.359  cycles           | Total 105 objects.
+00:01.359  cycles           | Total 36 meshes.
+00:01.359  cycles           | Objects BVH build pool statistics:
+                            | Total time:    0.689524
+                            | Tasks handled: 0
+00:01.359  cycles           | Using OPTIX layout.
+00:01.359  cycles           | Total 1 lights.
+00:01.359  cycles           | Background MIS has been disabled.
+00:01.359  cycles           | Number of lights sent to the device: 0
+00:01.359  cycles           | Use light distribution with 25410 emitters.
+00:01.359  cycles           | Total 11 lookup tables.
+00:01.359  cycles           | Detected required volume stack size 2
+00:01.359  cycles           | System memory statistics after full device sync:
+                            |   Usage: 171,133,814 (163.21M)
+                            |   Peak: 204,311,414 (194.85M)
+00:01.359  cycles           | Calculated resolution divider is 1
+00:01.359  cycles           | Will path trace 1 samples at the resolution divider 1
+00:01.359  cycles           | Will schedule 3 tiles of size: (256, 256), num_samples: 1
+00:01.359  cycles           | Number of unused path states: 61440
+00:01.391  cycles           | Rendered 1 samples in 0.0231177 seconds (0.0231177 seconds per sample), occupancy: 0.070825
+00:01.391  cycles           | Measured path tracing occupancy: 0.070825
+00:01.391  cycles           | Average path tracing time: 0.0231573 seconds.
+00:01.391  cycles           | Will path trace 15 samples at the resolution divider 1
+00:01.391  cycles           | Will schedule 3 tiles of size: (128, 128), num_samples: 4
+00:01.391  cycles           | Number of unused path states: 61440
+00:01.578  cycles           | Rendered 15 samples in 0.185403 seconds (0.0123602 seconds per sample), occupancy: 0.453421
+00:01.578  cycles           | Measured path tracing occupancy: 0.453421
+00:01.578  cycles           | Average path tracing time: 0.0130384 seconds.
+00:01.578  cycles           | Write tile result.
+00:01.578  cycles           | Write tile result via buffer write callback.
+00:01.594  cycles           | Invoke buffer update callback.
+00:01.594  cycles           | Average display update time: 2.15e-05 seconds.
+00:01.594  cycles           | Rendering in main loop is done in 0.220742 seconds.
+00:01.594  cycles           | Full path tracing report:
+                            | 
+                            | Path tracing on: NVIDIA GeForce RTX 5080 (OptiX) [CUDA_NVIDIA GeForce RTX 5080_0000:01:00_OptiX]
+                            |                      Hardware Ray-Tracing: Off
+                            | 
+                            | Render Scheduler Summary
+                            | 
+                            | Mode: Headless
+                            | Resolution: 1920x1080
+                            | 
+                            | Adaptive sampling:
+                            |   Use: False
+                            | 
+                            | Denoiser:
+                            |   Use: False
+                            | 
+                            | Time (in seconds):
+                            |                                        Wall              Average
+                            |           Path Tracing             0.208615             0.013038
+                            |         Display Update             0.000022             0.000022
+                            | 
+                            |   Total: 0.208636
+                            | 
+                            | Rendered 16 samples in 0.220702 seconds
+                            | Average time per sample: 0.013794 seconds
+                            | 
+00:01.594  cycles           | Total render time: 0.223534
+00:01.594  cycles           | Render time (without synchronization): 0.220859

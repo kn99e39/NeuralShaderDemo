@@ -1,0 +1,422 @@
+00:00.672  cycles           | Opened database: "C:\Users\dna10\AppData\Local\NVIDIA\OptixCache\optix7cache.db"
+00:00.672  cycles           |     Cache data size: "514.0 KiB"
+00:00.672  cycles           | Using AVX2 CPU kernels.
+00:00.828  cycles           | Total time spent synchronizing data: 0.148368
+00:00.828  cycles           | Colorspace sRGB is scene linear sRGB
+00:00.906  cycles           | Using tile size of (1920, 1080)
+00:00.906  cycles           | Effective scene passes:
+00:00.906  cycles           | - type: combined, name: "Combined", mode: NOISY, is_written: True
+00:00.906  cycles           | - type: depth, name: "Depth", mode: NOISY, is_written: True
+00:00.906  cycles           | - type: object_id, name: "Object Index", mode: NOISY, is_written: True
+00:00.906  cycles           | Requested features:
+00:00.906  cycles           | Use BSDF True
+00:00.906  cycles           | Use Emission True
+00:00.906  cycles           | Use Volume False
+00:00.906  cycles           | Use Bump True
+00:00.906  cycles           | Use Voronoi False
+00:00.906  cycles           | Use Shader Raytrace False
+00:00.906  cycles           | Use MNEE False
+00:00.906  cycles           | Use Transparent True
+00:00.906  cycles           | Use Denoising False
+00:00.906  cycles           | Use Path Tracing True
+00:00.906  cycles           | Use Hair False
+00:00.906  cycles           | Use Pointclouds False
+00:00.906  cycles           | Use Object Motion False
+00:00.906  cycles           | Use Baking False
+00:00.906  cycles           | Use Subsurface False
+00:00.906  cycles           | Use Volume False
+00:00.906  cycles           | Use Shadow Catcher False
+00:00.906  cycles           | Use Portal Node False
+00:00.906  cycles           | Testing for pre-compiled kernel C:\Program Files\Blender Foundation\Blender 5.1\5.1\scripts\addons_core\cycles\lib/kernel_sm_120.cubin.zst.
+00:00.906  cycles           | Using precompiled kernel.
+00:00.953  cycles           | Local memory reserved 723,517,440 bytes. (690.00M)
+00:00.953  cycles           | Cache hit for key: ptx-568655-key8dd2365c5bd40b314727745aa5a2d1c2-sm_120-rtc1-drv596.49
+                            | 
+00:00.953  cycles           | 
+00:00.953  cycles           | Info: Pipeline statistics
+                            | 	module(s)                            :     1
+                            | 	entry function(s)                    :    10
+                            | 	trace call(s)                        :     4
+                            | 	continuation callable call(s)        :     0
+                            | 	direct callable call(s)              :     0
+                            | 	basic block(s) in entry functions    :  1064
+                            | 	instruction(s) in entry functions    : 16136
+                            | 	non-entry function(s)                :     1
+                            | 	basic block(s) in non-entry functions:    45
+                            | 	instruction(s) in non-entry functions:   858
+                            | 	debug information                    :    no
+                            | 
+00:00.953  cycles           | Total 28 shaders.
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: default_volume
+                            | Number of SVM nodes: 3
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000004
+                            |   Surface:           0.000002
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Floor
+                            | Number of SVM nodes: 14
+                            | Peak stack usage:    7
+                            | Time (in seconds):
+                            | Generate:            0.000026
+                            |   Surface:           0.000022
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: HeadlightMatte
+                            | Number of SVM nodes: 11
+                            | Peak stack usage:    8
+                            | Time (in seconds):
+                            | Generate:            0.000016
+                            |   Surface:           0.000014
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Material
+                            | Number of SVM nodes: 16
+                            | Peak stack usage:    8
+                            | Time (in seconds):
+                            | Generate:            0.000022
+                            |   Surface:           0.000020
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: ChromeMatte
+                            | Number of SVM nodes: 15
+                            | Peak stack usage:    7
+                            | Time (in seconds):
+                            | Generate:            0.000022
+                            |   Surface:           0.000020
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: BMWBlack
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000017
+                            |   Surface:           0.000012
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: CarShellNew
+                            | Number of SVM nodes: 24
+                            | Peak stack usage:    9
+                            | Time (in seconds):
+                            | Generate:            0.000044
+                            |   Surface:           0.000040
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Chrome
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000017
+                            |   Surface:           0.000013
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: MatteBlack
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000007
+                            |   Surface:           0.000006
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: HeadlightGlass
+                            | Number of SVM nodes: 76
+                            | Peak stack usage:    20
+                            | Time (in seconds):
+                            | Generate:            0.000059
+                            |   Surface:           0.000006
+                            |   Bump:              0.000046
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000006
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: BlackPlastic
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000015
+                            |   Surface:           0.000011
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Brake
+                            | Number of SVM nodes: 10
+                            | Peak stack usage:    7
+                            | Time (in seconds):
+                            | Generate:            0.000016
+                            |   Surface:           0.000013
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Plate
+                            | Number of SVM nodes: 16
+                            | Peak stack usage:    10
+                            | Time (in seconds):
+                            | Generate:            0.000027
+                            |   Surface:           0.000023
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Glass
+                            | Number of SVM nodes: 17
+                            | Peak stack usage:    10
+                            | Time (in seconds):
+                            | Generate:            0.000022
+                            |   Surface:           0.000018
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Interior
+                            | Number of SVM nodes: 9
+                            | Peak stack usage:    6
+                            | Time (in seconds):
+                            | Generate:            0.000015
+                            |   Surface:           0.000010
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Tailight
+                            | Number of SVM nodes: 14
+                            | Peak stack usage:    7
+                            | Time (in seconds):
+                            | Generate:            0.000026
+                            |   Surface:           0.000022
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: Emit
+                            | Number of SVM nodes: 5
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000006
+                            |   Surface:           0.000004
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: HeadLightGlass
+                            | Number of SVM nodes: 5
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000013
+                            |   Surface:           0.000008
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: default_light
+                            | Number of SVM nodes: 3
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000006
+                            |   Surface:           0.000004
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: default_surface
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    3
+                            | Time (in seconds):
+                            | Generate:            0.000017
+                            |   Surface:           0.000015
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: BMWBlue
+                            | Number of SVM nodes: 9
+                            | Peak stack usage:    6
+                            | Time (in seconds):
+                            | Generate:            0.000014
+                            |   Surface:           0.000011
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: default_empty
+                            | Number of SVM nodes: 3
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000005
+                            |   Surface:           0.000003
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: BMWSilver
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000016
+                            |   Surface:           0.000013
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000002
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: HeadLightAngelEye
+                            | Number of SVM nodes: 5
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000005
+                            |   Surface:           0.000003
+                            |   Bump:              0.000000
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: default_background
+                            | Number of SVM nodes: 5
+                            | Peak stack usage:    0
+                            | Time (in seconds):
+                            | Generate:            0.000011
+                            |   Surface:           0.000008
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: TireRubber
+                            | Number of SVM nodes: 50
+                            | Peak stack usage:    20
+                            | Time (in seconds):
+                            | Generate:            0.000032
+                            |   Surface:           0.000003
+                            |   Bump:              0.000025
+                            |   Volume:            0.000001
+                            |   Displacement:      0.000003
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: BMWWhite
+                            | Number of SVM nodes: 9
+                            | Peak stack usage:    6
+                            | Time (in seconds):
+                            | Generate:            0.000014
+                            |   Surface:           0.000011
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Compilation summary:
+                            | Shader name: HeadlightChrome
+                            | Number of SVM nodes: 8
+                            | Peak stack usage:    4
+                            | Time (in seconds):
+                            | Generate:            0.000016
+                            |   Surface:           0.000013
+                            |   Bump:              0.000000
+                            |   Volume:            0.000002
+                            |   Displacement:      0.000001
+                            | 
+00:00.953  cycles           | Shader manager updated 28 shaders in 0.0010965 seconds.
+00:00.953  cycles           | Total 105 objects.
+00:00.953  cycles           | Total 0 particle systems.
+00:00.953  cycles           | Total 36 meshes.
+00:01.000  cycles           | Objects BVH build pool statistics:
+                            | Total time:    0.319410
+                            | Tasks handled: 36
+00:01.000  cycles           | Using OPTIX layout.
+00:01.000  cycles           | 0 volume octree(s) with a total of 0 nodes are built in 3e-07 seconds.
+00:01.000  cycles           | Total 10 lookup tables.
+00:01.000  cycles           | Total 1 lights.
+00:01.000  cycles           | Background MIS has been disabled.
+00:01.000  cycles           | Number of lights sent to the device: 0
+00:01.000  cycles           | Use light distribution with 25410 emitters.
+00:01.000  cycles           | Total 11 lookup tables.
+00:01.000  cycles           | Detected required volume stack size 2
+00:01.000  cycles           | System memory statistics after full device sync:
+                            |   Usage: 113,094,646 (107.85M)
+                            |   Peak: 117,740,380 (112.29M)
+00:01.000  cycles           | Initial resolution divider is 8
+00:01.000  cycles           | Will path trace 1 samples at the resolution divider 1
+00:01.016  cycles           | Will schedule 3 tiles of size: (256, 256), num_samples: 1
+00:01.016  cycles           | Number of unused path states: 61440
+00:01.031  cycles           | Rendered 1 samples in 0.0260266 seconds (0.0260266 seconds per sample), occupancy: 0.0704345
+00:01.031  cycles           | Measured path tracing occupancy: 0.0704345
+00:01.031  cycles           | Average path tracing time: 0.0260444 seconds.
+00:01.031  cycles           | Will path trace 15 samples at the resolution divider 1
+00:01.031  cycles           | Will schedule 3 tiles of size: (128, 128), num_samples: 4
+00:01.031  cycles           | Number of unused path states: 61440
+00:01.219  cycles           | Rendered 15 samples in 0.18828 seconds (0.012552 seconds per sample), occupancy: 0.458228
+00:01.219  cycles           | Measured path tracing occupancy: 0.458228
+00:01.219  cycles           | Average path tracing time: 0.0133969 seconds.
+00:01.219  cycles           | Write tile result.
+00:01.219  cycles           | Write tile result via buffer write callback.
+00:01.250  cycles           | Invoke buffer update callback.
+00:01.250  cycles           | Average display update time: 3.59e-05 seconds.
+00:01.250  cycles           | Rendering in main loop is done in 0.238256 seconds.
+00:01.250  cycles           | Full path tracing report:
+                            | 
+                            | Path tracing on: NVIDIA GeForce RTX 5080 (OptiX) [CUDA_NVIDIA GeForce RTX 5080_0000:01:00_OptiX]
+                            |                      Hardware Ray-Tracing: Off
+                            | 
+                            | Render Scheduler Summary
+                            | 
+                            | Mode: Headless
+                            | Resolution: 1920x1080
+                            | 
+                            | Adaptive sampling:
+                            |   Use: False
+                            | 
+                            | Denoiser:
+                            |   Use: False
+                            | 
+                            | Time (in seconds):
+                            |                                        Wall              Average
+                            |           Path Tracing             0.214351             0.013397
+                            |         Display Update             0.000036             0.000036
+                            | 
+                            |   Total: 0.214387
+                            | 
+                            | Rendered 16 samples in 0.238016 seconds
+                            | Average time per sample: 0.014876 seconds
+                            | 
+00:01.250  cycles           | Total render time: 0.571761
+00:01.250  cycles           | Render time (without synchronization): 0.240012

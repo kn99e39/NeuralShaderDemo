@@ -1,0 +1,109 @@
+{
+ "protocol_id": "bmw_full_recompute_v1",
+ "declared": "2026-10-06",
+ "purpose": "Calibration of physical full GI recomputation cost after a rigid geometry change (Cycles, RTX 5080). Not a neural-method experiment.",
+ "pre_protocol_observations": [
+  "Before this file was written, smoke runs on the original scene were seen: a 16-spp 1920x1080 render took ~1.9 s in a fresh process and ~0.22 s path tracing with persistent data; evaluated triangle count 699,800; Cycles geometry memory ~10.6 MB and texture memory ~66 MB (--cycles-print-stats).",
+  "The G1 transform below was chosen from a 32-spp half-resolution preview and a top view (collision and visibility check), before any timing at the protocol settings."
+ ],
+ "blender": {
+  "version": "5.1.0",
+  "build_hash": "adfe2921d5f3",
+  "executable": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe",
+  "launch": "--factory-startup -b --log cycles --log-level debug --log-file <per-process log>"
+ },
+ "scene_source": {
+  "name": "BMW27 (Mike Pan), official Blender demo/benchmark file",
+  "url": "https://download.blender.org/demo/test/BMW27_2.blend.zip",
+  "archive": "BMW27_2.blend.zip",
+  "archive_sha256": "74f5dc6d718fc565e0ff50e355be7f8b1a58983cc9ae79775608d8905c269ee4",
+  "member": "bmw27/bmw27_gpu.blend",
+  "path": "C:/Projects/NeuralShaderDemo/external/bmw27_official/extracted/bmw27/bmw27_gpu.blend",
+  "sha256": "172a6b1c6f25acf59d17cb2682866a6b7a33718b92ad15f4073d55d16ff3af74",
+  "file_version": "2.77 (converted on load by Blender 5.1.0; the original file is never saved)",
+  "note": "bmw27_cpu.blend (sha256 4f0a12ee...) differs only in tile settings and is not used."
+ },
+ "render_contract": {
+  "resolution": [1920, 1080],
+  "engine": "CYCLES",
+  "device": "GPU / OptiX",
+  "denoising": false,
+  "adaptive_sampling": false,
+  "seed": 0,
+  "compositing": false,
+  "sequencer": false,
+  "compositing_justification": "The file's compositor (glare, blur, bokeh image overlay, colour balance) is image post-processing, not light transport; it is disabled so the timed path ends at the Cycles Combined pass. Its cost is reported once separately.",
+  "unchanged_as_loaded": "camera and its depth of field, lights, world, materials, light tree flag (False in the converted file), caustics, clamping, pixel filter, tiling, view-layer passes"
+ },
+ "spp_values": [1, 4, 16, 64, 256],
+ "bounce_presets": {
+  "original": "as_loaded",
+  "medium": {"max_bounces": 8, "diffuse_bounces": 4, "glossy_bounces": 4, "transmission_bounces": 8, "volume_bounces": 8},
+  "low": {"max_bounces": 2, "diffuse_bounces": 2, "glossy_bounces": 2, "transmission_bounces": 2, "volume_bounces": 2}
+ },
+ "bounce_as_loaded": {"max_bounces": 32, "diffuse_bounces": 16, "glossy_bounces": 16, "transmission_bounces": 32, "volume_bounces": 32, "transparent_max_bounces": 128},
+ "bounce_sensitivity": {"spp": 64, "presets": ["low", "medium", "original"], "persistent": [true], "note": "transparent_max_bounces stays 128 in every preset"},
+ "camera": {"original_variant": "Camera", "xl_variants": "XLCamera (see xl_policy.camera)"},
+ "mover": {
+  "object": "1M",
+  "collection": "1M",
+  "description": "Rear BMW: an empty instancing collection 1M (the same collection whose real objects are the front BMW). Moving it moves only the rear car.",
+  "G0": "location and rotation as loaded (recorded at run time)",
+  "G1_translation_m": [-1.0, -2.0, 0.0],
+  "G1_rotation": "unchanged",
+  "transport_rationale": "brings the rear car ~2 m from the front car and partly under the emission panel: changes body-to-body reflections, floor shadowing between the cars and the light the rear car returns to the front car"
+ },
+ "persistent_data_modes": {
+  "on": "render.use_persistent_data = True: the Cycles session survives between renders and only updated data is re-synchronised (Blender's incremental final-render path). Primary.",
+  "off": "fresh Cycles session per render: full export, full BVH build. Secondary."
+ },
+ "repetitions": {
+  "cold": 1,
+  "warmup": 2,
+  "steady_persistent_on": 10,
+  "steady_persistent_off": 5,
+  "static": 3,
+  "sequence": "cold render in G0; warm-up frames alternating G1,G0; steady frames alternating (every steady frame follows a mover change); static frames re-render without change (control)",
+  "statistics": "first, median, mean, min, max, p25, p75 per phase; headline = steady median; cold reported separately; no fastest-run selection"
+ },
+ "warmup_policy": "one Blender process per condition; the first render in the process is the cold render (OptiX kernels from the precompiled sm_120 cubin and the warm OptiX disk cache); two warm-up frames follow and are reported but excluded from steady statistics",
+ "timing_fields": {
+  "A_load_s": "wm.open_mainfile wall time",
+  "B_cold_setup_s": "cold render: Cycles total - path tracing",
+  "C_depsgraph_s": "mover transform set + view_layer.update()",
+  "D_sync_s": "Cycles 'Total time spent synchronizing data'",
+  "E_device_update_s": "Cycles total - render-without-sync - D (BVH/IAS build or refit plus all other device managers; not separable at debug log level)",
+  "F_path_trace_s": "Cycles render-scheduler Path Tracing wall time",
+  "G_frame_total_s": "C + wall time of bpy.ops.render.render (includes Blender render-pipeline overhead)",
+  "derived": "effective_fps = 1/G; gap_30fps = G_ms/33.333; gap_60fps = G_ms/16.667; also reported for Cycles total and path tracing alone"
+ },
+ "memory_fields": {
+  "cpu": "process working set / peak working set / private bytes (GetProcessMemoryInfo)",
+  "gpu": "whole-GPU memory.used polled by nvidia-smi every 0.2 s, reported as peak minus the pre-launch baseline (per-process GPU memory is not available under WDDM); maximum of the Cycles render_stats 'Mem:' figure over each render (Cycles-tracked device allocations: scene data, BVH, render buffers, path states)"
+ },
+ "xl_policy": {
+  "trigger": "BMW27 is classified lightweight on the RTX 5080 if its logical triangle count is below 5,000,000 AND its Cycles device scene memory (geometry + textures, --cycles-print-stats) is below 10% of the GPU's 16 GB. These are workload-scale properties, not timing outcomes.",
+  "trigger_inputs_known_at_declaration": "699,800 triangles; ~77 MB geometry+texture -> XL is built",
+  "unit": "bay = front car + rear car + one emission panel, laid out exactly as in the original",
+  "bay_pitch_m": 13.0,
+  "floor_object": "Floor",
+  "floor_half_extent_m": 26.43,
+  "panel_object": "Light",
+  "levels_bays_per_side": {"instanced": [1, 2, 4, 8, 16], "realized": [2, 4, 8, 12]},
+  "instanced": "added cars are collection instances of 1M (unique geometry unchanged, logical geometry grows)",
+  "realized": "added cars converted to real objects (duplicates_make_real); each carries its own modifier stack, so evaluated geometry is no longer shared",
+  "camera": {"rule": "copy of the original camera data (sensor, f-stop); original azimuth; looks at the grid centre", "lens_mm": 35.0, "elevation_deg": 30.0, "target_z_m": 0.7, "frame_margin": 0.03, "focus": "distance to the grid centre"},
+  "unchanged": "materials, shaders, panel/world strength, render settings; bay (0,0) is the original scene and holds the mover",
+  "scale_series_spp": [1, 64],
+  "scale_series_persistent": [true, false],
+  "stop_rule": "stop at the first level that fails to build or render (OOM, Cycles error) or whose build process exceeds 48 GB working set; that level is recorded as the practical capacity boundary and larger levels of the same mode are not attempted",
+  "visible_elements": "every car is checked by camera ray casts to 9 probe points; counts of cars visible and in frame are reported"
+ },
+ "evidence_images": {
+  "spp": 64,
+  "renders": ["G0 seed 0", "G1 seed 0", "G0 seed 1 (noise floor)"],
+  "passes": ["Combined", "Depth"],
+  "stationary_mask": "pixels whose depth is equal in G0 and G1 (relative difference < 1e-4): first hit unchanged",
+  "transport_change": "mean |G1-G0| on the stationary mask compared with mean |G0 seed0 - G0 seed1|"
+ }
+}
