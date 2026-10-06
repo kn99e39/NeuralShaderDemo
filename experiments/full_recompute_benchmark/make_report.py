@@ -134,8 +134,11 @@ def plot_spp(rows, path):
             lo = [r["frame_min_s"] * 1000 for r in rs]
             hi = [r["frame_max_s"] * 1000 for r in rs]
             ax.vlines(x, lo, hi, color=col, linewidth=1, alpha=0.6)
-        ax.annotate(f"{y[-1]:.0f} ms", (x[-1], y[-1]), textcoords="offset points", xytext=(6, 0),
-                    color=INK2, fontsize=8, va="center")
+            ax.annotate(f"{y[-1]:.0f} ms", (x[-1], y[-1]), textcoords="offset points",
+                        xytext=(6, 6 if pers is False else -8), color=INK2, fontsize=8, va="center")
+            ax.annotate(f"{y[0]:.0f} ms", (x[0], y[0]), textcoords="offset points",
+                        xytext=(6, 9 if pers else -9),
+                        color=INK2, fontsize=8, va="center")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
     ax.set_xticks([1, 4, 16, 64, 256])
@@ -164,10 +167,17 @@ def plot_breakdown(rows, path):
                     key=lambda r: r["spp"])
         xs = np.arange(len(rs))
         bottom = np.zeros(len(rs))
+        ax.set_axisbelow(True)
         for lab, key, col in parts:
             v = np.array([max(r[key], 0.0) * 1000 for r in rs])
             ax.bar(xs, v, bottom=bottom, color=col, width=0.6, label=lab, edgecolor=SURF, linewidth=1)
             bottom += v
+        # Residual = frame median - sum of the part medians: mostly Cycles' in-session work outside
+        # path tracing (render-buffer write-out, scheduling); medians do not add exactly.
+        resid = np.array([max(r["frame_median_s"] * 1000 - b, 0.0) for r, b in zip(rs, bottom)])
+        ax.bar(xs, resid, bottom=bottom, color="#c3c2b7", width=0.6, edgecolor=SURF, linewidth=1,
+               label="other Cycles session work (residual)")
+        bottom += resid
         ax.set_xticks(xs)
         ax.set_xticklabels([str(r["spp"]) for r in rs])
         _style(ax, f"persistent data {'on' if pers else 'off'}", "samples per pixel", "steady median (ms)")
@@ -249,6 +259,16 @@ def evidence(ev_dir, out_dir):
         "stationary_box9_change_to_noise": float(sig_change[m].mean() / sig_noise[m].mean()),
         "stationary_box9_frac_change_gt_3x_noise_p99": float(
             (sig_change[m] > 3 * np.percentile(sig_noise[m], 99)).mean()),
+        # Pixelwise: box-filtered change vs box-filtered independent-seed noise at the same pixel.
+        # Conservative: the same-seed G1-G0 difference cancels most sampling noise, so the
+        # independent-seed difference over-states the noise the change competes with.
+        "stationary_box9_frac_change_gt_3x_local_noise": float((sig_change[m] > 3 * sig_noise[m]).mean()),
+        "stationary_box9_pixels_change_gt_3x_local_noise": int((sig_change[m] > 3 * sig_noise[m]).sum()),
+        "stationary_box9_mean_change_where_gt_3x_local_noise": float(
+            sig_change[m][sig_change[m] > 3 * sig_noise[m]].mean()),
+        "stationary_box9_mean_noise_where_gt_3x_local_noise": float(
+            sig_noise[m][sig_change[m] > 3 * sig_noise[m]].mean()),
+        "stationary_mean_luminance": float(lum(g0)[m].mean()),
         "note": "luminance of linear Combined; stationary = depth equal in G0 and G1 (same seed, relative 1e-4)",
     }
     os.makedirs(out_dir, exist_ok=True)
