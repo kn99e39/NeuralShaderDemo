@@ -1,6 +1,6 @@
 # Research Roadmap — Dynamic Neural Shading / Neural Light Transport
 
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
 
 ## Document Role
 
@@ -79,7 +79,16 @@ This is now the working architecture direction, not yet a validated method.
 - The Rain fixed-target causal probe closed as **PHYSICAL EFFECT TOO WEAK** and did not decide the nonlocal mechanism.
 - Worklog 21 produced the first clean controlled 8DNA teaset case with a stationary target query, changed surrounding part relation, strong physical transport change above noise, frozen near-zero tracking, and a stable relation-preserving control.
 - Worklog 22 reproduced the same frozen-failure signature with RNA on the same teaset protocol under common light.
-- 8DNA same-state T3 refit under the original envmap regime recovers close to T0 quality, strongly supporting stale persistent state rather than insufficient representation capacity in that tested regime.
+- 8DNA same-state T3 refit under the original envmap regime recovers close to T0 quality, strongly supporting stale persistent state rather than insufficient representation capacity in that tested regime. Worklog 27 reproduced this recovery in a second, independently timed rebuild (last checkpoint 1.149 / 0.629 vs the historical 1.073 / 0.698).
+- Same-state refit in the common-light regime is near-threshold for both backbones and not robust: 8DNA fails the rule in both runs (worklogs 22, 27), and RNA's worklog-22 borderline pass (1.22) did not recur in the worklog-27 rebuild (≈1.32, no checkpoint passes; datasets bit-identical, training run differs).
+
+### Full-recomputation cost
+
+- **Physical (worklog 26):** BMW27, Cycles, RTX 5080, after a rigid change: ≈0.22 s / 0.76 s / 3.0 s per 1080p frame at 16 / 64 / 256 spp (persistent data); geometry sync is ≈2 ms, the cost is sampling (≈11.5 ms/spp).
+- **Neural (worklog 27):** teaset T3, historical refit pipelines (scratch rebuilds; no supported warm start exists in either method), RTX 5080:
+  - 8DNA: first rule-satisfying checkpoint after **38.9 min** (oracle-identified, not stable until 77 min); full 30-epoch schedule **1.76 h**, 89% optimisation.
+  - RNA: **3.24 h**, 87% of it rendering the T3 training targets; no checkpoint satisfies the recovery rule.
+  - Every value is offline: 10⁵–10⁶ frames of a 30/60 FPS budget. Different scene from worklog 26, so cost context only, never an equal-quality ratio.
 
 ### Physical attribution
 
@@ -122,7 +131,8 @@ This does **not** mean broad generality or paper-level closure has been establis
 - The material regime is near-mirror rough nickel.
 - RNA remains supporting rather than co-equal causal evidence because its static teaset reconstruction margin is weak.
 - The minimum sufficient dynamic transport representation has not been established.
-- The update-cost advantage over full recomputation/regeneration has not yet been measured.
+- Both full-recomputation baselines are now calibrated (physical, worklog 26; neural, worklog 27), but the proposed method's own update cost does not exist yet, so no advantage has been measured.
+- The neural baselines' rebuild cost was measured only for their fixed historical schedules; faster rebuild variants (shorter schedules, warm start, smaller target sets) are untested.
 - The working architecture has not yet been implemented or validated.
 
 ---
@@ -136,7 +146,7 @@ M1  Failure Existence / Direct Evidence       CLOSED
  ↓
 M2  Failure Attribution                       CLOSED
  ↓
-M3  Information Sufficiency + Cost Boundary   ACTIVE
+M3  Information Sufficiency + Cost Boundary   ACTIVE (cost boundary calibrated; minimum state open)
  ↘
 M4  Architecture Hypothesis Selection         ACTIVE — working contract selected
  ↓
@@ -144,16 +154,16 @@ M5  End-to-End Method Implementation          FUTURE
  ↓
 M6  Cross-Representation Method Validation    FUTURE
  ↓
-M7  Efficiency / Regeneration Trade-off       EARLY CALIBRATION ACTIVE
+M7  Efficiency / Regeneration Trade-off       BASELINE CALIBRATION CLOSED (WL26/27); method comparison FUTURE
  ↓
 M8  Generalization Boundary                   FUTURE
  ↓
 M9  Paper-Level Evidence Closure              FUTURE
 ```
 
-M3, M4, and the early calibration part of M7 may overlap.
+M3, M4, and the baseline calibration part of M7 overlapped intentionally.
 
-This overlap is intentional: attribution is sufficiently closed to select a working representation contract; the exact dynamic-state parameterization remains an M3 question; and the physical full-recomputation benchmark informs the runtime budget before implementation.
+Attribution is sufficiently closed to select a working representation contract; the exact dynamic-state parameterization remains an M3 question; the physical (worklog 26) and neural (worklog 27) full-recomputation benchmarks now supply the runtime context before implementation.
 
 ---
 
@@ -273,21 +283,18 @@ Open questions include directional basis vs another compact parameterization, ho
 
 ## H3 — Full Current-State Regeneration / Recompute
 
-**ACTIVE as a calibration baseline**
+**CALIBRATED — both baselines measured (worklogs 26, 27)**
 
-Before claiming selective reuse is useful, measure the cost of obtaining physically current GI after geometry change.
+Before claiming selective reuse is useful, the cost of obtaining current GI after geometry change had to be known. Both kinds are now measured on the RTX 5080:
 
-The immediate calibration uses:
+- **Physical recomputation (worklog 26, BMW27 / BMW Garage XL, Cycles):** ≈0.22 s / 0.76 s / 3.0 s per 1080p frame at 16 / 64 / 256 spp after a rigid change (persistent data); without persistent data, +0.39 s on BMW27 and tens to hundreds of seconds for large non-instanced scenes.
+- **Neural full-state regeneration (worklog 27, teaset T3, historical refit pipelines):** 8DNA 38.9 min to the first rule-satisfying checkpoint (oracle, unstable until 77 min), 1.76 h for the fixed schedule; RNA 3.24 h with no rule-satisfying checkpoint.
 
-- official BMW27 Cycles scene as the reproducible baseline;
-- BMW Garage XL only if the original scene is too light to expose useful scaling on RTX 5080;
-- SPP / scene-scale / geometry-change cost curves.
-
-Important distinction:
+Important distinction, unchanged:
 
 > Cycles physical recomputation is not the same as neural full-state regeneration.
 
-The later method evaluation must compare both where relevant.
+The two were measured on different scenes and are not quality matched. Neural regeneration in its existing form is offline (category C) and is therefore not a practical per-change competitor; the tighter runtime reference for a future method remains physical recomputation. The later method evaluation must still compare against both, on the same scene.
 
 ## Completion Condition
 
@@ -295,7 +302,7 @@ M3 is complete when we can answer:
 
 1. What minimum current transport state can represent the canonical failure?
 2. How is that state prevented from collapsing back into persistent canonical GI?
-3. What order-of-magnitude update budget must the method beat to remain meaningful relative to full recomputation/regeneration?
+3. What order-of-magnitude update budget must the method beat to remain meaningful relative to full recomputation/regeneration? — *Answered for the calibration scope:* neural regeneration costs tens of minutes to hours (worklog 27); physical recomputation costs ≈0.2–3 s per frame on BMW27 (worklog 26), which implies an update on the order of ~1–10 ms within a frame to be practically meaningful (worklog 26's estimate, not a validated threshold).
 
 ---
 
@@ -380,18 +387,25 @@ Do not confuse repeated failure evidence with portability of the proposed method
 
 ## Status
 
-**EARLY CALIBRATION ACTIVE; method-level comparison FUTURE**
+**BASELINE CALIBRATION CLOSED (worklogs 26, 27); method-level comparison FUTURE**
 
 ## M7-A — Physical Full-Recomputation Calibration
 
-Current task:
-
-- measure geometry-change → current Cycles GI cost on RTX 5080;
-- use BMW27 as the reproducible anchor;
-- expand to BMW Garage XL only when needed for meaningful large-scene scaling;
-- measure effective FPS and distance from 30/60 FPS budgets.
+**CLOSED (worklog 26).** BMW27 Cycles on the RTX 5080 after a rigid mover change: 38 ms / 85 ms / 219 ms / 763 ms / 2.98 s per 1080p frame at 1 / 4 / 16 / 64 / 256 spp with persistent data (geometry sync ≈2 ms; cost is sampling, ≈11.5 ms/spp); without persistent data +0.39 s per frame, and tens to hundreds of seconds for large non-instanced BMW Garage XL scenes. Denoised low-spp rendering was not measured and is the most important missing physical baseline.
 
 This establishes intuition and an order-of-magnitude target. It does **not** validate the neural architecture.
+
+## M7-A2 — Neural Full-Recomputation Calibration
+
+**CLOSED (worklog 27).** The existing RNA and 8DNA refit paths of worklog 22 (both scratch rebuilds; neither method has a supported warm start), timed end to end on the RTX 5080 from "T3 geometry handed to the pipeline":
+
+| baseline | first checkpoint satisfying the worklog-22 rule | historical selection | fixed schedule | dominant cost |
+|---|---|---|---|---|
+| 8DNA, envmap | 38.9 min (oracle; stable from 77 min) | recovers | 1.76 h | optimisation 89% |
+| 8DNA, common light (same training) | 63.5 min (isolated) | fails | 1.76 h | — |
+| RNA, common light | none | fails | 3.24 h | target rendering 87% |
+
+All values are offline (10⁵–10⁶ frames of a 30/60 FPS budget). Full neural recomputation is therefore not a practical response to per-frame or interactive geometry change; it is plausible only as offline per-configuration baking. Untested: faster rebuild variants (shorter schedules, warm start, smaller target sets), run-to-run spread, other assets.
 
 ## M7-B — Method-Level Efficiency
 
@@ -443,7 +457,8 @@ Reconsider or narrow the direction instead of patching indefinitely if:
 - the dynamic path effectively requires whole-scene re-encoding every frame;
 - the architecture still leaks most canonical GI into persistent state under transport-exciting multi-configuration training;
 - dense pairwise interaction is required for acceptable quality;
-- the physical full-recompute baseline is already cheap enough in the target regime that selective reuse provides little practical value;
+- the physical full-recompute baseline is already cheap enough in the target regime that selective reuse provides little practical value (worklog 26: 0.2–3 s per 1080p frame at 16–256 spp on BMW27; a converged-quality spp and denoised low-spp frames were not established);
+- a fast neural rebuild/refit variant reaches current validity at interactive cost (worklog 27: the existing rebuild pipelines take 39 min – 3.2 h; faster variants untested);
 - the eventual method works only on the canonical teaset and does not survive broader material/configuration tests;
 - another existing current-geometry method already provides the same ownership/update contract more directly.
 
@@ -476,19 +491,11 @@ Do not optimize toward a desired conclusion.
 
 # 16. Current Immediate Next Steps
 
-Two bounded activities are now justified in parallel.
+## A. Full-recomputation cost calibration — CLOSED
 
-## A. Full-recomputation cost calibration
+Physical (worklog 26) and neural (worklog 27) full recomputation are both measured; see M7-A / M7-A2. Neither validates the proposed method. Optional follow-ups only if a later decision needs them: denoised low-spp physical frames; a same-scene physical baseline on teaset; a separately protocolled fast neural refit variant.
 
-Run the BMW27 / BMW Garage XL Cycles benchmark batch.
-
-Purpose:
-
-> establish the physical recomputation cost curve and a realistic update-latency target for the proposed method.
-
-Do not treat this as neural-method validation.
-
-## B. Minimal dynamic-state design
+## B. Minimal dynamic-state design — current main task
 
 Without implementing the full architecture yet, determine the smallest current directional/relational transport representation that can express the already-measured teaset failure.
 
@@ -507,8 +514,8 @@ Do not prematurely choose graph/attention/SH/latent dimensions before this infor
 3. How should near-field sparse relations and far-field compressed transport divide responsibility?
 4. How should multi-configuration training excite transport relations strongly enough to make the ownership split identifiable?
 5. What anti-leakage constraint prevents persistent state/shared weights from memorizing canonical GI?
-6. What physical full-recompute budget does BMW27 / BMW Garage XL establish?
-7. What update latency would count as a meaningful practical win?
+6. ~~What physical full-recompute budget does BMW27 / BMW Garage XL establish?~~ Answered by worklog 26 (≈0.2–3 s per 1080p frame at 16–256 spp); neural regeneration answered by worklog 27 (39 min – 3.2 h).
+7. What update latency would count as a meaningful practical win? Working estimate from worklog 26: ~1–10 ms per change inside a frame, with quality above 1–4 spp physical frames; neural regeneration (worklog 27) is no tighter a constraint. Not a validated threshold.
 8. Which implementation substrate should host the first bounded prototype?
 9. After a working prototype exists, how broad is the generalization claim?
 
@@ -523,11 +530,11 @@ Resolve these in evidence order, not implementation convenience order.
 | M0 — Research Contract | CLOSED | What problem are we solving? |
 | M1 — Failure Existence | CLOSED | Is the failure real and physically interpretable? |
 | M2 — Failure Attribution | CLOSED | What transport state became stale and why? |
-| M3 — Information Sufficiency + Cost Boundary | ACTIVE | What current state is minimally sufficient, and what must it beat? |
+| M3 — Information Sufficiency + Cost Boundary | ACTIVE (cost boundary calibrated, WL26/27) | What current state is minimally sufficient, and what must it beat? |
 | M4 — Architecture Selection | ACTIVE | What ownership/update contract should we implement? |
 | M5 — End-to-End Method | FUTURE | Does the architecture work as a full system? |
 | M6 — Cross-Representation Method Validation | FUTURE | Does the solution transfer beyond one backbone? |
-| M7 — Efficiency Trade-off | EARLY CALIBRATION ACTIVE | Is selective reuse meaningfully cheaper than recomputation/regeneration? |
+| M7 — Efficiency Trade-off | BASELINES CALIBRATED (WL26/27); method comparison FUTURE | Is selective reuse meaningfully cheaper than recomputation/regeneration? |
 | M8 — Generalization Boundary | FUTURE | How broad is the dynamic regime? |
 | M9 — Paper Evidence Closure | FUTURE | Is the contribution fully supported? |
 

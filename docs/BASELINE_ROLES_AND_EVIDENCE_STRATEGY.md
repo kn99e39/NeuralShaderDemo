@@ -1,7 +1,7 @@
 # Baseline Roles and Evidence Strategy — Dynamic Neural Shading / Neural Light Transport
 
 **Original decision date:** 2026-09-28  
-**Last updated:** 2026-10-01  
+**Last updated:** 2026-10-07  
 **Status:** Active research operating decision
 
 ## Document Role
@@ -149,7 +149,11 @@ If frozen state fails and same-state refit succeeds, stale state is strongly sup
 
 If refit also fails, capacity / optimization remains plausible.
 
-The original 8DNA envmap refit is a strong stale-state control. The common-light 8DNA/RNA refits are both near the predeclared threshold and should be treated as partial recovery, not as evidence that one backbone has more capacity.
+The original 8DNA envmap refit is a strong stale-state control, and it reproduced in a second, independent rebuild (worklog 27: last checkpoint 1.149 / 0.629 vs 1.073 / 0.698).
+
+The common-light refits are near the predeclared threshold and are **not robust** across runs: 8DNA failed the ratio rule in both runs (1.28, worklog 22; 1.36, worklog 27); RNA's worklog-22 pass (1.22) did not recur in the worklog-27 rebuild (≈1.32, no checkpoint passes, although targets and evaluation were bit-identical). Treat both as partial recovery, never as evidence that one backbone has more capacity.
+
+Note for reading worklog 22: its 8DNA `last.ckpt` held epoch-28 weights (worklog 27); its verdicts are unchanged.
 
 ## Rule 4 — Breadth and depth still have different jobs
 
@@ -172,8 +176,8 @@ A negative result should only weaken the hypothesis at the scope actually tested
 
 | Model / role | Rain non-rigid scarf | Teaset cross-part relation | Same-state refit |
 |---|---|---|---|
-| RNA — development base | Failure observed; mechanism confounded | **Frozen failure reproduced** under common light; thin static-quality margin | Partial recovery near threshold |
-| 8DNA — scientific replication | Not tested | **Controlled frozen failure observed** | **Envmap T3 refit recovers**; common-light partial recovery |
+| RNA — development base | Failure observed; mechanism confounded | **Frozen failure reproduced** under common light; thin static-quality margin | Near threshold; WL22 borderline pass did not recur in the WL27 rebuild |
+| 8DNA — scientific replication | Not tested | **Controlled frozen failure observed** | **Envmap T3 refit recovers** (reproduced, WL27); common-light near threshold, fails the rule in both runs |
 | Current-geometry contrast | Not tested | Future | Future |
 
 Additional dimensions still missing:
@@ -220,13 +224,11 @@ Therefore the correct current position is:
 
 ## Step D — Close attribution enough for a representation test
 
-Current task.
+**CLOSED (worklogs 24, 25):** the missing information is current cross-part relational transport state (nonlocal visibility of indirect light plus the moved part's reflected radiance); both methods own it in persistent learned state by their representation contract.
 
-Priorities:
+## Step D2 — Full-recomputation cost baselines
 
-1. qualitatively review the Worklog 22 exports;
-2. determine whether reference-only transport decomposition is needed before M2 closure;
-3. decide whether the next bounded batch should test H1/H2 sufficiency or add another asset/deformation family.
+**CLOSED (worklogs 26, 27):** physical Cycles recomputation on BMW27 costs ≈0.2–3 s per 1080p frame at 16–256 spp; the existing RNA/8DNA refit pipelines need 39 min (8DNA, first rule-satisfying checkpoint) to 1.8–3.2 h (fixed schedules) on the teaset T3 state. Different scenes; cost context only. These are the *existing* baselines' costs, not a property of neural transport in general.
 
 ## Step E — Current-geometry contrast / additional breadth
 
@@ -236,16 +238,17 @@ Future, when it answers a concrete decision.
 
 # 8. Current Decision
 
-As of 2026-10-01:
+As of 2026-10-07:
 
 1. **Keep RNA as the implementation/development base.**
 2. **Treat the Worklog 21/22 teaset case as the current canonical controlled failure case.**
 3. **Treat 8DNA as a successful scientific replication baseline, not the default method-development substrate.**
 4. **Do not reopen the old Rain mechanism as the main evidence path unless a new question specifically requires it.**
 5. **Do not select the final method architecture yet.**
-6. **Do not spend a large batch resolving the common-light 1.28 vs 1.22 refit split unless that distinction changes the next architecture decision.**
-7. **Before a large architecture implementation, close M2 enough to state what information the next representation experiment must provide.**
-8. **Continue to separate cross-backbone problem evidence from future cross-backbone method validation.**
+6. **Do not spend a large batch resolving the common-light refit split unless that distinction changes the next architecture decision.** Worklog 27 showed it is within run-to-run variation (RNA 1.22 -> 1.32 with identical data); neither common-light refit is a reliable recovery.
+7. **M2 is closed for the canonical case (worklogs 24/25); the next representation experiment must supply current cross-part relational transport state.**
+8. **Use worklog 26 (physical) and worklog 27 (neural regeneration) as the cost baselines a future method is compared against; existing neural regeneration is offline and is not the binding constraint.**
+9. **Continue to separate cross-backbone problem evidence from future cross-backbone method validation.**
 
 ---
 

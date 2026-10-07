@@ -1,7 +1,7 @@
 # Architecture — Persistent Appearance + Dynamic Transport
 
 **Status:** Working method architecture  
-**Last updated:** 2026-10-06  
+**Last updated:** 2026-10-07  
 **Scope:** Central representation contract for the next method-design phase. This is not yet a frozen implementation architecture.
 
 ---
@@ -221,6 +221,16 @@ Future evaluation must distinguish:
 
 Relevant metrics include update latency, render latency, effective frame rate, memory, training cost, quality, amount of state updated, scene-size scaling, and changed-region scaling.
 
+Measured reference points so far (RTX 5080; different scenes, not quality matched, cost context only):
+
+| baseline | measured cost after a rigid configuration change | source |
+|---|---|---|
+| physical full recomputation (Cycles, BMW27, 1080p, persistent data) | ≈0.22 s / 0.76 s / 3.0 s per frame at 16 / 64 / 256 spp | worklog 26 |
+| neural full-state recomputation, 8DNA (teaset T3, historical refit) | 38.9 min to the first rule-satisfying checkpoint; 1.76 h fixed schedule | worklog 27 |
+| neural full-state recomputation, RNA (teaset T3, historical refit) | 3.24 h fixed schedule (87% target rendering); no rule-satisfying checkpoint | worklog 27 |
+
+Existing neural regeneration is offline and is not the binding constraint; physical recomputation is. Faster neural refit variants have not been measured.
+
 A method that updates almost the whole scene at nearly full-regeneration cost does not satisfy the intended contribution.
 
 ---
@@ -276,19 +286,18 @@ Do not turn these into commitments without an experiment that distinguishes the 
 | missing change is indirect-path occlusion + moved-part reflected radiance | dynamic state must represent current cross-surface transport |
 | same-state 8DNA refit can recover T3 | stale state, rather than absolute representational incapacity, is a viable target |
 | RNA and 8DNA share the failure through different implementations | avoid configuration-specific transport ownership in persistent learned state |
-| large full recomputation may be expensive | update locality and compact dynamic state are first-class design goals |
+| full recomputation is expensive: neural regeneration 39 min – 3.2 h (WL27), physical GI ≈0.2–3 s/frame at 16–256 spp (WL26) | update locality and compact dynamic state are first-class design goals; the update must target the physical-recompute scale, not the neural-regeneration scale |
 
 ---
 
 ## 15. Immediate next research tasks
 
-1. **Full-recomputation cost calibration**
-   - use official BMW27 as a reproducible Cycles baseline;
-   - expand only if necessary to BMW Garage XL;
-   - measure current-GI recomputation cost on RTX 5080;
-   - use the result to define a meaningful update budget.
+1. **Full-recomputation cost calibration — done**
+   - physical: BMW27 / BMW Garage XL Cycles on the RTX 5080 (worklog 26);
+   - neural: RNA and 8DNA refit pipelines on the teaset T3 state (worklog 27);
+   - resulting working budget: an update of roughly ~1–10 ms per change inside a frame (worklog 26's estimate, not a validated threshold); see §10.
 
-2. **Minimal dynamic-state prototype design**
+2. **Minimal dynamic-state prototype design — current task**
    - do not implement the full method yet;
    - decide the smallest directional/current transport representation that can express the measured teaset failure;
    - preserve explicit separation between persistent state and current transport state.
