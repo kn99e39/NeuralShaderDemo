@@ -219,6 +219,39 @@ def export(run, rec, composed, frozen, gt, rois, data, L, worklog):
         frames = [L.label(upscale(ldr(im)[ys, xs], 512), lab) for lab, im in cols]
         L.save_gif(out / f"0{1 if s == 'T3' else 2}_review_{s}_crop_cycle.gif", frames, ms=900)
         files[f"0{1 if s == 'T3' else 2}_review_{s}_crop_cycle.gif"] = {"sources": files[name]["sources"]}
+    # ROI-tight change maps: does a branch's T0 -> T3 change follow the reference change?
+    def roi_box(s, pad=6):
+        m = np.load(L.RESULTS / f"gt_design/common_light/rois_{s}.npz")["mask_interaction"]
+        return crop_box(m, pad), m
+
+    def masked(rgb, m, ys_, xs_):
+        r = rgb.copy()
+        r[~m] = 235
+        return upscale(r[ys_, xs_], 512)
+
+    (ys3, xs3), m3 = roi_box("T3")
+    tags = [t for t in ("local_only_s0", "relational_s0", "relational_s1", "relational_s2", "oracle_s0") if t in composed]
+    ch = [("reference change GT(T3)-GT(T0)", g["T3"], g["T0"]), ("frozen RNA change", frozen["T3"], frozen["T0"])] + \
+         [(f"{t} change", composed[t]["T3"], composed[t]["T0"]) for t in tags]
+    row1 = [L.label(masked(signed(a, b), m3, ys3, xs3), lab) for lab, a, b in ch]
+    dgd = L.tonemap(g["T3"]) - L.tonemap(g["T0"])
+    row2 = [L.label(masked(L.error_map(np.abs((L.tonemap(a) - L.tonemap(b)) - dgd).mean(-1), 0.2), m3, ys3, xs3),
+                    "|change - reference change| 0..0.2") for lab, a, b in ch]
+    name = "07_T3_change_maps_roi.png"
+    L.save_png(out / name, np.concatenate([np.concatenate(row1, 1), np.concatenate(row2, 1)], 0))
+    files[name] = {"sources": [f"{L.rel(run)}/models/pred_{t}.npz" for t in tags] + ["results/8dna_replication/rna_teaset/frozen/T3_canonical.npy",
+                                                                                    "results/8dna_replication/rna_teaset/frozen/T0_canonical.npy"],
+                   "note": "interaction ROI only (grey outside), signed display-space change T0->T3, RdBu +-0.1; row 2 |branch change - reference change|"}
+    (ys1, xs1), m1 = roi_box("T1")
+    res1 = [("target residual GT(T1)-frozen(T1)", g["T1"])] + [(f"{t} residual", composed[t]["T1"]) for t in tags]
+    row = [L.label(masked(signed(a, frozen["T1"]), m1, ys1, xs1), lab) for lab, a in res1]
+    res0 = [("target residual GT(T0)-frozen(T0)", g["T0"])] + [(f"{t} residual", composed[t]["T0"]) for t in tags]
+    (ys0, xs0), m0 = roi_box("T0")
+    row0 = [L.label(masked(signed(a, frozen["T0"]), m0, ys0, xs0), lab + " (T0)") for lab, a in res0]
+    name = "08_T1_vs_T0_residuals_roi.png"
+    L.save_png(out / name, np.concatenate([np.concatenate(row0, 1), np.concatenate(row, 1)], 0))
+    files[name] = {"sources": [f"{L.rel(run)}/models/pred_{t}.npz" for t in tags],
+                   "note": "row 1 T0 (training), row 2 T1 (held-out relation-preserving control); each state's own ROI; signed residual vs frozen RNA, RdBu +-0.1"}
     shutil.copy2(run / "eval" / "rrp_eval.json", out / "03_rrp_eval.json")
     files["03_rrp_eval.json"] = {"sources": [f"{L.rel(run)}/eval/rrp_eval.json"]}
     shutil.copy2(C.PROTOCOL, out / "04_protocol_rrp_v1.json")
