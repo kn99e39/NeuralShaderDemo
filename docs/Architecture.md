@@ -229,7 +229,9 @@ Measured reference points so far (RTX 5080; different scenes, not quality matche
 | neural full-state recomputation, 8DNA (teaset T3, historical refit) | 38.9 min to the first rule-satisfying checkpoint; 1.76 h fixed schedule | worklog 27 |
 | neural full-state recomputation, RNA (teaset T3, historical refit) | 3.24 h fixed schedule (87% target rendering); no rule-satisfying checkpoint | worklog 27 |
 
-Existing neural regeneration is offline and is not the binding constraint; physical recomputation is. Faster neural refit variants have not been measured.
+Existing neural regeneration is offline and is not the binding constraint; physical recomputation is the tighter runtime reference. Faster neural refit variants have not been measured.
+
+**Implementation viability gate (worklogs 26/27): PASS for a bounded prototype.** The existing alternatives leave a large enough latency gap to justify testing selective reuse, but this does not establish that the proposed update can close that gap or preserve quality.
 
 A method that updates almost the whole scene at nearly full-regeneration cost does not satisfy the intended contribution.
 
@@ -297,10 +299,14 @@ Do not turn these into commitments without an experiment that distinguishes the 
    - neural: RNA and 8DNA refit pipelines on the teaset T3 state (worklog 27);
    - resulting working budget: an update of roughly ~1–10 ms per change inside a frame (worklog 26's estimate, not a validated threshold); see §10.
 
-2. **Minimal dynamic-state prototype design — current task**
-   - do not implement the full method yet;
-   - decide the smallest directional/current transport representation that can express the measured teaset failure;
-   - preserve explicit separation between persistent state and current transport state.
+2. **Minimal dynamic-state prototype — current task**
+   - implementation may now begin as a **bounded architecture experiment**, not as the full end-to-end method;
+   - use the canonical teaset T0/T3 failure first;
+   - implement the smallest current directional/relational transport-state path that can express the measured missing transport while keeping persistent appearance/state fixed;
+   - preserve explicit separation between persistent state and current transport state;
+   - compare against the frozen baseline and the historical full T3 recompute/refit control;
+   - treat update latency, changed-state fraction, recovery quality, and canonical-GI leakage as first-class measurements;
+   - stop after this prototype if the current-state abstraction itself is insufficient; do not rescue it with parameter sweeps or dense all-to-all interaction.
 
 ---
 
