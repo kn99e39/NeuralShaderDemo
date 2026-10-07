@@ -308,13 +308,14 @@ def fig_quality_time(path, tracks, plt):
             pts = sorted((t["usable_elapsed_s"] / 3600, t[key], t["recovers"]) for t in rec["quality_trace"] if t["usable_elapsed_s"] is not None)
             xs, ys = [p[0] for p in pts], [p[1] for p in pts]
             ax.plot(xs, ys, color=col, lw=2, label=name, zorder=3)
-            ax.scatter([p[0] for p in pts if p[2]], [p[1] for p in pts if p[2]], s=36, color=col, edgecolor=COLORS["surface"],
-                       linewidth=1.5, zorder=4)
+            ax.scatter([p[0] for p in pts if p[2]], [p[1] for p in pts if p[2]], s=64, color=col, edgecolor=COLORS["ink"],
+                       linewidth=1.0, zorder=5)
             ax.scatter([p[0] for p in pts if not p[2]], [p[1] for p in pts if not p[2]], s=36, facecolor=COLORS["surface"],
                        edgecolor=col, linewidth=1.5, zorder=4)
         ax.axhline(thr, color=COLORS["ink2"], lw=1, ls=(0, (4, 3)), zorder=2)
-        ax.text(0.995, thr, f" historical rule: {'<=' if key == 'error_ratio' else '>='} {thr}", transform=ax.get_yaxis_transform(),
-                ha="right", va="bottom", color=COLORS["ink2"], fontsize=9)
+        ax.text(0.80, thr, f"historical rule: {'<=' if key == 'error_ratio' else '>='} {thr}", transform=ax.get_yaxis_transform(),
+                ha="right", va="bottom", color=COLORS["ink2"], fontsize=9,
+                bbox={"facecolor": COLORS["surface"], "edgecolor": "none", "pad": 1.5})
         ax.set_ylabel(lab, color=COLORS["ink2"], fontsize=9.5)
         ax.grid(True, color=COLORS["grid"], lw=0.8, zorder=0)
         for sp in ("top", "right"):
@@ -333,7 +334,8 @@ def fig_quality_time(path, tracks, plt):
     axes[0].yaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
     axes[1].set_xlabel("elapsed wall time since T3 geometry handed to the pipeline (h)", color=COLORS["ink2"], fontsize=9.5)
     axes[0].legend(frameon=False, fontsize=9, loc="upper right")
-    axes[0].set_title("Quality vs wall-clock time of the neural rebuild on T3  (filled marker = historical rule satisfied)",
+    axes[0].set_title("Quality vs wall-clock time of the neural rebuild on T3  (filled, outlined marker = historical rule satisfied;\n"
+                      "vertical line = end of the fixed schedule)",
                       color=COLORS["ink"], fontsize=11, loc="left")
     for name, rec, col in series:
         for ax in axes:
@@ -348,7 +350,7 @@ def fig_breakdown(path, tracks, plt):
     tr = tracks["rna_common_light"]["phase_durations_s"]
     groups = [
         ("8DNA rebuild", [("setup + scene", t8["spawn"] + t8["process_setup"] + t8["model_init"] + t8["dataset_init"]),
-                          ("path / target generation", t8["path_generation"] + t8["resample"]),
+                          ("path / target generation", t8["path_generation"] + t8["resample"]),  # 8DNA: online path samples + their shuffle
                           ("optimisation", t8["optimization"]),
                           ("validation", t8["validation"] + t8["sanity_validation"]),
                           ("checkpoint + export", t8["checkpoint_write"] + t8["export"]),
