@@ -91,6 +91,9 @@ def main() -> int:
     frozen_b = np.load(rdir / "T0_canonical_B.npy").astype(np.float32)
     data = {s: dict(np.load(run / "dataset" / f"{s}.npz")) for s in proto["evaluate_states"]}
     training = json.loads((run / "models" / "training.json").read_text())
+    oracle_f = run / "models" / "oracle_training.json"  # predeclared oracle diagnostic, if it was run (never a method)
+    if oracle_f.exists():
+        training["runs"].update(json.loads(oracle_f.read_text())["runs"])
     feats = json.loads((run / "dataset" / "features.json").read_text())
     probes = json.loads((run / "probes" / "probes.json").read_text(encoding="utf-8"))
     proto_m = dict(cb, modes={s: ["m"] for s in cb["states"]})

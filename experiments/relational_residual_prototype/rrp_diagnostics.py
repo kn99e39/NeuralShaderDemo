@@ -48,6 +48,9 @@ def main() -> int:
     tm = L.tonemap
     data = {s: dict(np.load(run / "dataset" / f"{s}.npz")) for s in ("T0", "T1b", "T2", "T3")}
     training = json.loads((run / "models" / "training.json").read_text())
+    oracle_f = run / "models" / "oracle_training.json"  # predeclared oracle diagnostic, if it was run (never a method)
+    if oracle_f.exists():
+        training["runs"].update(json.loads(oracle_f.read_text())["runs"])
     names = proto["parts_order"]
     rec = {"git": git, "declared": "post hoc, after the evidence run; analysis of existing outputs only", "branches": {}}
 
