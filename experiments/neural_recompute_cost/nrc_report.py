@@ -388,6 +388,40 @@ def fig_breakdown(path, tracks, plt):
     plt.close(fig)
 
 
+def fig_historical(path, tracks, hist, plt):
+    """Error ratio by epoch: this rebuild vs the worklog-22 run's surviving checkpoints (same evaluation path)."""
+    panels = [("8DNA envmap", tracks["8dna_envmap_primary"]["quality_trace"], hist["8dna"]["w21_envmap"]["rows"]),
+              ("8DNA common light", tracks["8dna_common_light_secondary"]["quality_trace"], hist["8dna"]["common_light"]["rows"]),
+              ("RNA common light", [t for t in tracks["rna_common_light"]["quality_trace"] if t["kind"] == "snapshot"]
+               + [t for t in tracks["rna_common_light"]["quality_trace"] if t["kind"] == "official"],
+               [r for r in hist["rna"]["rows"] if r["epoch"] is not None])]  # last.ckpt's epoch is not in its name; omitted
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True, facecolor=COLORS["surface"])
+    for ax, (title, new, old) in zip(axes, panels):
+        ax.set_facecolor(COLORS["surface"])
+        for rows, col, lab in ((new, COLORS["s1"], "this rebuild (RTX 5080)"),
+                               (old, COLORS["s2"], "worklog-22 run, surviving checkpoints")):
+            pts = sorted({(r["epoch"], r["error_ratio"], r["recovers"]) for r in rows})
+            ax.plot([p[0] for p in pts], [p[1] for p in pts], color=col, lw=1.5, label=lab, zorder=3)
+            ax.scatter([p[0] for p in pts if p[2]], [p[1] for p in pts if p[2]], s=40, color=col, edgecolor=COLORS["ink"], lw=0.8, zorder=5)
+            ax.scatter([p[0] for p in pts if not p[2]], [p[1] for p in pts if not p[2]], s=40, facecolor=COLORS["surface"],
+                       edgecolor=col, lw=1.5, zorder=4)
+        ax.axhline(1.25, color=COLORS["ink2"], lw=1, ls=(0, (4, 3)))
+        ax.set_title(title, color=COLORS["ink"], fontsize=10, loc="left")
+        ax.set_xlabel("epoch", color=COLORS["ink2"], fontsize=9)
+        ax.grid(True, color=COLORS["grid"], lw=0.8)
+        for sp in ("top", "right"):
+            ax.spines[sp].set_visible(False)
+        ax.tick_params(colors=COLORS["ink2"], labelsize=8.5)
+    axes[0].set_ylabel("error ratio (rule: <= 1.25, dashed)", color=COLORS["ink2"], fontsize=9)
+    axes[0].set_ylim(0.95, 2.2)
+    axes[0].legend(frameon=False, fontsize=8.5, loc="upper right")
+    fig.suptitle("Same rule, same evaluation path: this rebuild vs the worklog-22 refit run (filled = rule satisfied incl. gain >= 0.5)",
+                 color=COLORS["ink"], fontsize=10.5, x=0.01, ha="left")
+    fig.tight_layout()
+    fig.savefig(path, dpi=130, facecolor=COLORS["surface"])
+    plt.close(fig)
+
+
 def review_panel(path, gif_path, L, gt, frozen, first, final, labels, mask, np):
     from cross_backbone_exports import crop_box, upscale
 
@@ -471,6 +505,10 @@ def main() -> int:
     reg("01_quality_vs_wall_time.png", [rep / f"timing_{k}.json" for k in tracks])
     fig_breakdown(out / "02_phase_breakdown.png", tracks, plt)
     reg("02_phase_breakdown.png", [rep / "timing_8dna_envmap_primary.json", rep / "timing_rna_common_light.json"])
+    diag = sorted((run / "diag").glob("historical_rescore_*/historical_rescore.json"))
+    if diag:
+        fig_historical(out / "09_historical_vs_rebuild_by_epoch.png", tracks, json.loads(diag[-1].read_text(encoding="utf-8")), plt)
+        reg("09_historical_vs_rebuild_by_epoch.png", [diag[-1]] + [rep / f"timing_{k}.json" for k in tracks])
 
     # review panels: GT T3 / frozen T0-trained model at T3 / first recovered / final
     from teaset_frozen_eval import load_rois
