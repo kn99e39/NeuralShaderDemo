@@ -1,7 +1,7 @@
 # Baseline Roles and Evidence Strategy — Dynamic Neural Shading / Neural Light Transport
 
 **Original decision date:** 2026-09-28  
-**Last updated:** 2026-10-07  
+**Last updated:** 2026-10-07 (worklog 28)  
 **Status:** Active research operating decision
 
 ## Document Role
@@ -85,6 +85,8 @@ RNA is useful for:
 - early architecture prototyping if evidence justifies it.
 
 RNA being the current development base does not mean the final method must be RNA-based.
+
+Worklog 28 used RNA this way for the first bounded prototype: the historical T0 RNA is a frozen, bit-exact persistent base, and the new current-state path and residual operator live in a project-owned sidecar. This keeps the historical baseline reproducible while testing the architecture.
 
 ## 3.2 8DNA — Scientific Replication Baseline
 

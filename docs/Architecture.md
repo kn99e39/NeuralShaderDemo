@@ -289,6 +289,9 @@ Do not turn these into commitments without an experiment that distinguishes the 
 | same-state 8DNA refit can recover T3 | stale state, rather than absolute representational incapacity, is a viable target |
 | RNA and 8DNA share the failure through different implementations | avoid configuration-specific transport ownership in persistent learned state |
 | full recomputation is expensive: neural regeneration 39 min – 3.2 h (WL27), physical GI ≈0.2–3 s/frame at 16–256 spp (WL26) | update locality and compact dynamic state are first-class design goals; the update must target the physical-recompute scale, not the neural-regeneration scale |
+| WL28: frozen RNA + local-only residual cannot move at held-out T3 | the current state must be nonlocal (H1 insufficiency, now also empirical) |
+| WL28: frozen RNA + sparse geometric relation probes (K = 32: hit, distance, remote normal, remote persistent feature, remote direct visibility) fits training configurations but does not generalise to held-out T3 | geometric relations alone are an insufficient current state; the state must carry **radiometric incident transport** (radiance arriving along each direction), not only which surface is hit |
+| WL28 oracle: reference path-class radiance through the same shared operator, frozen RNA and training contract recovers T3 | the lifecycle split (persistent appearance + current state + shared operator) is viable when the state has the right content; keep it |
 
 ---
 
@@ -299,7 +302,9 @@ Do not turn these into commitments without an experiment that distinguishes the 
    - neural: RNA and 8DNA refit pipelines on the teaset T3 state (worklog 27);
    - resulting working budget: an update of roughly ~1–10 ms per change inside a frame (worklog 26's estimate, not a validated threshold); see §10.
 
-2. **Minimal dynamic-state prototype — current task**
+2. **Minimal dynamic-state prototype — first prototype done (worklog 28, CASE C)**
+   - sidecar over frozen RNA with a sparse geometric relation state (O(Q·K), K = 32; ~16 ms state update, 0.26 ms decoder for 66 k queries): **does not** recover held-out T3; the oracle incident-transport state does;
+   - the original task statement follows, kept for reference:
    - implementation may now begin as a **bounded architecture experiment**, not as the full end-to-end method;
    - use the canonical teaset T0/T3 failure first;
    - implement the smallest current directional/relational transport-state path that can express the measured missing transport while keeping persistent appearance/state fixed;
@@ -307,6 +312,11 @@ Do not turn these into commitments without an experiment that distinguishes the 
    - compare against the frozen baseline and the historical full T3 recompute/refit control;
    - treat update latency, changed-state fraction, recovery quality, and canonical-GI leakage as first-class measurements;
    - stop after this prototype if the current-state abstraction itself is insufficient; do not rescue it with parameter sweeps or dense all-to-all interaction.
+
+3. **Next bounded question — current task (own batch and protocol)**
+   - give the current state runtime-constructible **radiometric** incident-transport content (radiance arriving along each probe from the current neighbours), keeping the frozen persistent path, the shared operator, the local-only control, the T1/T3 hold-out and the historical rule;
+   - separate the confounds worklog 28 left open: training-relation coverage (two changed training configurations, both weaker than T3) and probe angular resolution for near-mirror transport;
+   - keep the update within the measured order (~16 ms for 66 k queries in the first prototype) and record changed-state fraction and canonical-GI leakage.
 
 ---
 

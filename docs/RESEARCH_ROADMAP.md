@@ -82,6 +82,11 @@ This is now the working architecture direction, not yet a validated method.
 - 8DNA same-state T3 refit under the original envmap regime recovers close to T0 quality, strongly supporting stale persistent state rather than insufficient representation capacity in that tested regime. Worklog 27 reproduced this recovery in a second, independently timed rebuild (last checkpoint 1.149 / 0.629 vs the historical 1.073 / 0.698).
 - Same-state refit in the common-light regime is near-threshold for both backbones and not robust: 8DNA fails the rule in both runs (worklogs 22, 27), and RNA's worklog-22 borderline pass (1.22) did not recur in the worklog-27 rebuild (≈1.32, no checkpoint passes; datasets bit-identical, training run differs).
 
+### First bounded prototype (worklog 28)
+
+- The sidecar prototype keeps the historical RNA bit-exact and adds a sparse current relational state (O(Q·K), K = 32; 15.7 ms state update, 0.26 ms decoder on 66 k queries).
+- Result: **CASE C** — this geometric relation state is insufficient for held-out T3; the lifecycle split is not falsified (the oracle state works through the same operator).
+
 ### Full-recomputation cost
 
 - **Physical (worklog 26):** BMW27, Cycles, RTX 5080, after a rigid change: ≈0.22 s / 0.76 s / 3.0 s per 1080p frame at 16 / 64 / 256 spp (persistent data); geometry sync is ≈2 ms, the cost is sampling (≈11.5 ms/spp).
@@ -133,7 +138,7 @@ This does **not** mean broad generality or paper-level closure has been establis
 - The minimum sufficient dynamic transport representation has not been established.
 - Both full-recomputation baselines are now calibrated (physical, worklog 26; neural, worklog 27), but the proposed method's own update cost does not exist yet, so no advantage has been measured.
 - The neural baselines' rebuild cost was measured only for their fixed historical schedules; faster rebuild variants (shorter schedules, warm start, smaller target sets) are untested.
-- The working architecture has not yet been implemented or validated.
+- The working architecture has not yet been implemented or validated. Its first bounded prototype (worklog 28) failed with a geometric relation state; a runtime-constructible state carrying incident radiance has not been tested.
 
 ---
 
@@ -266,7 +271,13 @@ This is a logical insufficiency result for the canonical ROI, not a broad claim 
 
 ## H2 — Current Nonlocal / Relational Transport State
 
-**ACTIVE — required category identified, minimum representation not yet selected**
+**ACTIVE — required category identified; first sparse geometric relation state tested and insufficient (worklog 28)**
+
+Worklog 28 tested one bounded realisation on the canonical teaset ROI: frozen RNA + K = 32 fixed hemisphere probes into the current geometry (hit, distance, remote normal, remote persistent RNA feature, remote direct visibility) + a shared residual operator, trained on T0/T1b/T2 with T1/T3 held out.
+
+- The local-only control cannot represent the T3 change (gain ≈ 0), which supports H1 insufficiency empirically.
+- The relational state changes strongly with the configuration and fits the training configurations' changes, but it does **not** generalise to held-out T3: its T0 → T3 change error equals the frozen model's, and the historical recovery rule fails in 3/3 seeds.
+- A predeclared oracle (reference path-class radiance as the state, same operator and contract) recovers T3 almost exactly. The operator path and the lifecycle split are therefore not the bottleneck; the missing ingredient is **radiometric incident-transport content** in the current state, not geometric relations alone.
 
 The dynamic state must be capable of representing at least:
 
@@ -499,6 +510,14 @@ Physical (worklog 26) and neural (worklog 27) full recomputation are both measur
 
 ## B. Minimal dynamic-state prototype — current main task
 
+**First prototype done (worklog 28): CASE C.** Sparse geometric probes + persistent remote features + a shared residual operator over frozen RNA do not recover held-out T3; an oracle incident-transport state through the same operator does. Next bounded question (a new hypothesis, own batch and protocol):
+
+> **Can a runtime-constructible current state carry radiometric incident transport — radiance arriving along each probe from the current neighbours, not only which surface is hit — at a cost near the measured ~16 ms state update, and recover T3 under the same split and rule?**
+
+Keep the worklog-28 controls (frozen RNA, local-only, T1/T3 hold-out, historical rule, oracle as diagnostic). Also separate the two confounds worklog 28 could not: training-relation coverage (two changed training configurations, both weaker than T3) and probe angular resolution for near-mirror transport.
+
+Original task statement, kept for reference:
+
 The cost-viability gate is now closed strongly enough to begin implementation, but only as a **bounded architecture experiment**.
 
 Start from the canonical teaset T0/T3 failure and implement the smallest current directional/relational transport-state path that can represent the already-measured missing transport while persistent appearance/state remains fixed.
@@ -521,14 +540,14 @@ Do not begin with graph/attention/SH/latent-dimension sweeps. Choose the minimum
 
 # 17. Current Decision Queue
 
-1. What compact current-state parameterization should represent indirect visibility and remote-surface incident radiance?
+1. What compact current-state parameterization should represent indirect visibility and remote-surface incident radiance? Worklog 28: geometric relation probes alone are insufficient; the state needs radiometric incident-transport content (oracle).
 2. What surface/anchor granularity is the smallest useful persistent unit?
 3. How should near-field sparse relations and far-field compressed transport divide responsibility?
 4. How should multi-configuration training excite transport relations strongly enough to make the ownership split identifiable?
 5. What anti-leakage constraint prevents persistent state/shared weights from memorizing canonical GI?
 6. ~~What physical full-recompute budget does BMW27 / BMW Garage XL establish?~~ Answered by worklog 26 (≈0.2–3 s per 1080p frame at 16–256 spp); neural regeneration answered by worklog 27 (39 min – 3.2 h).
 7. What update latency would count as a meaningful practical win? Working estimate from worklog 26: ~1–10 ms per change inside a frame, with quality above 1–4 spp physical frames; neural regeneration (worklog 27) is no tighter a constraint. Not a validated threshold.
-8. Which implementation substrate should host the first bounded prototype?
+8. Which implementation substrate should host the first bounded prototype? Worklog 28 used RNA as a frozen persistent base with a project-owned sidecar; that remains workable for the next prototype.
 9. After a working prototype exists, how broad is the generalization claim?
 
 Resolve these in evidence order, not implementation convenience order.
@@ -542,7 +561,7 @@ Resolve these in evidence order, not implementation convenience order.
 | M0 — Research Contract | CLOSED | What problem are we solving? |
 | M1 — Failure Existence | CLOSED | Is the failure real and physically interpretable? |
 | M2 — Failure Attribution | CLOSED | What transport state became stale and why? |
-| M3 — Information Sufficiency + Cost Boundary | ACTIVE (cost boundary calibrated, WL26/27) | What current state is minimally sufficient, and what must it beat? |
+| M3 — Information Sufficiency + Cost Boundary | ACTIVE (cost boundary calibrated WL26/27; geometric relation state insufficient WL28) | What current state is minimally sufficient, and what must it beat? |
 | M4 — Architecture Selection | ACTIVE | What ownership/update contract should we implement? |
 | M5 — End-to-End Method | FUTURE | Does the architecture work as a full system? |
 | M6 — Cross-Representation Method Validation | FUTURE | Does the solution transfer beyond one backbone? |
@@ -554,4 +573,4 @@ Resolve these in evidence order, not implementation convenience order.
 
 # 19. One-Line Rule for Future Work
 
-> **The problem, canonical failure mechanism, and full-recompute cost boundary are sufficiently established; the current job is to test the lifecycle split in the smallest bounded dynamic-transport prototype and determine whether its current-state update is both sufficient and materially cheaper than rebuilding current transport from scratch.**
+> **The problem, canonical failure mechanism, and full-recompute cost boundary are sufficiently established, and the first bounded prototype showed that a geometric relation state is not enough while the lifecycle split survives; the current job is to give the current state radiometric incident-transport content cheaply and test whether it recovers the held-out change.**
