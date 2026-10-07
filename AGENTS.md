@@ -10,6 +10,22 @@ Before substantial research implementation, experiment design, or architecture i
 
 In particular, do not confuse implementation/development baselines with scientific replication or architecture-contrast baselines, and do not generalize a negative result from one model/asset pair into project-level falsification without the evidence breadth defined in the strategy document.
 
+## Living-document synchronization
+
+Worklogs are historical evidence; the central documents above are the current research state.
+
+When a substantive batch causes a **major decision** or **phase transition**—for example a gate closes, a working hypothesis is adopted or rejected, a baseline role changes, a kill condition is triggered, the next architecture question changes, or implementation is authorized—update the relevant living document(s) in the same batch after the evidence is interpreted.
+
+At minimum consider:
+
+- `docs/Architecture.md` for representation ownership, selected working architecture, update contract, or implementation frontier;
+- `docs/RESEARCH_ROADMAP.md` for milestone status, current decision frontier, next task, or stop condition;
+- `docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md` for baseline roles, evidence hierarchy, or generality scope.
+
+Do not rewrite prior worklogs to make them agree with the new interpretation. Preserve them as append-only history and record the new current interpretation in the living documents.
+
+Do not update living documents for trivial implementation details or every diagnostic result; update them when the durable research direction or decision state actually changes.
+
 ## Worklog conventions
 
 `docs/worklogs/` is the base location for human-readable worklogs — Korean or English
