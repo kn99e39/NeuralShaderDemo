@@ -292,6 +292,8 @@ Do not turn these into commitments without an experiment that distinguishes the 
 | WL28: frozen RNA + local-only residual cannot move at held-out T3 | the current state must be nonlocal (H1 insufficiency, now also empirical) |
 | WL28: frozen RNA + sparse geometric relation probes (K = 32: hit, distance, remote normal, remote persistent feature, remote direct visibility) fits training configurations but does not generalise to held-out T3 | geometric relations alone are an insufficient current state; the state must carry **radiometric incident transport** (radiance arriving along each direction), not only which surface is hit |
 | WL28 oracle: reference path-class radiance through the same shared operator, frozen RNA and training contract recovers T3 | the lifecycle split (persistent appearance + current state + shared operator) is viable when the state has the right content; keep it |
+| WL29: the same K = 32 relations plus a runtime radiometric proxy (frozen RNA rendered at each hit toward the query) ≈ matched ZERO / SHUFFLED controls on held-out T3 | aligned radiometric values on this support are not shown to help; the radiometric-channel hypothesis is weakened as realised |
+| WL29 oracle: exact path-traced incident radiance on the same 32 uniform directions also fails T3 | for near-mirror transport the limit is not radiometric content alone: angular support of the state, its aggregation, and training-relation coverage are open and entangled; do not assume a fixed uniform sparse probe set is a sufficient current-state support |
 
 ---
 
@@ -313,10 +315,16 @@ Do not turn these into commitments without an experiment that distinguishes the 
    - treat update latency, changed-state fraction, recovery quality, and canonical-GI leakage as first-class measurements;
    - stop after this prototype if the current-state abstraction itself is insufficient; do not rescue it with parameter sweeps or dense all-to-all interaction.
 
-3. **Next bounded question — current task (own batch and protocol)**
+3. **Radiometric content on the same sparse relations — done (worklog 29, CASE D)**
+   - runtime proxy ≈ ZERO ≈ SHUFFLED; exact per-direction radiance on the same K = 32 support also fails; the proxy also raised the state update to about 3.2 s;
+   - the original task statement follows, kept for reference:
    - give the current state runtime-constructible **radiometric** incident-transport content (radiance arriving along each probe from the current neighbours), keeping the frozen persistent path, the shared operator, the local-only control, the T1/T3 hold-out and the historical rule;
    - separate the confounds worklog 28 left open: training-relation coverage (two changed training configurations, both weaker than T3) and probe angular resolution for near-mirror transport;
    - keep the update within the measured order (~16 ms for 66 k queries in the first prototype) and record changed-state fraction and canonical-GI leakage.
+
+4. **Next bounded question — current task (own batch and protocol; choose one factor)**
+   - angular support that resolves the transport-relevant lobe for this material, **or** aggregation that preserves directional structure, **or** training-relation coverage that brackets the held-out state, **or** the same contract on a less mirror-like material;
+   - keep frozen RNA, the matched controls, the T1/T3 hold-out, the R_delta primary metric and the historical rule; one factor per batch.
 
 ---
 
