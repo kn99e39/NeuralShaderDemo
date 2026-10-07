@@ -1,0 +1,78 @@
+{
+  "id": "rrs_v1",
+  "worklog": 29,
+  "purpose": "Second bounded architecture experiment. Hold the worklog-28 sparse relation structure fixed (same K=32 probes, frames, geometric descriptor, split, operator class, budget, seeds) and change ONE factor: each current hit additionally carries a runtime-constructible radiometric value, the frozen RNA's own rendering of the remote hit toward the query. Matched ZERO and SHUFFLED controls isolate alignment from extra channels.",
+  "written_before": "any computation of the radiometric proxy on teaset data and any training of a worklog-29 branch",
+
+  "worklog28_reference": {
+    "run": "results/relational_residual_prototype/v1_237bb45",
+    "code_commit": "237bb4531a25fdd9a1eab33e88d312d60ffa3f08",
+    "protocol": "experiments/relational_residual_prototype/protocol/rrp_v1.json",
+    "reuse": "probe directions, frames, ray casting, 20-channel geometric descriptor, remote canonical pull-back, stable queries, references and frozen pixels are read from the worklog-28 probe and dataset files after checking that the unchanged worklog-28 code reproduces them bit for bit; branch A (geometric-only) predictions are the worklog-28 relational_s0/s1/s2 predictions, reused unretrained",
+    "reproduction_checks": ["re-cast probes with rrp_probes.cast_probes equal the stored worklog-28 probe arrays", "re-assembled 20-channel descriptors equal the stored worklog-28 dataset probes", "this batch's training loop run on the 20-channel descriptor with seed 0 reproduces worklog-28 relational_s0's validation curve"]
+  },
+
+  "radiometric_proxy": {
+    "name": "L_hat_remote_to_query (runtime radiometric proxy; NOT exact current incident radiance)",
+    "definition": "for a probe hit j of query i: the frozen T0 RNA (worklog-22 checkpoint, canonical mode) rendered at j with the query as camera, exactly as rna_infer.py renders a pixel sample: position = j's canonical pull-back (hit - t_part) normalised by the training-H5 AABB; camera_dir = unit vector j -> i (= minus the probe direction); normal = j's current shading normal faced toward i; 16 area-light samples at j from the existing rna_bridge.area_light_samples on the current lit scene (protocol emitter, 4x4 strata at their centres, deterministic), each with current segment visibility; radiance = mean over samples of where(vis, lit, shadow branch).clamp(0) * weight / training light intensity",
+    "contains": "the frozen RNA's persistent appearance at j (including whatever canonical transport its triplane+MLP baked in), evaluated for the current direction toward the query and the current direct-light visibility at j",
+    "does_not_contain": "current indirect illumination at j beyond RNA's direct-visibility branch switch, any recursive query of another relation, any path tracing, any reference radiance, state identity or transform",
+    "lit_scene": "teaset_parts.scene_dict(64, <state translations>, cross-backbone lighting): same geometry plus the protocol emitter; the probe ray is re-cast there to obtain the hit for light sampling and must land on the same point as in the geometry-only probe scene",
+    "encoding": "log1p(max(RGB, 0)) on hits; misses carry 0 in these channels, with the existing worklog-28 'hit' channel as the explicit miss flag",
+    "channels_added": ["proxy_log_r", "proxy_log_g", "proxy_log_b"]
+  },
+
+  "branches": {
+    "A_geometric_wl28": "historical worklog-28 relational branch (20 channels); predictions reused",
+    "B_zero": "worklog-29 architecture (23 channels per probe), proxy channels set to 0 for every probe",
+    "C_shuffled": "23 channels; within each state the proxy values of hit probes are permuted by numpy default_rng(29029).permutation (same seed for every state, never across states); misses stay 0; marginal distribution of hit values preserved, alignment destroyed",
+    "D_real": "23 channels with the aligned proxy",
+    "matching": "B, C, D share architecture, parameter count, optimiser, steps, split, seeds; only the proxy semantics differ. A differs by the 3 input channels of the first layer (192 weights)"
+  },
+
+  "model": {
+    "class": "rrp_model.RelationalResidual (worklog 28), unchanged",
+    "probe_encoder": [64, 64], "state_dim": 32, "decoder": [128, 128],
+    "probe_input_channels": 23,
+    "note": "only the first layer's input dimension changes (20 -> 23); no width or depth change"
+  },
+
+  "split": {"train_states": ["T0", "T1b", "T2"], "holdout_states": ["T1", "T3"], "val_block": 8, "val_modulus": 5,
+            "note": "identical to worklog 28; normalisation statistics from the training split of the training states only"},
+  "training": {"loss": "worklog 28", "loss_scale_offset": 0.1, "optimizer": "Adam", "lr": 0.001, "steps": 4000, "batch_pixels": 512,
+               "val_every": 50, "selection": "lowest validation loss", "seeds": [0, 1, 2]},
+  "evaluate_states": ["T0", "T0_B", "T1", "T1b", "T2", "T3"],
+
+  "primary_metric": {
+    "E_delta": "mean over stable T3 pixels paired with T0 (identical queries) and RGB of |(tm(N_T3) - tm(N_T0)) - (tm(G_T3) - tm(G_T0))|, tm = display transform clamp(x^(1/2.2)); N = frozen RNA + branch residual, G = mean of the locked seed-A/B references",
+    "R_delta": "E_delta / mean |tm(G_T3) - tm(G_T0)| on the same pixels",
+    "space": "display, as worklog 28's change-error diagnostic; linear values also reported",
+    "secondary": ["absolute T3 error", "T0 static error", "historical refit_block ratio and gain (own T0 and frozen T0)", "frozen-response rule"]
+  },
+
+  "success_test": {
+    "1": "every seed: R_delta(D_real) < R_delta(B_zero) of the same seed",
+    "2": "every seed: R_delta(D_real) < R_delta(C_shuffled) of the same seed",
+    "3": "at least 2 of 3 seeds: R_delta(D_real) <= 0.50",
+    "4": "the signed T3 change map of D follows the moved transport structure better than A, B and C (reviewer judgement recorded in the worklog with the ROI provenance)",
+    "verdict": "D PASSES only if 1-4 all hold; otherwise D FAILS and only the exact-direction oracle is run",
+    "not_required": "the historical worklog-22 recovery rule (reported as supporting evidence)"
+  },
+
+  "t1_control": "as worklog 28: absolute T1 error, own-T0 error, correction difference T0 -> T1 (mean |(N_T1 - F_T1) - (N_T0 - F_T0)| over T1 pixels paired to T0 by idx0), GT change, correction norm, signed maps",
+
+  "state_diagnostics": ["probe hit fraction", "moved-part hits per query", "proxy magnitude distribution (hit probes, per state)", "fraction of probes whose proxy changes vs T0 (paired queries)", "per-query proxy change norm", "Pearson and Spearman correlation across stable pixels of per-pixel proxy change norm with |G_state - G_T0|", "T3: fraction of hit-probe proxy values outside the training-state range per channel; fraction of queries whose summed proxy or moved-part hit count exceeds the training range (geometry vs radiometric extrapolation)"],
+
+  "exact_direction_oracle": {
+    "when": "only if D_real FAILS the success test",
+    "state": "same 23-channel layout; the 3 proxy channels replaced by log1p of the path-traced incident radiance along each of the same 32 probe directions from the same query origin in the current lit scene (Mitsuba C++ path, max_depth -1, rr_depth 5, wavefront, as the references); emitter hits included",
+    "spp": 256,
+    "noise_check": "two independent seeds; report per-probe repeat noise in the encoded channels and per-pixel aggregated noise against the T0 -> T3 change of the same quantity; the oracle trains on seed A",
+    "contract": "same queries, directions, training states, hold-outs, operator, budget, seeds; diagnostic only, never a method",
+    "cases": {"O1": "oracle meets success criterion 3 (>= 2/3 seeds R_delta <= 0.50) while D failed: the runtime proxy is the bottleneck", "O2": "oracle also fails: K=32 support / aggregation / training coverage remain entangled; stop"}
+  },
+
+  "timing": {"repeats": 10, "items": ["probe rays (worklog 28 figure re-measured)", "remote light sampling (shadow rays)", "proxy RNA evaluation (GPU-resident)", "persistent feature lookup", "encoder + aggregation", "decoder", "frozen RNA rendering of the ROI queries"]},
+
+  "stop_conditions": ["worklog-28 reproduction check fails", "frozen RNA changes", "lit-scene probe hits differ from the geometry-only hits", "T3 enters training, selection or statistics", "the proxy needs path tracing or references", "a second mechanism is needed"]
+}
