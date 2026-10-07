@@ -172,7 +172,7 @@ def export(run, rec, composed, frozen, gt, rois, data, L, worklog):
     import matplotlib
 
     matplotlib.use("Agg")
-    from matplotlib import cm
+    from matplotlib import colormaps
 
     from cross_backbone_exports import crop_box, upscale
 
@@ -185,7 +185,7 @@ def export(run, rec, composed, frozen, gt, rois, data, L, worklog):
 
     def signed(a, b, scale=0.1):
         d = (L.tonemap(a) - L.tonemap(b)).mean(-1)
-        rgb = cm.get_cmap("RdBu_r")(np.clip(d / scale * 0.5 + 0.5, 0, 1))[..., :3]
+        rgb = colormaps["RdBu_r"](np.clip(d / scale * 0.5 + 0.5, 0, 1))[..., :3]
         return (rgb * 255).astype(np.uint8)
 
     z = np.load(L.RESULTS / "gt_design/common_light/rois_T3.npz")
