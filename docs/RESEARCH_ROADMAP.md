@@ -310,7 +310,7 @@ M3 is complete when we can answer:
 
 ## Status
 
-**ACTIVE — central representation contract selected; implementation choices remain open**
+**ACTIVE — central representation contract selected; bounded prototype implementation is now authorized**
 
 The working architecture is recorded in `docs/Architecture.md`.
 
@@ -359,9 +359,11 @@ M4 is closed when one bounded implementation hypothesis is selected with explici
 
 **FUTURE**
 
-Do not begin the full method merely because `Architecture.md` exists.
+Do not begin the **full end-to-end method** merely because `Architecture.md` exists.
 
-Begin only after M3/M4 narrow the minimum dynamic-state representation, initial surface/anchor granularity, expected update-cost target, and first development substrate.
+A bounded prototype is now explicitly allowed under M3/M4 after worklogs 26/27 closed the full-recomputation cost calibration. Its purpose is to test the representation contract on the canonical teaset failure, not to declare M5 started.
+
+Promote to M5 only after that prototype narrows the minimum dynamic-state representation, initial surface/anchor granularity, expected update-cost target, and first development substrate.
 
 Preserve original RNA/8DNA baselines as reproducible historical controls.
 
@@ -495,15 +497,25 @@ Do not optimize toward a desired conclusion.
 
 Physical (worklog 26) and neural (worklog 27) full recomputation are both measured; see M7-A / M7-A2. Neither validates the proposed method. Optional follow-ups only if a later decision needs them: denoised low-spp physical frames; a same-scene physical baseline on teaset; a separately protocolled fast neural refit variant.
 
-## B. Minimal dynamic-state design — current main task
+## B. Minimal dynamic-state prototype — current main task
 
-Without implementing the full architecture yet, determine the smallest current directional/relational transport representation that can express the already-measured teaset failure.
+The cost-viability gate is now closed strongly enough to begin implementation, but only as a **bounded architecture experiment**.
 
-The first design question is:
+Start from the canonical teaset T0/T3 failure and implement the smallest current directional/relational transport-state path that can represent the already-measured missing transport while persistent appearance/state remains fixed.
 
-> **How should current indirect visibility and remote-surface incident radiance be compressed without restoring dense pairwise transport or allowing canonical GI to leak back into persistent state?**
+The first implementation question is:
 
-Do not prematurely choose graph/attention/SH/latent dimensions before this information question is closed.
+> **Can a compact current state carrying indirect visibility and remote-surface incident-radiance information recover the T3 transport change without dense pairwise transport, full neural regeneration, or canonical-GI leakage into persistent state?**
+
+Required controls for the first prototype:
+
+- frozen historical baseline;
+- historical full T3 recompute/refit control;
+- unchanged persistent-state path;
+- explicit accounting of dynamic-state size / changed fraction / update time;
+- the existing quantitative recovery rule plus qualitative interaction-ROI review.
+
+Do not begin with graph/attention/SH/latent-dimension sweeps. Choose the minimum representation needed to make the architectural question testable, then stop and judge the abstraction before expanding it.
 
 ---
 
@@ -542,4 +554,4 @@ Resolve these in evidence order, not implementation convenience order.
 
 # 19. One-Line Rule for Future Work
 
-> **The problem and canonical failure mechanism are now sufficiently established; the current job is to turn the lifecycle split into the smallest useful dynamic transport state and prove that updating it is materially cheaper than rebuilding current transport from scratch.**
+> **The problem, canonical failure mechanism, and full-recompute cost boundary are sufficiently established; the current job is to test the lifecycle split in the smallest bounded dynamic-transport prototype and determine whether its current-state update is both sufficient and materially cheaper than rebuilding current transport from scratch.**
