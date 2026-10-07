@@ -390,8 +390,10 @@ def fig_breakdown(path, tracks, plt):
 
 def fig_historical(path, tracks, hist, plt):
     """Error ratio by epoch: this rebuild vs the worklog-22 run's surviving checkpoints (same evaluation path)."""
-    panels = [("8DNA envmap", tracks["8dna_envmap_primary"]["quality_trace"], hist["8dna"]["w21_envmap"]["rows"]),
-              ("8DNA common light", tracks["8dna_common_light_secondary"]["quality_trace"], hist["8dna"]["common_light"]["rows"]),
+    # the historical 8DNA last.ckpt holds epoch-28 weights (step 237568; the rescore labels it 29): a duplicate, dropped
+    h8 = lambda rows: [r for r in rows if not r["checkpoint"].endswith("last.ckpt")]
+    panels = [("8DNA envmap", tracks["8dna_envmap_primary"]["quality_trace"], h8(hist["8dna"]["w21_envmap"]["rows"])),
+              ("8DNA common light", tracks["8dna_common_light_secondary"]["quality_trace"], h8(hist["8dna"]["common_light"]["rows"])),
               ("RNA common light", [t for t in tracks["rna_common_light"]["quality_trace"] if t["kind"] == "snapshot"]
                + [t for t in tracks["rna_common_light"]["quality_trace"] if t["kind"] == "official"],
                [r for r in hist["rna"]["rows"] if r["epoch"] is not None])]  # last.ckpt's epoch is not in its name; omitted
