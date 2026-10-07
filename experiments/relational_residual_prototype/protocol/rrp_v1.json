@@ -1,0 +1,100 @@
+{
+  "id": "rrp_v1",
+  "worklog": 28,
+  "purpose": "First bounded architecture prototype of the working contract (docs/Architecture.md): frozen persistent RNA prediction + compact CURRENT cross-surface relational state + small shared residual operator. Tests on the canonical teaset failure whether only the current relation state must change when geometry changes. Not the full method. Written before any training or real-data probe run.",
+  "written_before": "any probe, feature, training or evaluation run on teaset data in this batch; nothing about T3 behaviour of any residual model has been seen",
+
+  "base_protocol": "protocol/teaset_cross_backbone_locked.json",
+  "frozen_rna": {
+    "checkpoint": "results/8dna_replication/rna_teaset/ckpt/rna-teaset-T0-common-light/version_0/checkpoints/epoch=187-val_psnr=18.87dB.ckpt",
+    "sha256": "81063b289e8683a7b0308f483e841195539c0efdef34489d863c41c96e790775",
+    "upstream_commit": "66b5b098e2013db32214e44a439a0cd66d331e4d",
+    "role": "historical frozen T0 RNA of worklog 22 (validation-best), canonical query mode; never trained, never modified; its historical renders rna_teaset/frozen/<state>_canonical.npy are the frozen baseline images"
+  },
+  "parts_order": ["plate", "teapot2", "teapot3", "teapot4"],
+  "moved_part_for_reporting_only": "teapot2",
+
+  "queries": {
+    "region": "established interaction ROI (gt_design/common_light/rois_<state>.npz mask_interaction): stationary tea pot within 0.15 of the milk pot at T3",
+    "unit": "sub-pixel sample of the historical RNA feature buffers rna_teaset/features/<state>.npz (16 per pixel), i.e. the worklog-25 query lanes",
+    "stable_pixel": "all 16 samples hit teapot4 in the state and in T0 with identical canonical position, normal and camera direction (T0/T1b/T2/T3 share the T0 pixels); T1 (whole asset moved, pixels mapped to T0 by the worklog-22 idx0 pairing) requires the part condition only",
+    "outside_stable": "pixels that are not stable keep the frozen RNA value (no residual)",
+    "anchors": "the stable query samples act as temporary anchors for this prototype only"
+  },
+
+  "probes": {
+    "K": 32,
+    "pattern": "upper half (y > 0) of the project's existing Fibonacci sphere teaset_parts._fibonacci_dirs(64); local frame (s, n, t) with n = buffer shading normal (camera side) and s, t from the deterministic Duff et al. 2017 basis (rrp_common.onb); probe y = n",
+    "scene": "teaset_parts.scene_dict(64, <state translations>, lighting=None): the four current parts, no emitter, no floor",
+    "origin_offset": 0.0002,
+    "chunk": 1048576,
+    "descriptor": "rrp_common.PROBE_FEATURES (20 channels): hit; exp(-t/0.1), exp(-t/1.0); remote shading normal faced to the query, query frame; remote facing cosine; frozen RNA triplane feature at the remote canonical pull-back (hit - t_part); remote direct visibility toward the protocol light centre (rna_bridge.visibility) and remote max(0, n.l); fixed probe direction in the query frame. Misses: zeros except the direction.",
+    "excluded": "reference radiance or images, state names or IDs, part transforms, distances to the moved part, world-space positions, any T3-specific quantity",
+    "timing_repeats": 5
+  },
+
+  "local_inputs": "rrp_common.LOCAL_FEATURES (19 channels): frozen RNA triplane feature at the query canonical point; camera and mean area-light direction in the query frame; current direct-visibility fraction and direct irradiance (RNA's existing visibility input); log1p of the frozen RNA sample prediction",
+
+  "features": {
+    "batch": 1048576,
+    "gpu_timing_repeats": 10,
+    "base_reproduction_rel_tol": 1e-4,
+    "base_definition": "rna_infer.py canonical-mode loop (unchanged semantics); per-pixel mean of the 16 sample predictions must reproduce the historical frozen render at every stable ROI pixel within the tolerance, else STOP"
+  },
+
+  "model": {
+    "probe_encoder": [64, 64],
+    "state_dim": 32,
+    "decoder": [128, 128],
+    "local_encoder": [96, 64],
+    "aggregation": "concat(mean_k, max_k) of the per-probe encoding, then a linear projection to the state",
+    "activation": "ReLU",
+    "sizes_chosen": "once, for implementation convenience, before any data was seen; the local-only encoder width was set to match the relational branch's parameter count within ~5%; frozen, no sweep"
+  },
+
+  "split": {
+    "train_states": ["T0", "T1b", "T2"],
+    "holdout_states": ["T1", "T3"],
+    "val_block": 8,
+    "val_modulus": 5,
+    "validation": "8x8-pixel blocks with (bx + 2*by) % 5 == 0 are validation pixels in every training state; selection uses only these",
+    "T1": "relation-preserving control (whole asset moved)",
+    "T3": "primary architecture hold-out: stronger unseen relation change"
+  },
+
+  "training": {
+    "trainable": "only the residual branch; the frozen RNA is not loaded during training",
+    "loss": "per ROI pixel, mean over RGB of ((dL_pred - dL_GT) / (GT + 0.1))^2, dL_pred = mean of the pixel's 16 sample residuals, dL_GT = GT - historical frozen RNA pixel, GT = mean of the locked seed-A/B references; identical for both branches",
+    "loss_scale_offset": 0.1,
+    "optimizer": "Adam",
+    "lr": 0.001,
+    "steps": 4000,
+    "batch_pixels": 512,
+    "val_every": 50,
+    "selection": "lowest validation loss (training states' validation blocks only)",
+    "seeds": [0, 1, 2],
+    "seed_policy": "seed 0 is the primary run; seeds 1 and 2 are reported in full; an architecture claim needs the outcome in all three seeds"
+  },
+
+  "evaluate_states": ["T0", "T0_B", "T1", "T1b", "T2", "T3"],
+  "timing_states": ["T3"],
+  "timing": {"repeats": 20},
+
+  "evaluation": {
+    "candidate_image": "historical frozen RNA render of the state + the predicted residual on stable ROI pixels; all other pixels unchanged",
+    "frozen_response": "teaset_frozen_eval.evaluate + cross_backbone_eval.rule (worklog-22 definitions; RNA noise repeat = the branch applied to the T0_B buffers)",
+    "recovery_rule_primary": "cross_backbone_eval.refit_block(gt, rois, N(T0), N(T3)) with N = the same branch's own T0 and T3 images (same-pipeline T0, as worklog 22): ratio <= 1.25 AND gain >= 0.5",
+    "recovery_rule_secondary": "refit_block with N(T0) = frozen RNA T0 (reported; not the verdict)",
+    "extra": ["absolute interaction-ROI display MAE per state", "residual tracking error |dL_pred - dL_GT| on stable pixels", "correction magnitude |dL_pred|", "fraction of stable pixels with a display-space correction above 0.018 (3 x frozen RNA's ROI seed-repeat display MAE 0.0060)", "T1: correction norm and gain"],
+    "meaningful_correction_display_threshold": 0.018,
+    "comparisons": {"A": "frozen RNA", "B": "frozen + local-only residual", "C": "frozen + relational residual", "D": "worklog-27 RNA full T3 rebuild (validation-best render) and the worklog-22 T3 refit render", "E": "reference"}
+  },
+
+  "oracle_diagnostic": {
+    "when": "only if the relational candidate fails T3",
+    "state": "worklog-24 reference-only path-class radiances of each ROI pixel (transport_decomposition/common_light/roi_<state>_A.npz, 9 classes x RGB, log1p), replacing the probe state g at pixel level in the same decoder; same training contract",
+    "use": "diagnostic only: distinguishes 'relation-state content insufficient' from 'shared operator / generalisation incapable'; never a runtime method"
+  },
+
+  "stop_conditions": ["T3 or T1 enters training", "frozen RNA checkpoint or parameters change", "base does not reproduce the historical frozen render", "a persistent feature differs between T0 and T3 for a stable query", "probe extraction becomes dense or all-pairs", "a T3-specific heuristic is needed"]
+}
