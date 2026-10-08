@@ -1,7 +1,7 @@
 # Architecture — Learned Transport Dependency & Selective Neural Reconstruction
 
 **Last updated:** 2026-10-08  
-**Status:** CONDITIONAL architecture candidate; first oracle selective-refit feasibility gate NOT YET TESTED  
+**Status:** CONDITIONAL architecture candidate; oracle selective-refit gate F1 tested once (worklog 30): **NEGATIVE on the 8DNA teaset triplane substrate**; untested on 3D-local substrates  
 **Active branch:** Selective_Recompute  
 **Historical direction:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md
 
@@ -104,7 +104,25 @@ This batch changes ONLY **which eligible learned-state units may update**, while
 
 The goal is a *causal* measurement of localizable neural refit, not a performance-optimized selective system.
 
-### Gate F2 — Learned transport dependency (FUTURE, only if F1 supports feasibility)
+### F1 result — worklog 30 (8DNA teaset, envmap regime)
+
+| arm (32 768 steps, 2 seeds) | trainable | affected-region error R_aff | stationary tracking gain | unaffected R_unaff |
+|---|---|---|---|---|
+| A frozen (attached) | 0 | 0.085 | −0.03 | 0.025 |
+| B scratch (matched / WL27 ceiling) | all | 0.050 / 0.040 | 0.67 / — | 0.034 / 0.026 |
+| C global warm start | all 669 321 | 0.045 | 0.56–0.63 | 0.026 |
+| D all triplane cells, shared frozen | 98 304 | 0.077 | 0.22 | 0.028 |
+| E oracle M95 cells, shared frozen | 9 560 | 0.080 | 0.17 | 0.027 (+7.5% vs step 0) |
+
+Measured contract consequences for this substrate:
+
+- **Ownership:** the configuration-dependent transport is owned mainly by the shared decoder (flows, direction cubemaps). D recovers 0.20× of C's stale-error reduction; a post-hoc swap shows C's shared tensors alone carry its receiver-tracking recovery.
+- **Support:** triplane axis projections make a 95% oracle cover (1 195 cells, 39% of occupied cells) touch 95% of training samples and 97% of unaffected pixels; restricting work to touched samples saves ≈5%, and E is 2× slower than D to the D-matched quality.
+- **Oracle:** exact and stable (CRN, Jaccard 0.994 across seeds); 24% of the affected weight lies ≥ 0.15 from the mover — invalidation is genuinely nonlocal.
+
+The result constrains the candidate contract: selective refit requires a substrate whose **localized state, not its shared decoder, owns the configuration-dependent transport, and whose state units have 3D-local support**. Whether such a substrate exists among existing per-scene neural GI models (e.g. dense-grid Neural Radiosity) is unaudited.
+
+### Gate F2 — Learned transport dependency (NOT AUTHORIZED: F1 negative on the only tested substrate)
 
 Infer or construct a deployable geometry-edit-to-invalid-learned-unit dependency. Compare to:
 - oracle invalid set (upper bound);
@@ -172,6 +190,8 @@ If F1 fails, do not optimize a threshold sweep, enlarge model, add heuristic dep
 
 Failures are substrate- and test-regime-scoped, not universal architecture falsifications.
 
+**Worklog 30 (8DNA teaset triplane):** kill conditions 2 (local state not radiometrically/computationally local), 3 (the 95% invalidation cover touches 95% of training samples, through triplane projections), 4 (affected transport requires shared-weight optimization: D ≪ C), 6 (partial refit never approaches global quality) and 7 (no cost advantage) materialized; 1, 5, 8 and 9 did not (substrate quality adequate, oracle exact and stable, signal strong, no test-GT use in training or selection). Scoped to this substrate.
+
 ## 7. Novelty / Prior-Art Guardrails
 
 Prior-art foundations (not ours):
@@ -197,3 +217,5 @@ Do not assume learned transport provenance can be recovered from object bounds a
 > **With oracle guidance on invalid learned state, can the chosen high-quality pretrained neural transport representation recover a held-out geometry edit through partial refit while preserving unaffected transport at meaningfully lower quality-matched cost than global refit?**
 
 A positive answer authorizes *research on actual dependency detection*, not a completed method.
+
+**Answered for one substrate (worklog 30): no** — the 8DNA teaset triplane cannot be selectively refit to near-global quality, does not preserve unaffected output under the predeclared criterion, and gives no cost advantage. The question remains open for substrates with 3D-local, decoder-independent transport state.

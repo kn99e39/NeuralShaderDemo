@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-10-08  
 **Branch:** Selective_Recompute  
-**Status:** New direction selected for **feasibility testing**, not validated as the final method  
+**Status:** New direction selected for feasibility testing; **F1 tested on one substrate (worklog 30): NEGATIVE** for the 8DNA teaset triplane. Not validated; next decision is the user's  
 **Publication planning target:** SIGGRAPH 2027 (exact Technical Papers deadline must be separately verified; do not represent the estimated January deadline as official)
 
 ## 0. Document Purpose and Authority
@@ -54,6 +54,13 @@ The earlier persistent appearance + compact dynamic GI state + reusable operator
 - WL29 CASE D: same K=32 plus remote outgoing-radiance proxy ≈ ZERO/SHUFFLED, and exact directional radiance on the SAME K=32 support also fails; runtime proxy update ~3.2 s. Angular resolution, aggregation and training-state coverage remain entangled.
 - Do not continue another K sweep, angular probe tuning, MLP expansion, or local residual patch merely because this new branch exists.
 
+### 2.3b Oracle selective refit (F0+F1) — CLOSED NEGATIVE ON ONE SUBSTRATE (WL30)
+
+- Substrate: released 8DNA teaset asset (localized state = triplane, 12 288 cells / 98 304 of 669 321 parameters); Neural Radiosity audited at code level and deferred (unvalidated runtime and T0 quality). Envmap regime; G0, signal and scratch-ceiling gates pass.
+- Oracle: exact common-random-number comparison of T0/T3 training path samples; 8.9% of valid samples affected, 24% of the affected weight ≥ 0.15 from the mover; M95 = 1 195 cells (9.7% of all, 39% of occupied cells), supporting 61% of all T3 samples; seed-stable (Jaccard 0.994).
+- Matched arms, 32 768 steps, 2 seeds: global warm start C recovers (R_aff 0.085 frozen → 0.045; tracking gain 0.6); all-localized-state D with shared networks frozen recovers only 0.20× of C's stale-error reduction (gain 0.22); oracle-selective E ≈ D (0.080 vs 0.077) but fails preservation (+7.5% unaffected error) and cost (E reaches the D-matched target 2× slower; restricting work to touched samples removes 5%).
+- Attribution: the shared flows/cubemaps own the configuration-dependent transport (post-hoc swap: C's shared tensors alone carry its interaction-ROI recovery), and triplane projections couple every cell to distant surfaces. A substrate result; not evidence against selective refit for 3D-local, non-owning state.
+
 ### 2.4 Literature kill-search — CLOSED ENOUGH FOR THIS DECISION, NOT PROOF OF WORLDWIDE ABSENCE
 
 - Classic incremental GI/BVH/Enlighten establish generic dependency, hierarchy and partial recomputation.
@@ -68,15 +75,15 @@ The earlier persistent appearance + compact dynamic GI state + reusable operator
 | E0 Problem and attribution | CLOSED, WL21–25 | Is learned GI stale when relations change? | Historical evidence preserved |
 | E1 Recompute baseline context | CLOSED, WL26–27 | Are existing rebuilds expensive? | Not a same-substrate speedup |
 | E2 Compact state pilot | CLOSED NEGATIVE, WL28–29 | Did tested K=32 current state recover T3? | Do not patch/sweep |
-| F0 Substrate suitability | NEXT WITH F1 | Does an existing per-scene neural GI model combine credible high-quality GI and localizable learned units? | No viable substrate without major redesign |
-| F1 Oracle selective-refit feasibility | **ACTIVE NEXT EXPERIMENT; NOT RUN** | With oracle affected-unit guidance, can partial refit match global quality while preserving unaffected state with lower cost? | No local recovery, preservation, or cost advantage |
-| F2 Actual dependency/invalidation | FUTURE / GATED | Can geometry edits identify stale learned units efficiently and radiometrically? | F1 not supported |
+| F0 Substrate suitability | DONE for one substrate, WL30 (8DNA teaset selected; Neural Radiosity deferred) | Does an existing per-scene neural GI model combine credible high-quality GI and localizable learned units? | No viable substrate without major redesign |
+| F1 Oracle selective-refit feasibility | **CLOSED NEGATIVE on 8DNA triplane (WL30)**; other substrates untested | With oracle affected-unit guidance, can partial refit match global quality while preserving unaffected state with lower cost? | No local recovery, preservation, or cost advantage |
+| F2 Actual dependency/invalidation | NOT AUTHORIZED (F1 not supported) | Can geometry edits identify stale learned units efficiently and radiometrically? | F1 not supported |
 | F3 Integrated reconstruction | FUTURE / GATED | Does actual selective refit beat appropriate baselines end to end? | F2 not supported |
 | F4 Scene breadth / SIGGRAPH closure | FUTURE / GATED | Does method generalize, stay efficient, look correct and tell a strong paper story? | Canonical-only or nonphysical improvement |
 
 A future agent must **not** proceed automatically from F1 to F2 even after success. The user reviews evidence and approves a new architecture decision.
 
-## 4. Active Batch: F0 + F1, One Bounded Architecture Experiment
+## 4. Batch F0 + F1, One Bounded Architecture Experiment — COMPLETED (WL30, negative on 8DNA teaset triplane)
 
 ### Direction
 
@@ -199,9 +206,14 @@ Do not silently alter central documents to describe an unvalidated branch as com
 
 ## 9. Immediate Action
 
-**Run ONE bounded F0+F1 oracle selective neural-state reconstruction experiment, with the stop conditions above.**
+**F0+F1 ran once (worklog 30) and is NEGATIVE on the 8DNA teaset triplane substrate.** The batch stopped at the predeclared gate. F2 is not authorized.
 
-Do not start F2 or a new design merely because F1 code compiles. Archive negative findings as valuable research evidence.
+The next step is a **user decision**, not an automatic batch. Defensible options:
+
+1. a separate F0 audit + F1 run on a substrate whose localized state has 3D-local support and whose shared decoder does not own configuration transport (e.g. Neural Radiosity dense grid), with the same protocol and controls, after its runtime, T0 quality and T3 ceiling are validated;
+2. reassess the selective-refit direction against the on-hold lifecycle-separation direction, given that on the only tested substrate global warm start recovers and localized state does not.
+
+Do not reuse the 8DNA result as a general falsification, and do not rescue it with larger masks, cubemap-as-local-state redefinitions or longer budgets without a new protocol.
 
 ## 10. Lasting One-Line Rule
 

@@ -2,7 +2,7 @@
 
 **Original research operating decision:** 2026-09-28  
 **Last updated:** 2026-10-08  
-**Status:** Active; new conditional oracle selective-refit feasibility gate
+**Status:** Active; oracle selective-refit gate F1 run once (worklog 30): negative on the 8DNA teaset triplane
 
 ## 0. Why Baseline Roles Must Be Separated
 
@@ -52,7 +52,11 @@ Previous RNA sidecar is not automatically the new substrate: partial neural-stat
 
 ---
 
-## 2. The New Method-Feasibility Substrate — NOT YET SELECTED
+## 2. The New Method-Feasibility Substrate — ONE TESTED (WL30), NEGATIVE
+
+**Worklog 30:** the released 8DNA teaset asset served as the F1 substrate (criterion-based choice recorded in `experiments/selective_refit_oracle/protocol/sro_v1.json`); Neural Radiosity was audited at code level only and deferred (runtime port and T0/T3 quality unvalidated on this hardware). 8DNA's role therefore extends from problem evidence to **one tested F1 substrate (negative)**; it is still not the method-development base. The negative result is scoped to its triplane state and shared-decoder ownership (section 7, "D fails while C succeeds").
+
+The eligibility list below still applies to any further substrate:
 
 Prefer an **existing pretrained per-scene neural GI model** with:
 - credible T0 static transport fidelity relative to the changed physical signal;
@@ -174,7 +178,9 @@ Cross-backbone problem evidence from WL21–22 is not cross-backbone validation 
 
 ## 9. Current Decision
 
-**ACTIVE:** one bounded F0+F1 oracle selective-state refit feasibility experiment on the Selective_Recompute branch.
+**DONE (worklog 30):** one bounded F0+F1 oracle selective-state refit experiment, 8DNA teaset, envmap regime. Outcome: G0, signal and scratch-ceiling gates pass; D (all localized state, shared frozen) recovers only 0.20× of global warm start's stale-error reduction (gate `G_D_meaningful` fails in both seeds); E ≈ D, with unaffected-region degradation (+7.5%) and no cost advantage (2× slower than D to the D-matched target). Cause: shared-decoder ownership plus triplane projection coupling — a substrate result.
+
+**PENDING USER DECISION:** whether to audit a second substrate with 3D-local, decoder-independent state under the same protocol, or to reassess the direction. F2 is not authorized.
 
 **NOT ACTIVE:** K=32 direction-state tuning; RNA sidecar extension; object hierarchy; dependency-predictor implementation; full new renderer; whole-scene dynamic neural GI framework.
 
