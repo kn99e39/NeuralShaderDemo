@@ -232,6 +232,10 @@
     {
       "when": "before any evidence run (tests)",
       "what": "frozen-output identity reference = worklog-21 released upstream render at T3 (frozen/teaset_locked/T3/8dna_upstream.exr); this batch's own step-0 render of the released checkpoint is checked against it."
+    },
+    {
+      "when": "after the oracle/tests/regions stages and the first E_mask cost run, before any refit arm finished or was rendered (2026-10-08)",
+      "what": "sro_train omitted upstream on_train_epoch_start's torch.cuda.empty_cache() calls around reload/resample and kept the validation generator's scene resident; torch reserved 28 GB on the 16 GB card (WDDM shared-memory spill), making a reload take 189 s instead of ~14 s. Fixed (empty_cache as upstream; validation generator released) at the next commit; the E_mask cost output and the interrupted C_s0 run are archived under results/.../superseded_memory_spill/ and are not evidence. No training math changed; oracle, tests, synthetic and regions outputs (code unchanged) are kept."
     }
   ]
 }

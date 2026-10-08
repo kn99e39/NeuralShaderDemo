@@ -137,6 +137,11 @@ def main() -> int:
     log.begin("validation", key="build")
 
     val = build_validation(T.scene_dict(ds_cfg["H"], st["T3"]), 40040, 128, ds_cfg["N"], ds_cfg["H"], ds_cfg["SPP"])
+    import gc
+
+    gc.collect()  # release the validation generator's scene and its cached GPU blocks
+    dr.flush_malloc_cache()
+    torch.cuda.empty_cache()
     sync(); log.end("validation", key="build", n=int(val["valid"].numel()))
 
     # --- T3 supervision: upstream PathSamplingDataset on the registered T3 scene
@@ -212,11 +217,15 @@ def main() -> int:
         b = step % steps_per_reload
         if b == 0:
             reload_seed = torch.randint(0, torch.iinfo(torch.int32).max, (1,)).item()
+            # upstream on_train_epoch_start: empty_cache before/after reload and after resample
             sync(); log.begin("path_generation", key=step // steps_per_reload)
+            torch.cuda.empty_cache()
             ds.reload(reload_seed)
+            torch.cuda.empty_cache()
             sync(); log.end("path_generation", key=step // steps_per_reload)
             log.begin("resample", key=step // steps_per_reload)
             ds.resample()
+            torch.cuda.empty_cache()
             sync(); log.end("resample", key=step // steps_per_reload)
             digest = hashlib.sha256(ds.inds[:4096].cpu().numpy().tobytes() + ds.xi[:4096].numpy().tobytes()).hexdigest()[:16]
             stream.append({"reload": step // steps_per_reload, "reload_seed": reload_seed, "digest": digest})
