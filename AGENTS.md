@@ -1,5 +1,21 @@
 # Working On This Repo
 
+## Selective_Recompute research gate (2026-10-08)
+
+This branch investigates a **conditional** selective neural-state reconstruction hypothesis, not an already validated new method.
+
+**ACTIVE next experiment: F0+F1 oracle-guided selective partial refit.** Before implementing any hierarchy or dependency detector, determine whether an existing high-quality per-scene neural GI representation has a nontrivial subset of learned transport state that can be refit selectively at comparable quality and lower cost. Preserve unaffected learned units and measure both parameter identity and output-level quality.
+
+Required matched comparisons on the same substrate/scene: frozen pretrained T0, scratch T3, global warm-start T0→T3, global localized-state refit with shared weights frozen, and oracle-selective local-state refit with identical frozen shared weights.
+
+**Do NOT** build an object hierarchy, adaptive invalidation predictor, a novel neural renderer or a new transport representation within this feasibility batch. Do not claim oracle-assisted timing is deployable runtime performance. Stop if the selected substrate lacks sufficient quality or localizable trainable state, if selective refit cannot match global-local refit quality while preserving unaffected state, or if update-cost savings vanish.
+
+The previous persistent appearance + dynamic GI state approach is on hold and archived at docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md. Worklogs 21–29 are historical evidence; do not modify their outcomes. The old K=32 prototype failures do not constitute proof against every possible dynamic-state architecture.
+
+Read the four living documents for the active decision frontier; use historic Worklogs for evidence only. Do not proceed automatically from F1 to F2 after a positive result.
+
+---
+
 ## Research context bootstrap
 
 Before substantial research implementation, experiment design, or architecture interpretation, read:
@@ -7,6 +23,7 @@ Before substantial research implementation, experiment design, or architecture i
 1. `docs/RESEARCH_CENTRIC_TOPIC.md`
 2. `docs/RESEARCH_ROADMAP.md`
 3. `docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md`
+4. `docs/Architecture.md`
 
 In particular, do not confuse implementation/development baselines with scientific replication or architecture-contrast baselines, and do not generalize a negative result from one model/asset pair into project-level falsification without the evidence breadth defined in the strategy document.
 
