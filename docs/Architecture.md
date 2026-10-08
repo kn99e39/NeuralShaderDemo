@@ -1,8 +1,20 @@
 # Architecture — Persistent Appearance + Dynamic Transport
 
-**Status:** Working method architecture  
-**Last updated:** 2026-10-07  
+**Status:** Lifecycle-separation working hypothesis ON HOLD; conditional selective-refit feasibility candidate  
+**Last updated:** 2026-10-08  
 **Scope:** Central representation contract for the next method-design phase. This is not yet a frozen implementation architecture.
+
+---
+
+## Current Research Priority — 2026-10-08
+
+**The lifecycle-separation architecture below is on hold, not retracted.** Worklogs 28–29 showed that its first two K=32 sparse-directional realizations do not recover held-out near-mirror T3, even with exact directional radiance on that support. This does not falsify the entire ownership concept.
+
+The advisor's alternative, informed by a classic/neural GI kill-search, is now a **conditional candidate**: high-quality pretrained per-scene neural transport + radiometric learned-state dependency + selective invalidation/refit with unaffected-state preservation. Simple object hierarchy and partial GI recomputation are not claimed as novelty.
+
+**Next gate:** Do NOT implement hierarchy yet. First test oracle-guided partial refit of localizable learned transport state after a geometry edit, compared on the same substrate/scene to frozen T0, full T3 retraining and global warm-start refit, with quality, unaffected-state protection, changed-state fraction and end-to-end update cost accounted separately from oracle construction. Stop if selective reconstruction itself is not viable; this candidate is NOT a validated replacement architecture.
+
+The material below remains the preserved historical working contract. Its old immediate-next-task statements are superseded by this dated feasibility gate.
 
 ---
 
