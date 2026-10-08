@@ -1,259 +1,185 @@
-# Baseline Roles and Evidence Strategy — Dynamic Neural Shading / Neural Light Transport
+# Baseline Roles and Evidence Strategy — Selective Neural Transport Reconstruction
 
-**Original decision date:** 2026-09-28  
-**Last updated:** 2026-10-07 (worklog 28)  
-**Status:** Active research operating decision
+**Original research operating decision:** 2026-09-28  
+**Last updated:** 2026-10-08  
+**Status:** Active; new conditional oracle selective-refit feasibility gate
 
-## Document Role
+## 0. Why Baseline Roles Must Be Separated
 
-This document records the current baseline roles, evidence scope, and research-process rules for the project. It complements `RESEARCH_CENTRIC_TOPIC.md` and `RESEARCH_ROADMAP.md`.
+This project has strong evidence that learned transport can go stale under changed internal geometry, but **no positive evidence yet that selective neural-state refit is viable**.
 
-The central distinction remains:
+Keep three distinct proof obligations:
 
-- **inductive breadth** establishes whether a phenomenon recurs;
-- **deductive controls** identify why it occurs;
-- neither one should be mistaken for the other.
+1. **Phenomenon:** Does a pretrained neural transport representation fail to follow a physical configuration-dependent GI change?
+2. **Selective-reconstruction feasibility:** Can only affected learned-state units be refit while preserving unaffected transport and saving quality-matched cost?
+3. **Deployable invalidation:** Can an actual non-oracle geometry-edit detector find invalid units efficiently and accurately?
 
----
-
-# 1. Current Research State
-
-The project now has two major evidence lineages.
-
-## 1.1 RNA × Rain
-
-RNA/Rain remains the mechanism-development bench that established:
-
-- a real frozen deformation failure;
-- correspondence and canonical-query controls;
-- direct-visibility diagnostics;
-- strong local-input/spatial confounds;
-- a fixed-target causal-probe design.
-
-The Rain fixed-target probe closed as **PHYSICAL EFFECT TOO WEAK**. It did not provide a positive or negative result for nonlocal transport failure because the target GT radiance did not change above render noise.
-
-Therefore Rain remains useful historical evidence, but it is no longer the cleanest mechanism case.
-
-## 1.2 Teaset cross-part configuration
-
-Worklogs 21 and 22 provide the current strongest controlled evidence.
-
-- In Worklog 21, a stationary teaset interaction surface kept its canonical query while another rigid part moved.
-- The physical interreflection changed strongly above render noise.
-- Frozen 8DNA barely followed that change, while relation-preserving whole-asset motion remained stable.
-- A same-state T3 refit under the original envmap regime recovered close to T0 quality, strongly supporting stale persistent state rather than insufficient architecture capacity in that tested regime.
-- In Worklog 22, RNA reproduced the same frozen-response signature on the same teaset states under a common-light regime.
-- Both backbones fail the predeclared rule at T1b and T3 and pass the relation-preserving T1 control.
-
-This is the project's first controlled **cross-backbone** support for the representation-lifecycle hypothesis.
-
-Important limitation:
-
-> The cleanest evidence is still one asset family and one main relation-change mechanism. It is strong mechanism evidence, not broad generality.
+Passing one does not establish the others. A synthetic correctness test is not a real-scene architecture proof.
 
 ---
 
-# 2. Hypothesis Layers
+## 1. Historical Problem-Evidence Lineages (Preserve)
 
-## 2.1 Phenomenon Hypothesis
+### 1.1 RNA / Rain — Historical diagnostics
 
-> **A high-quality frozen neural shading / light-transport representation can lose validity when geometry relations change.**
+RNA/Rain exposed frozen-deformation failures but had local query/canonical-location confounds. Its fixed-target mechanism probe had a physically weak radiance signal and must not be presented as clean causal proof of missing nonlocal transport.
 
-This hypothesis now has controlled support in teaset across two representation families.
+Role: implementation/correspondence/control methodology and historical phenomenon motivation. Do not reopen it just to obtain a positive result.
 
-## 2.2 Mechanism Hypothesis
+### 1.2 8DNA / Teaset — Primary physical stale-state anchor
 
-> **Some failures occur because persistent learned state owns transport information whose validity depends on the current nonlocal geometry configuration.**
+WL21: stationary receiver surface maintains identity/query while another rigid part changes relation. GT indirect transport changes substantially; frozen 8DNA barely tracks it. Relation-preserving T1 acts as a control. WL27 reproduced an envmap same-state T3 scratch reconstruction near T0 quality; early threshold crossing at 38.9 min was retrospectively identified, not a deployable time-to-recovery. Full schedule ~1.76 h.
 
-The teaset evidence strongly supports this mechanism in the tested regime, but the exact transport component and generality remain open.
+Role: clean causal stale-state mechanism and historical reconstruction/cost evidence.
 
-Do not generalize this to all neural transport methods, all materials, or all deformation families.
+### 1.3 RNA / Teaset — Same-scene independent-backbone phenomenon replication
 
----
+WL22: frozen RNA replicates the nonlocal failure signature under common lighting. RNA static-quality margin is weaker than 8DNA. Common-light rebuild success was not robust: WL22 RNA had borderline recovery, WL27 independent full schedule (~3.24 h) had no rule-satisfying checkpoint.
 
-# 3. Baseline Role Taxonomy
+Role: cross-backbone **problem replication**, not proof that a new solution transfers between two representations.
 
-## 3.1 RNA — Implementation / Development Base
+### 1.4 WL24–25 physics/code attribution
 
-RNA remains the primary experimental workbench and likely first method-development substrate because its geometry/network boundary is inspectable and its correspondence semantics are practical to control.
+Missing transport mixes indirect visibility/occlusion and reflected radiance from the moving part; unchanged receiver local geometry and current direct-visibility features do not carry the needed nonlocal GI. Neither asset result justifies claims about every neural renderer.
 
-RNA is useful for:
+### 1.5 WL28–29 previous architecture candidates
 
-- diagnostics;
-- controlled correspondence experiments;
-- future H1/H2 sufficiency tests;
-- early architecture prototyping if evidence justifies it.
+- WL28: K=32 geometry-only relation state insufficient for held-out T3; richer reference-derived transport oracle through frozen RNA shared operator works.
+- WL29: same K=32 plus aligned runtime frozen-RNA radiometric proxy offers no benefit over zero/shuffled; even exact directional radiance on the same directions fails; proxy state extraction ~3.2 s.
+- Local state, angular support, aggregation, and training-relation coverage are not interchangeable causes. These results falsify the specific tested representations, **not** the whole lifecycle split and **not** the new selective-refit candidate.
 
-RNA being the current development base does not mean the final method must be RNA-based.
-
-Worklog 28 used RNA this way for the first bounded prototype: the historical T0 RNA is a frozen, bit-exact persistent base, and the new current-state path and residual operator live in a project-owned sidecar. This keeps the historical baseline reproducible while testing the architecture.
-
-## 3.2 8DNA — Scientific Replication Baseline
-
-8DNA has now completed its first intended scientific role:
-
-> **independent replication of the frozen geometry-configuration validity failure outside RNA.**
-
-It remains valuable for:
-
-- controlled replication;
-- same-state refit/capacity controls;
-- later testing of whether a proposed principle transfers beyond RNA.
-
-Do not automatically promote 8DNA to the main method-development backbone.
-
-## 3.3 RenderFormer-Type / Current-Geometry Systems — Architecture Contrast
-
-These remain future contrast baselines.
-
-The intended question is:
-
-> **What changes when transport is derived from or conditioned on current geometry instead of relying on persistent canonical asset state?**
-
-Use such a system only when it answers a concrete evidence question. Do not add it merely to increase the baseline count.
-
-## 3.4 Future Method Base — Undecided
-
-No final substrate has been selected.
-
-Possible outcomes still include:
-
-- extending RNA;
-- adapting another transport framework;
-- implementing the research contract in a small independent framework;
-- combining ideas across systems.
+Previous RNA sidecar is not automatically the new substrate: partial neural-state refit needs identifiable localizable **trainable GI units**, unlike an unchanged RNA asset with a sidecar residual.
 
 ---
 
-# 4. Evidence Interpretation Rules
+## 2. The New Method-Feasibility Substrate — NOT YET SELECTED
 
-## Rule 1 — Do not over-generalize one asset
+Prefer an **existing pretrained per-scene neural GI model** with:
+- credible T0 static transport fidelity relative to the changed physical signal;
+- high-frequency glossy/interreflection or multi-bounce transport;
+- localizable learned GI parameters (grid, surface/vertex features, patch blocks, etc.);
+- shared/global parameters that can be held fixed;
+- measurable parameter support under interpolation and hashing;
+- reproducible full train, warm-start refit and targeted optimizer masking;
+- tractable training and reference data on available hardware.
 
-The teaset result is a clean controlled case, not a universal claim.
+Audit at most two candidate implementations before selection in the F0+F1 batch.
 
-Current defensible statement:
+Do not choose by model publicity or select RNA/8DNA only because they were historical baselines. Do not create a new neural GI representation in order to satisfy this first gate.
 
-> **The representation-lifecycle hypothesis has controlled support across RNA and 8DNA on one shared geometry-configuration benchmark.**
-
-Not yet defensible:
-
-> **All neural transport representations fail under dynamic geometry.**
-
-## Rule 2 — Separate problem replication from method validation
-
-Worklog 22 is cross-backbone **problem evidence**.
-
-Future cross-backbone testing of a proposed solution is a different milestone and should not be conflated with the evidence already obtained.
-
-## Rule 3 — Keep stale-state and capacity questions separate
-
-If frozen state fails and same-state refit succeeds, stale state is strongly supported.
-
-If refit also fails, capacity / optimization remains plausible.
-
-The original 8DNA envmap refit is a strong stale-state control, and it reproduced in a second, independent rebuild (worklog 27: last checkpoint 1.149 / 0.629 vs 1.073 / 0.698).
-
-The common-light refits are near the predeclared threshold and are **not robust** across runs: 8DNA failed the ratio rule in both runs (1.28, worklog 22; 1.36, worklog 27); RNA's worklog-22 pass (1.22) did not recur in the worklog-27 rebuild (≈1.32, no checkpoint passes, although targets and evaluation were bit-identical). Treat both as partial recovery, never as evidence that one backbone has more capacity.
-
-Note for reading worklog 22: its 8DNA `last.ckpt` held epoch-28 weights (worklog 27); its verdicts are unchanged.
-
-## Rule 4 — Breadth and depth still have different jobs
-
-Depth has now produced a clean mechanism case.
-
-Breadth is still needed across:
-
-- another asset family;
-- another geometry-change mechanism;
-- less mirror-like transport/material regimes;
-- ideally non-rigid or contact/release cases.
-
-## Rule 5 — Negative results remain valid
-
-A negative result should only weaken the hypothesis at the scope actually tested.
+If none qualifies, STOP and report a substrate blocker. This is neither proof nor disproof of general selective neural transport refit.
 
 ---
 
-# 5. Current Evidence Matrix
+## 3. Required F1 Controls (One Substrate / One Scene)
 
-| Model / role | Rain non-rigid scarf | Teaset cross-part relation | Same-state refit |
-|---|---|---|---|
-| RNA — development base | Failure observed; mechanism confounded | **Frozen failure reproduced** under common light; thin static-quality margin | Near threshold; WL22 borderline pass did not recur in the WL27 rebuild |
-| 8DNA — scientific replication | Not tested | **Controlled frozen failure observed** | **Envmap T3 refit recovers** (reproduced, WL27); common-light near threshold, fails the rule in both runs |
-| Current-geometry contrast | Not tested | Future | Future |
+| ID | Baseline | Initialization | Trainable parameters | Scientific role |
+|---|---|---|---|---|
+| A | Frozen T0 | pretrained T0 | none | establishes stale-state baseline |
+| B | Scratch full T3 | scratch, same architecture | all ordinarily trainable state | new-configuration reconstruction capacity / quality upper reference |
+| C | Global warm-start T3 | exact pretrained T0 | all ordinarily trainable state | strongest obvious update/continual adaptation alternative |
+| D | Global localized-state T3 | exact pretrained T0 | all eligible local learned-state units, global shared phi frozen | isolates freeze-shared-parameters from selective masking |
+| E | Oracle selective-state T3 | exact pretrained T0 | only reference-derived selected local units, phi and unselected units frozen | tests whether selective refit is possible |
 
-Additional dimensions still missing:
+Optional diagnostic: equal-size simple spatial-neighborhood mask, without introducing a new hierarchy.
 
-- another asset family;
-- another deformation/relation mechanism;
-- diffuse/glossy rather than near-mirror-dominated interaction;
-- contact/release or true non-rigid interaction.
+**Fairness:** compare C/D/E with matched supervision, data splits, optimizer schedule, reference, hardware and evaluator. D and E must match trainable-state family and frozen-global contract; only the update mask differs.
 
----
+Report separately at fixed training budget and at matched recovered quality. Do not select checkpoints or thresholds based on final held-out T3 evaluation samples.
 
-# 6. Minimum Evidence Before Broad Project Claims
-
-The project now satisfies:
-
-- at least two representation families in one shared controlled regime;
-- one strong case separating stationary local state from changed nonlocal geometry;
-- one strong same-state refit control in 8DNA.
-
-It does **not** yet satisfy broad generality across:
-
-- two or more clean asset families;
-- two or more clean deformation/relation mechanisms.
-
-Therefore the correct current position is:
-
-> **The mechanism has strong controlled support in the tested teaset regime and has replicated across two backbones, but broad generality remains open.**
+**Static-quality prerequisite:** T0 pretrained fidelity must resolve the GT T0→T3 signal. If not, stop prior to candidate verdict. A full T3 scratch fit must demonstrate the chosen substrate can represent the target configuration; otherwise selective failure may be capacity failure.
 
 ---
 
-# 7. Current Experimental Sequence
+## 4. Oracle and Invalid-State Accounting
 
-## Step A — Rain fixed-target probe
+The oracle can consult high-quality GT at T0/T3 to create a diagnostic affected receiver/query map. This information is allowed in F1 **only to choose the experimental update set**, not as a method-level runtime feature.
 
-**CLOSED:** PHYSICAL EFFECT TOO WEAK.
+The receiver change mask must be mapped to real learned parameter support; report any feature interpolation/hash collisions, global parameter dependencies, and geometry/radiometric influence beyond immediate mover bounds.
 
-## Step B — 8DNA independent replication
+A reference-derived affected map is NOT guaranteed to be perfect, especially for:
+- weak-but-nonzero transport changes near the reference noise floor;
+- distant glossy/multi-bounce influence;
+- state units shared across affected and unaffected evaluations;
+- feature hash collisions and learned decoder coupling.
 
-**CLOSED for first objective:** controlled teaset failure observed.
+Use disjoint render/validation samples when constructing mask and final quality evaluation. Report mask size, affected query coverage, potentially missed state units and over-invalidation.
 
-## Step C — Same-scene cross-backbone replication
-
-**CLOSED for first objective:** RNA reproduces the frozen failure signature on the same teaset state protocol under common light.
-
-## Step D — Close attribution enough for a representation test
-
-**CLOSED (worklogs 24, 25):** the missing information is current cross-part relational transport state (nonlocal visibility of indirect light plus the moved part's reflected radiance); both methods own it in persistent learned state by their representation contract.
-
-## Step D2 — Full-recomputation cost baselines
-
-**CLOSED (worklogs 26, 27):** physical Cycles recomputation on BMW27 costs ≈0.2–3 s per 1080p frame at 16–256 spp; the existing RNA/8DNA refit pipelines need 39 min (8DNA, first rule-satisfying checkpoint) to 1.8–3.2 h (fixed schedules) on the teaset T3 state. Different scenes; cost context only. These are the *existing* baselines' costs, not a property of neural transport in general.
-
-## Step E — Current-geometry contrast / additional breadth
-
-Future, when it answers a concrete decision.
+Do not use final T3 evaluation radiance to tune mask thresholds, optimizer parameters or checkpoint selection. Report the oracle-building cost separately and do not include it silently in a deployable efficiency claim.
 
 ---
 
-# 8. Current Decision
+## 5. Performance / Physical Reference Baselines
 
-As of 2026-10-07:
+**Physical full computation (historical context):** WL26 BMW27 1080p Cycles ~0.22/0.76/3.0 s at 16/64/256 spp on RTX 5080. Different scene/reference and not quality matched to selective-refit tests.
 
-1. **Keep RNA as the implementation/development base.**
-2. **Treat the Worklog 21/22 teaset case as the current canonical controlled failure case.**
-3. **Treat 8DNA as a successful scientific replication baseline, not the default method-development substrate.**
-4. **Do not reopen the old Rain mechanism as the main evidence path unless a new question specifically requires it.**
-5. **Do not select the final method architecture yet.**
-6. **Do not spend a large batch resolving the common-light refit split unless that distinction changes the next architecture decision.** Worklog 27 showed it is within run-to-run variation (RNA 1.22 -> 1.32 with identical data); neither common-light refit is a reliable recovery.
-7. **M2 is closed for the canonical case (worklogs 24/25); the next representation experiment must supply current cross-part relational transport state.**
-8. **Use worklog 26 (physical) and worklog 27 (neural regeneration) as the cost baselines a future method is compared against; existing neural regeneration is offline and is not the binding constraint.**
-9. **Continue to separate cross-backbone problem evidence from future cross-backbone method validation.**
+**Neural full regeneration (historical context):** WL27 8DNA envmap T3 scratch first isolated oracle-identified recovery ~38.9 min; fixed schedule ~1.76 h. RNA common-light scratch fixed schedule ~3.24 h with no criterion pass. These pipelines do NOT constitute a global warm-start baseline.
+
+**Required method-level comparators:** same-substrate same-scene B/C/D, end-to-end wall-clock to matched quality, plus optical/physical reference where quality permits. For practical comparisons in later F3/F4, additionally assess NRC/NIRC online cache adaptation, static+dynamic residual GI/Hybrid Rendering, per-frame GI probes and relevant incremental MC as the claims demand.
+
+No method can be declared faster by measuring only optimizer kernel time while ignoring target generation, transfer, masks, validation or loading. Nor is lower parameter count automatically faster.
 
 ---
 
-# 9. One-Line Operating Rule
+## 6. Metrics and Reviewer Exports
 
-> **The phenomenon now has a clean cross-backbone controlled case; the next job is to identify the minimal missing current-state information without over-generalizing from one asset or prematurely committing to a solution architecture.**
+**Transport validity:** affected stationary receiver signed T0→T3 change error, relative physical-change error and GT noise floor.
+
+**Reconstruction:** full T3, global warm refit, global-localized refit, and selective refit absolute and change errors in the same regime.
+
+**Preservation:** unaffected query error delta, unintended radiance change, frozen parameter identity, overlap leakage, boundary seams and temporal stability if tested.
+
+**State locality:** eligible unit count, selected count and percentage, genuinely changed units, support coverage, multi-bounce invalidation expansion and memory.
+
+**Cost:** full quality-vs-wall-clock curves; optimization/target generation/mask generation/validation/memory/inference disaggregated; actual matched-quality end-to-end savings vs C and D. A screening target of ~2x vs D with near-D quality is optional only if predeclared.
+
+**Qualitative:** same-exposure GT/frozen/full/global/localized/selective renders, reflection and indirect-occlusion bands, signed difference/error maps, mask/state-support visualizations, unrelated stationary regions and seams.
+
+No synthetic-only architecture pass; no "looks similar" without provenance and error accounting.
+
+---
+
+## 7. Interpretation / Stop Rules
+
+- **F0 failure:** no existing substrate with enough quality and localizable state → report substrate limit; do not build another renderer.
+- **B fails:** substrate cannot fit T3 → cannot attribute E failure to selectivity.
+- **D fails while C succeeds:** fixed shared parameters / local-only representation are insufficient → conditional substrate-ownership issue, not oracle mask proof.
+- **E fails while D succeeds:** mask support, parameter locality, multi-bounce closure, data/optimization budget must be disentangled; do not automatically expand masks.
+- **E succeeds but requires nearly all units:** selective locality may be economically meaningless.
+- **E quality succeeds, speed fails:** update mechanism is not a practical selective-recompute result even if parameter masking is correct.
+- **E passes quality and cost:** authorize only a new bounded investigation of actual non-oracle learned-state dependency. Do not declare an entire hierarchy, framework or SIGGRAPH success.
+
+Always separate IMPLEMENTATION FACT, MEASUREMENT, OBSERVATION, INTERPRETATION, UNRESOLVED QUESTION and ARCHITECTURE DECISION.
+
+Stop when the predeclared gate condition is met; do not rescue a negative mechanism with unapproved heuristics, threshold tuning, more model capacity or repeated unbounded optimization.
+
+---
+
+## 8. Generality and Publication Claims
+
+One well-controlled teaset case can establish a mechanism, not broad dynamic-GI generality.
+
+A final selective-recompute method should eventually face independent scenes, high-frequency glossy paths, far-field/multi-bounce dependencies, several movers, edit magnitude variation and temporal animation. Nonrigid/contact/fold changes are important long-term but not F1.
+
+The strongest defensible paper claim must show:
+- novelty beyond classic hierarchy / incremental GI / NeLT / Superposed Deformable Feature Fields;
+- genuine learned-state invalidation and partial refit rather than using oracle at runtime;
+- high-quality GI restoration;
+- quantitatively bounded missed dependencies and unaffected-state corruption;
+- cost advantage over same-substrate global adaptation at matched quality.
+
+Cross-backbone problem evidence from WL21–22 is not cross-backbone validation of a new selective-recompute method.
+
+---
+
+## 9. Current Decision
+
+**ACTIVE:** one bounded F0+F1 oracle selective-state refit feasibility experiment on the Selective_Recompute branch.
+
+**NOT ACTIVE:** K=32 direction-state tuning; RNA sidecar extension; object hierarchy; dependency-predictor implementation; full new renderer; whole-scene dynamic neural GI framework.
+
+**Completion question:**
+
+> With reference-derived oracle invalidation guidance, can we selectively refit a strict subset of pretrained high-quality neural GI state and recover current transport while preserving valid state, with meaningful quality-matched update-cost savings?
+
+A negative answer is a valid result and must be interpreted before selecting the next research hypothesis.
