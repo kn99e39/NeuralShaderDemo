@@ -1,0 +1,237 @@
+{
+  "schema": "sro_protocol/v1",
+  "living_documents": "written against the F0+F1 gate of docs/RESEARCH_ROADMAP.md, docs/Architecture.md and docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md at commit 7d19c35",
+  "purpose": "Oracle feasibility of selective reconstruction of a pretrained neural transport representation (worklog 30). Written before any oracle mask, warm-start training or evaluation render of this batch exists. Changes after the first evidence run are recorded in 'amendments' with their reason and are never made after seeing a selective-refit result.",
+  "batch_question": "Even with oracle knowledge of invalidated transport state, can a high-quality pretrained neural GI representation be selectively refit after a geometry edit while preserving unaffected transport and substantially reducing quality-matched update cost?",
+  "substrate_selection": {
+    "audited_candidates": {
+      "neural_radiosity": {
+        "source": "https://github.com/saeedhd96/neural-radiosity",
+        "commit": "51a2b8ca3b79b0d0ab712451b07a586b8cd41492",
+        "audit": "code-level only (external/neural-radiosity, not run)",
+        "state_structure": "radiance field L(x, w) = MLP(width 512, 5 hidden) over [x, grid(x), w, n, albedo]; grid = summed multi-resolution dense/sparse grids (res 2..64, 16 features, pure PyTorch) or a tcnn hash grid. Fine dense levels are spatially local trainable units; coarse levels (2, 4, 8) are effectively global; direction enters only the shared MLP.",
+        "criteria": {
+          "1_T0_quality_on_a_nontrivial_change": "UNKNOWN: never run on this project's scenes; the canonical case is alpha 0.05 / 0.1 nickel, where the configuration-dependent part is a sharp reflected image whose directional structure only the shared MLP can carry; no T0 or T3 evidence chain exists",
+          "2_identifiable_localized_units": "yes (fine dense-grid cells; hash grid has collisions, dense grid does not)",
+          "3_selective_update": "yes (pure-PyTorch grid tensors)",
+          "4_shared_parameters_fixed": "yes",
+          "5_same_scene_reference": "possible after converting the teaset (one shapegroup instance) to flat meshes and the code's XML scene path",
+          "6_reproducible_on_this_hardware": "UNVALIDATED: pinned stack is torch 1.13.1+cu117 / Mitsuba 3.1.1 / DrJit 0.3.2 (no SM 12.0 kernels); a port to torch 2.8 / Mitsuba 3.5.1 / DrJit 0.4.6 is required, and its recorded-loop integrator would need the LoopRecord validation of worklog 22 (radiance loss with LoopRecord on this GPU)"
+        },
+        "decision": "not selected for this batch: criteria 1 and 6 cannot be established without a separate substrate-validation batch (runtime port, scene conversion, T0 quality and T3 recovery ceiling on the canonical case). Not a negative result about neural radiosity."
+      },
+      "8dna": {
+        "source": "https://github.com/lwwu2/8dna26",
+        "commit": "4a2157ca24e506c5ac0831f27d656ecc50a64f07",
+        "checkpoint": "external/8dna26/checkpoints/teaset.ckpt",
+        "checkpoint_sha256": "6feb5e1b00e17d662596fcc0e6abde686ebbbd48d5233a2100caa407780f5bbc",
+        "audit": "code (worklog 25, this batch's inventory) and the project's existing evidence (worklogs 21, 22, 24, 27)",
+        "state_structure": "per-asset fitted intra-asset transport (all paths with >= 2 asset vertices; direct scattering analytic): cond = Triplane(xi) [3 planes x 8 ch x 64 x 64 = 98 304 params, the only position-indexed state] + GridCube(wi) [49 152, direction-indexed, global]; albedo MLP and two conditional normalising flows (p(xo|cond), p(wo|cond, xo)) with GridCube(xo) and Grid1D encodings are shared. Total 669 321 parameters.",
+        "criteria": {
+          "1_T0_quality_on_a_nontrivial_change": "yes: released teaset T0 512^2 PSNR 29.4 dB (worklog 21); interaction-ROI T0 error 0.034 vs T3 physical change 0.066-0.070 display MAE (9.7x reference noise, worklog 22 corrected references); the change is indirect transport (worklog 24 envmap: occlusion of stationary indirect 0.58, mover-reflected 0.43, direct 0.02)",
+          "2_identifiable_localized_units": "yes: triplane cells with an exact bilinear footprint (upstream fetch_2d, align-corners, pitch 2/63); coupling: each cell is shared by every point along the projected axis (projection collisions), measured in this batch",
+          "3_selective_update": "yes: one parameter tensor, element-wise gradient masking",
+          "4_shared_parameters_fixed": "yes: requires_grad False on every non-triplane tensor",
+          "5_same_scene_reference": "yes: worklog-21 envmap regime, corrected wavefront references (worklog 22)",
+          "6_reproducible_on_this_hardware": "yes: native Windows runtime of worklogs 21-27; T3 recovery ceiling reproduced twice in this regime (worklog 22 1.07/0.70, worklog 27 1.149/0.629); scratch T3 rebuild traced per epoch on this host (worklog 27)"
+        },
+        "role_note": "8DNA keeps its historical problem-evidence role; here it is used as the F1 substrate of an oracle feasibility control, not promoted to the method-development base.",
+        "living_document_caution": "docs/Architecture.md (F0) and docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md (section 2) at 7d19c35 warn that RNA/8DNA are not automatically suitable and must not be chosen for their historical role. Criterion-based answer: (a) in the teaset the learned asset is the whole scene geometry (only the distant envmap lies outside), so its learned state is per-scene GI; (b) 8DNA's learned state is exactly the >= 2-vertex intra-asset transport that the edit invalidates (direct is analytic), so state ownership matches the F1 question rather than differing from it; (c) its triplane is an enumerable, maskable localized unit family with exact support; (d) it is the only audited candidate with an established T0 quality and T3 scratch recovery on a radiometrically verified indirect change on this hardware. Residual caveat recorded for the worklog: the triplane's projection coupling is a property of this substrate, not of localized GI state in general.",
+        "decision": "selected"
+      },
+      "rna": {
+        "decision": "not a candidate: static teaset margin 4% (worklog 22) and no rule-satisfying T3 rebuild (worklog 27), so it fails criterion 1 by existing evidence"
+      }
+    }
+  },
+  "scene": {
+    "asset": "teaset",
+    "regime": "w21_envmap (worklog 21 envmap regime; references corrected in worklog 22)",
+    "regime_reason": "the only regime in which the substrate's same-state T3 rebuild recovers reproducibly; in common light both 8DNA rebuilds fail the rule (worklogs 22, 27), so the ceiling (control B) would not be credible there. Common light is not evaluated in this batch.",
+    "states_protocol": "experiments/8dna_deformation_replication/protocol/teaset_frozen_locked.json",
+    "T0": {},
+    "T3": {
+      "teapot2": [
+        0.16,
+        0.0,
+        0.0
+      ]
+    },
+    "frame_convention": "every refit (B-E) is trained and rendered in the T3 asset frame, exactly as the historical T3 refit (render_8dna_refits.py: upstream mode at T3, no pullback). 8DNA has no part identity, so the moved part's own learned state is necessarily relocated in this frame; the oracle reports that share separately.",
+    "references": "results/8dna_replication/w21_reference_correction/<state>/gt_A.exr, gt_B.exr (2 x 2048 spp prb, wavefront)",
+    "rois": "results/8dna_replication/gt_design/v2/rois_<state>.npz (interaction, tray, far, mover; historical)",
+    "render": {
+      "res": 512,
+      "spp": 512,
+      "chunk": 4,
+      "seed": 0,
+      "integrator": "upstream neuralpath max_depth 10 rr_depth 5, LoopRecord off, VCallRecord on"
+    }
+  },
+  "state_units": {
+    "eligible_localized_state": "model.encode_xi.feature, shape (3, 8, 64, 64); unit = one (plane, row, col) cell with its 8 channels; 12 288 units, 98 304 parameters",
+    "planes": {
+      "0": "xy: col <- x, row <- y",
+      "1": "yz: col <- y, row <- z",
+      "2": "zx: col <- z, row <- x"
+    },
+    "support": "a sample at xi touches, per plane, the four cells of upstream fetch_2d's bilinear stencil with weights (1-fx)(1-fy), fx(1-fy), (1-fx)fy, fx fy; a cell is touched when its weight is > 0",
+    "shared": "every other tensor (encode_wi, encode_xo, flow_xo, flow_wo incl. their Grid1D encodings, albedo MLP): 571 017 parameters"
+  },
+  "oracle": {
+    "role": "offline, reference-derived upper-bound control. Not a deployable mechanism. Its construction cost is reported separately and excluded only from the conditional selective-refit upper bound.",
+    "domain": "the substrate's own supervision domain: upstream PathSamplingDataset path samples (rays from the unit sphere into the asset, cosine about the sphere normal, BSDF-sampled continuation, Russian roulette from depth 5, exit projected to the asset bbox), traced in the T0 and in the T3 scene with common random numbers (identical strata jitter and Mitsuba sampler seeds per chunk). It is lighting independent, like the learned state.",
+    "samples": "one upstream reload per scene: N = 128, H = 128, SPP = 256 -> 268 435 456 rays per scene, 64 chunks",
+    "seeds": {
+      "primary": 30030,
+      "stability_replicate": 30031
+    },
+    "affected_sample": "a ray is affected if its T0 and T3 traces differ in any of: validity (depth >= 1 and exit hits the bbox), occluded flag (depth < 2 or roulette termination), depth, xi, xo, wo (max abs difference > 1e-5) or throughput (max abs difference > 1e-5 * (1 + |throughput|)). The fraction of rays with a nonzero difference below these tolerances is reported (expected ~0 under common random numbers).",
+    "weights": "one unit per valid sample (the albedo MSE weights every valid sample; the NLL weights by throughput); a throughput-weighted coverage is reported as a secondary",
+    "cell_accumulation": "per cell c: W3_c = bilinear weight of valid T3 samples; A3_c = of affected valid T3 samples; A0_c = of affected valid T0 samples (vanished or changed T0 supervision). Weights are quantised to integers (round(w * 65536)) before atomic accumulation, so the sums are deterministic. Affected weight A_c = A3_c + A0_c.",
+    "primary_mask": "M95: cells ranked by A_c descending (ties: lower flat index first); the smallest prefix whose cumulative A reaches 95% of the total.",
+    "sensitivity_masks_reported_not_run": [
+      "M90",
+      "M99",
+      "cells with A_c / (W3_c + A0_c) >= 0.5"
+    ],
+    "stability": "M95 from the replicate seed; Jaccard overlap with the primary is reported",
+    "decomposition": "affected weight split by the T3 first-hit part (mover vs stationary parts), by the T0 first-hit part for T0-side samples, and by distance of xi to the milk pot (T0 or T3 position; bins 0.05 / 0.15 / 0.30 / more)",
+    "collateral": "for the selected cells, the fraction of their T3 support weight that comes from unaffected samples (projection collisions)",
+    "image_consistency": "fraction of the image-space affected pixels (evaluation regions below) whose 12-cell x1 stencil is fully / partly / not inside M95; computed after the mask is fixed, never used to change it",
+    "spatial_control_mask": "S: equal-size proximity mask. For each cell, the distance in its plane between the cell centre and the nearest milk-pot surface sample projected to that plane (T0 and T3 positions, 200 000 area-uniform samples each); the |M95| cells with the smallest distance (ties: lower flat index)."
+  },
+  "controls": {
+    "A_frozen": "released teaset.ckpt, no update. Primary render: worklog-21 attached render at T3 (per-part pullback). Step 0 of every warm-start run is the same checkpoint rendered in the T3 frame (upstream mode), i.e. worklog 21's coordinate-mismatch diagnostic; identical on stationary surfaces.",
+    "B_scratch_matched": "scratch T3: upstream EightDNA initialisation (torch seed 0 before construction), all parameters trainable, this batch's training loop, data stream, optimizer and budget; the fixed-budget scratch arm",
+    "B_full_rebuild_historical": "worklog-27 scratch T3 rebuild (upstream train.py through Lightning, seed 9, 30 epochs = 245 760 steps, this host, per-epoch snapshots and envmap renders); reused, not re-run. It is the substrate's capacity ceiling (docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md section 3: a full T3 scratch fit must show the substrate can represent T3); its epoch-3 snapshot (32 768 steps) is also reported at the fixed budget.",
+    "C_global_warm": "init from teaset.ckpt; all 669 321 parameters trainable",
+    "D_global_localized": "init from teaset.ckpt; only model.encode_xi.feature trainable (all 12 288 cells); every shared tensor frozen",
+    "E_oracle_selective": "init from teaset.ckpt; only the M95 cells of model.encode_xi.feature trainable (element-wise gradient mask); everything else frozen. Implementation (primary): per step, the batch is the same batch D sees, restricted to the valid samples that touch at least one selected cell, and the loss is normalised by the batch's full valid count. Non-touching samples have exactly zero gradient with respect to the selected cells when everything else is frozen, so this computes E's masked update exactly while evaluating the network only on the touching samples. Verified against the masked full-batch implementation (E_mask) in a predeclared short-horizon equivalence run.",
+    "E_mask": "diagnostic only: E's mask on the full batch (no restriction); 256 steps, for the equivalence check and the per-step cost of masking without restriction",
+    "S_spatial": "the equal-size proximity mask S, same implementation as E"
+  },
+  "training_contract": {
+    "data": "upstream PathSamplingDataset on the T3 scene (scenes module registered as train_8dna_state.py does), N 128, H 128, SPP 256, batch_size 32768 raw samples (invalid samples dropped inside the step as upstream), bounce 2. A reload (fresh path samples, seed drawn by torch.randint as upstream's on_train_epoch_start) and a resample (shuffle) every 8192 steps, i.e. upstream's epoch.",
+    "loss": "upstream training_step: -(throughput * logpdf).mean() + mse(throughput, albedo) over the batch's valid samples",
+    "optimizer": "Adam, lr 5e-4, betas (0.9, 0.999), eps 1e-8 (torch defaults, as upstream), fresh state; no scheduler (upstream has none)",
+    "gradient_clipping": "clip_grad_norm_(trainable parameters, 5.0) (upstream gradient_clip_val 5, Lightning's norm algorithm)",
+    "budget_steps": 32768,
+    "snapshot_steps": [
+      0,
+      128,
+      256,
+      512,
+      1024,
+      2048,
+      4096,
+      8192,
+      16384,
+      24576,
+      32768
+    ],
+    "runs": [
+      "B",
+      "C",
+      "D",
+      "E",
+      "S"
+    ],
+    "seeds": {
+      "all_runs": 0,
+      "replicate": {
+        "seed": 1,
+        "runs": [
+          "C",
+          "D",
+          "E"
+        ]
+      }
+    },
+    "data_stream_pairing": "with the same seed every run sees the same reload seeds and the same shuffles (training draws no other random numbers); checked by a stream digest per reload",
+    "checkpoint_selection": "quality at matched budget = the final snapshot (step 32768); no selection on validation or test",
+    "validation": "held-out T3 path samples from a dedicated reload with seed 40040 (distinct from the oracle seeds 30030/30031 and from training reloads); the first 64 raw batches; loss reported at every snapshot; never used for selection; its time is excluded from adaptation latency",
+    "B_budget_note": "B follows its historical 30-epoch schedule (245 760 steps); quality vs wall-clock is reported on one axis with C-E"
+  },
+  "evaluation": {
+    "renders": "each snapshot of each run at T3, upstream mode (T3 frame), 512^2, 512 spp, chunk 4, seed 0; step 0 rendered once (shared by all warm-start runs). Released checkpoint at T0 (worklog-21 upstream render) is every warm-start run's own-pipeline T0 model.",
+    "neural_noise": "released checkpoint at T0, seed 0 vs seed 100000 (worklog-21 8dna_upstream.exr vs 8dna_upstream_seedB.exr), display MAE per region",
+    "regions": {
+      "construction": "from geometry and references only, before any training: pixel-centre primary hits at T0 and T3 (teaset_gt_states.primary_buffers, part ids by teaset_parts.part_shape_ids); g_s = (gt_A + gt_B)/2 per state; per pixel, display change c = box7(|disp(g_T3) - disp(g_T0)|) and reference noise n = box7(|disp(gt_A) - disp(gt_B)|) at T3 (box7 = 7x7 mean, channel mean)",
+      "stable_stationary": "first hit on the same stationary part at T0 and T3 with |p_T3 - p_T0| < 1e-5",
+      "R_aff_stat": "stable_stationary and c > 3 n",
+      "R_unaff": "stable_stationary and c < 1 n",
+      "R_buffer": "stable_stationary and 1 n <= c <= 3 n (reported, not in either set)",
+      "R_mover": "first hit on the milk pot at T3",
+      "R_aff": "R_aff_stat union R_mover (primary affected region)",
+      "R_unstable": "pixels whose first hit changes part or position (disocclusion / occlusion by the mover outside R_mover); reported separately",
+      "historical": "interaction, tray, far, mover ROIs of gt_design/v2"
+    },
+    "metrics": [
+      "display MAE vs reference per region (display = clamp(x^(1/2.2), 0, 1); reference = mean of A and B)",
+      "interaction ROI: historical refit rule (refit_block): ratio to own T0 error <= 1.25 and gain >= 0.5",
+      "transport-change tracking on stable stationary pixels: dN = N(T3) - N_T0model(T0), dG = g_T3 - g_T0; gain = <dN, dG>/<dG, dG> (linear), E_delta = display MAE of (dN - dG) computed on display-space images, R_delta = E_delta / mean |dG| (display), per region",
+      "frozen-output identity: pixels whose x1 stencil (12 cells) contains no updated cell must equal the step-0 render bit for bit (E and S); count and max abs difference reported",
+      "seam crops at the boundary of the updated-cell footprint on the image"
+    ]
+  },
+  "cost_accounting": {
+    "phases": [
+      "process_setup",
+      "scene_prep_dataset_init",
+      "model_load",
+      "mask_load",
+      "optimizer_init",
+      "path_generation",
+      "resample",
+      "restriction_index",
+      "optimization",
+      "validation",
+      "snapshot_write",
+      "other"
+    ],
+    "adaptation_latency": "wall clock from process creation to a snapshot being written, minus all validation and minus earlier snapshot writes (instrumentation); includes T3 supervision generation (path_generation), shuffles, model load, mask load and optimisation",
+    "optimization_only": "sum of optimisation intervals up to the snapshot",
+    "oracle_cost": "reported separately (T0 + T3 traces, comparison, accumulation, ranking)",
+    "evaluation": "render time per snapshot, reported separately",
+    "memory": "torch max allocated / reserved per run, nvidia-smi whole-GPU peak"
+  },
+  "gates": {
+    "G0_static_baseline": "released checkpoint's same-surface T0 error (display MAE) is below the reference T0->T3 change in the interaction ROI and in R_aff_stat; otherwise STOP (stop condition 2)",
+    "G_B_capacity": "the historical scratch rebuild's final checkpoint satisfies the worklog-22 rule in this regime (worklog 27: 1.149 / 0.629); re-scored with this batch's region metrics. If it did not, an E failure could not be attributed to selectivity.",
+    "G_signal": "reference change exceeds 3x reference repeat noise and 3x neural seed noise in the interaction ROI and in R_aff_stat",
+    "G_D_meaningful": "D's stale-error reduction on R_aff, err(A_attached) - err(D_final), exceeds 3x the R_aff neural seed noise AND is at least half of C's reduction; if it fails, selective refit of localized state cannot be judged meaningful on this substrate (stop condition 5: the change needs the shared model) and the batch reports that cause",
+    "screening": {
+      "S1_quality": "err_R_aff(E_final) <= 1.10 x err_R_aff(D_final), evaluated only if G_D_meaningful passes",
+      "S2_preservation": "err_R_unaff(E_final) <= 1.05 x err_R_unaff(step 0), and zero changed pixels among frozen-stencil pixels",
+      "S3_frozen_subset": "|M95| <= 50% of the 12 288 eligible cells",
+      "S4_latency": "t_D(Q*) / t_E(Q*) >= 2 with Q* = 1.10 x err_R_aff(D_final); t = adaptation latency at the first snapshot whose R_aff error <= Q* (oracle-identified, snapshot resolution); undefined (fail) if E never reaches Q*",
+      "replicate": "S1 and S4 are also computed for seed 1; a pass needs both seeds"
+    },
+    "outcome": "VIABLE (conditional, oracle upper bound) if S1-S4 pass; otherwise the failing criteria name the cause: S1 -> insufficient transport recovery under selection; S2 -> parameter coupling / forgetting; S3 -> excessive invalidation coverage; S4 -> no cost advantage; G_D_meaningful -> state nonlocality into shared parameters",
+    "thresholds_are": "predeclared screening values, not physical thresholds; raw numbers and sensitivity are reported"
+  },
+  "stop_rules": "after the evidence runs the batch stops; no new heuristics, sweeps, masks, budgets or substrates are introduced after a result (batch section 11)",
+  "amendments": [
+    {
+      "when": "before any evidence run (implementation)",
+      "what": "restriction_index is not a separately synchronised phase: the per-batch stencil test (sro_common.touches) runs inside the optimization interval of E and S, so its cost is charged to their optimisation time; synchronising per step would perturb step timing."
+    },
+    {
+      "when": "before any evidence run (implementation)",
+      "what": "validation set = every 128th ray of each chunk (offset chunk index mod 128) of one full reload drawn with seed 40040 = 2 097 152 raw rays = exactly the 64 raw batches; built in each training process before the data stream starts and timed as validation."
+    },
+    {
+      "when": "before any evidence run (implementation)",
+      "what": "B (scratch, matched): torch.manual_seed(seed) immediately before the upstream EightDNA constructor; the data stream is then re-seeded with the same seed, so B shares C-E's batches."
+    },
+    {
+      "when": "before any evidence run (tests)",
+      "what": "E restricted vs E_mask equivalence is established by test (masked full-batch gradient bit-identical to the full batch with non-touching loss terms zeroed; restricted-batch gradient within 1.4e-4 relative L2 = float32 reduction order of smaller GEMMs). The predeclared 256-step E_mask run is kept for its per-step cost only."
+    },
+    {
+      "when": "before any evidence run (tests)",
+      "what": "frozen-output identity reference = worklog-21 released upstream render at T3 (frozen/teaset_locked/T3/8dna_upstream.exr); this batch's own step-0 render of the released checkpoint is checked against it."
+    }
+  ]
+}
