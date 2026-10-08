@@ -2,6 +2,16 @@
 
 **Last updated:** 2026-10-07
 
+## Current Decision Frontier — 2026-10-08
+
+Following the advisor's selective-recomputation proposal and the prior-art kill-search, the next primary experiment is an **oracle-guided selective neural-transport refit feasibility gate**. The former compact current-state direction (worklogs 28–29) is on hold, not erased or universally falsified.
+
+**Before building a transport-dependency hierarchy**, test whether a localizable pretrained per-scene neural GI state can be selectively refit after a geometry edit when the affected set is supplied by an offline reference-derived oracle. Compare to same-substrate full retraining, global warm-start refit, and frozen T0; measure quality, unaffected-state preservation, state fraction and end-to-end cost.
+
+**Stop** if even oracle-guided selective refit cannot recover transport at meaningfully lower quality-matched cost. Do not build hierarchy before passing this gate. This candidate is not yet an approved final architecture.
+
+---
+
 ## Document Role
 
 This document defines the research roadmap, milestone gates, stop conditions, and current decision frontier for the project.
