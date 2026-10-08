@@ -1,497 +1,117 @@
-# Research Centric Topic — Dynamic Neural Shading / Neural Light Transport
+# Research Centric Topic — Reusable High-Quality Neural Light Transport Under Geometry Edits
 
-## Status
+**Last updated:** 2026-10-08  
+**Status:** Active research problem; conditional selective-reconstruction direction; method NOT validated  
+**Target:** SIGGRAPH 2027 planning target (official submission date and acceptance not assumed)
 
-This document defines the **central research topic and interpretation contract** for this project.
+## 1. Central Problem (Stable Across Architecture Changes)
 
-It is not a final method proposal, not a claim of novelty, and not an implementation specification.
+High-quality pretrained neural light-transport representations can compress interreflection, self-shadowing, near-field transport, glossy reflection, complex appearance, and higher-order scattering in a fixed geometry configuration. Some of that compressed transport may cease to be valid when geometry relationships change after training.
 
-All experiments, diagnostics, architecture discussions, and future method development should remain aligned with the research question defined here unless the project direction is explicitly changed.
+**Central problem:**
 
----
+> Under a geometry edit, which high-quality learned transport information remains valid, which becomes stale, and how can the valid information be reused without regenerating the entire transport representation?
 
-# 1. Centric Research Topic
+This is a **light-transport validity and reuse** problem, not generic dynamic geometry rendering. It is not a claim that every neural renderer fails on dynamic scenes.
 
-Recent high-quality Neural Shading / Neural Light Transport methods can compress complex appearance and transport effects very efficiently, including:
+A controlled stale-state failure requires stable surface identity, correct current geometry/correspondence and lighting, a physically meaningful indirect transport change, and a frozen learned response that fails to follow the change. Implementation or feature-coordinate errors alone do not establish the phenomenon.
 
-- interreflection,
-- self-shadowing,
-- multiple scattering,
-- near-field transport,
-- complex layered appearance,
-- fine-scale geometry-dependent shading.
+## 2. Present Research Direction (Conditional)
 
-This ability is a major strength of neural transport representations.
+The current primary **candidate to evaluate** is:
 
-However, the learned transport may also become dependent on the **geometry configuration present during training**.
+> Preserve a high-quality pretrained **per-scene or internally multi-part learned transport state**, identify transport-state units invalidated by an unforeseen geometry edit, and reconstruct only those units while preserving unaffected high-quality transport.
 
-When geometry changes substantially — especially under:
+Conceptual sequence:
 
-- non-rigid deformation,
-- articulation,
-- fold creation or disappearance,
-- cross-part approach,
-- self-contact,
-- contact release,
-- compound deformation,
-- other open-ended geometry changes,
+~~~text
+High-quality pretrained learned transport
+    + geometry edit
+    -> affected learned-transport state
+    -> selective invalidation
+    -> selective neural-state reconstruction / refit
+    -> updated transport with unaffected pretrained state preserved
+~~~
 
-some of the previously learned transport may no longer remain physically valid.
+The scientific contribution, if achieved, must concern **learned-state dependency, invalidation semantics, local refit and quality/cost preservation**. An object hierarchy alone is not novel and cannot be used as the contribution claim.
 
-The central research problem is therefore not merely:
+**Present gate is narrower:** before constructing an operational dependency hierarchy, determine whether selective reconstruction is viable even with an offline reference-derived oracle affected-state mask. A positive oracle result is a necessary feasibility indication, not validation of the complete method.
 
-> "Can neural compression be applied to deforming geometry?"
+The previous **Persistent Appearance + Current Configuration-Dependent GI State + Shared Transport Operator** direction is **ON HOLD**, not falsified. Its historical specification is preserved in docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md; Worklogs 28–29 tested two particular K=32 representations and do not falsify all lifecycle-separated representations.
 
-That question is too broad and overlaps with existing work.
+## 3. What the Existing Evidence Actually Establishes
 
-The actual research interest is:
+- **Worklogs 21–22:** stable stationary teaset receiver queries display a large physical T0→T3 indirect transport change after another internal part moves, while frozen 8DNA and RNA respond poorly; the relation-preserving T1 is an important control.
+- **Worklogs 24–25:** the physical change involves indirect-path occlusion and moved-part radiance; stable local query inputs and current direct visibility do not supply the missing nonlocal information.
+- **Worklog 27:** historical scratch T3 regeneration is offline (8DNA envmap first isolated oracle-identified recovery 38.9 min, full schedule ~1.76 h; RNA common-light full schedule ~3.24 h without rule-satisfying recovery). These are not warm-start/selective-refit timings.
+- **Worklog 26:** physical Cycles after geometry change took ~0.22 / 0.76 / 3.0 seconds at 1080p, 16 / 64 / 256 spp on a different scene. These are not quality-matched to the neural results.
+- **Worklog 28, CASE C:** the first K=32 geometric relational sidecar fails held-out T3; a richer reference-derived oracle can recover the change through a shared operator.
+- **Worklog 29, CASE D:** aligned frozen-RNA radiometric proxy is not better than ZERO/SHUFFLED controls and is slow (~3.2 s update); even exact radiance on the same K=32 support fails. Angular support, aggregation and training coverage remain confounded. These failures do not disprove selective neural-state reconstruction.
 
-> **What geometry-dependent information is encoded inside a high-quality neural transport representation, and when geometry changes, what information should remain reusable, what should be updated, and what should be recomputed?**
+Evidence scope: one clean teaset asset family and cross-backbone problem replication; not a general theorem for dynamic neural GI, all materials, or arbitrary deformation. Rain served as a mechanism-development bench but its clean fixed-target physical signal was too weak.
 
----
+## 4. Novelty Boundary From Literature Kill Search
 
-# 2. Core Motivation
+**Already established prior art:**
+- Classical incremental/hierarchical GI dependency and selective recomputation (Drettakis–Sillion 1997; Bala et al. 1999; Luksch et al. 2019).
+- Object-oriented learned transport and dynamic object-conditioned inference (NeLT, TOG 2023; Superposed Deformable Feature Fields, SIGGRAPH Asia 2024).
+- Production dependency-aware incremental precompute at authoring time (Enlighten).
+- Online neural GI adaptation/caching, static/dynamic residual rendering, dynamic PRT and geometric acceleration structure refit.
 
-A static high-quality neural asset can be viewed conceptually as compressing some combination of:
+**Potential surviving technical questions (not proven novelty claims):**
+1. Construct or infer radiometrically meaningful dependencies **for learned transport state units**, which do not necessarily have explicit path provenance.
+2. Map a geometry edit to stale learned-state units without updating nearly the entire representation or missing distant indirect effects.
+3. Selectively refit directional / glossy / multi-bounce learned transport without damaging the unaffected state, with measurable cost benefit.
+4. Demonstrate that learned-state validity and local parameter support can be reconciled under actual neural optimization.
 
-- intrinsic material response,
-- local geometric appearance,
-- microstructure,
-- self-visibility,
-- self-shadowing,
-- intra-object interreflection,
-- higher-order multiple scattering,
-- scene- or asset-specific transport.
+Do not claim novelty for object hierarchy, spatial locality alone, generic cache invalidation, partial GI recomputation, object-wise composition, or persistent-plus-dynamic partitioning.
 
-For a fixed asset configuration, strongly compressing these effects together can be highly effective.
+Some dynamic neural systems already predict high-frequency GI for moving objects within trained configuration distributions. Our potential claim must be **unforeseen post-training geometry edits and incremental learned-state repair**, not simply "dynamic neural GI is impossible."
 
-The architectural problem appears when geometry becomes mutable.
+Selected references: [Drettakis–Sillion 1997](https://maverick.inria.fr/Publications/1997/DS97/dret.pdf), [NeLT 2023](https://doi.org/10.1145/3596491), [Superposed DFF 2024](https://doi.org/10.1145/3680528.3687680), [GLTE preprint](https://arxiv.org/abs/2510.18189), [Neural Radiosity](https://arxiv.org/abs/2105.12319). Preserve uncertainty where paper details are unverified; do not invent absence of prior art.
 
-If a representation trained on geometry state:
+## 5. Scientific Meaning of State and Dependency
 
-\[
-G_0
-\]
+Keep these distinct:
 
-implicitly stores transport associated with that state:
+- **Geometry unit:** object, part, patch, voxel, triangle, or spatial support affected by motion.
+- **Receiver transport sample:** a surface position/direction whose physically correct outgoing radiance can change.
+- **Learned state unit:** independently identifiable and possibly trainable grid entry, patch feature, latent block, etc.
+- **Parameter support:** which predictions depend on a learned unit (including interpolation/collisions).
+- **Radiometric dependency:** how a geometry edit can invalidate predictions associated with a state unit through direct or multi-bounce light paths.
+- **Update set:** units actually modified during refit.
+- **Oracle mask:** offline reference-derived affected estimates, not a deployable dependency detector or automatically a correct parameter mask.
 
-\[
-T(G_0)
-\]
+A changed pixel set is not automatically a learned-state invalidation set. Simple object containment or Euclidean distance cannot represent every nonlocal transport dependency.
 
-then after deformation to:
+## 6. Current Scoped Investigation
 
-\[
-G_1
-\]
+**Immediate test:** an existing spatially/structurally localizable, high-quality **per-scene** neural GI representation; controlled T0 pretrained state and held-out T3 geometry edit; oracle-assisted selective refit vs frozen, full retrain, global warm-start and globally refit eligible local units. Preserve shared weights in controls that test localizable-state updating.
 
-the physically correct transport may instead be:
+Begin with rigid cross-part relative motion and a stationary indirect receiver. Require a radiometrically meaningful reference signal and genuine glossy/multi-bounce effect. The original teaset is preferred if the selected substrate can model it; do not force an incompatible renderer to reproduce the scene.
 
-\[
-T(G_1)
-\]
+Later, only if feasibility passes: develop actual dependency/invalidation, expand to independent scenes, more geometry edits, contact/folds/nonrigid motion, scale and temporally varying updates.
 
-and therefore:
+No requirement to implement object hierarchy, general neural renderer, NURBS, full inverse rendering, a new BRDF model, or cross-representation framework in the first gate.
 
-\[
-T(G_0) \neq T(G_1)
-\]
+## 7. Evidence and Attribution Rules
 
-for some regions or transport components.
+- Synthetic fixtures verify contracts, not real-scene viability.
+- Compare method costs and quality **on the same selected substrate, scene, reference and training regime**. The historical RNA/8DNA scratch costs cannot be a speedup denominator for another model.
+- Compare affected, unaffected and boundary regions independently; show signed change maps, forgetting/seams, update-set coverage, quality-vs-wall-clock and actual updated-state fraction.
+- An oracle may use held-out GT to define a diagnostic mask but this cost and reference dependence must be disclosed; hold back separate evaluation data and do not call oracle timing real runtime performance.
+- An optimization-only speedup is not an end-to-end speedup; count supervision, data movement, validation and update overhead separately.
+- Negative evidence is scoped. An unsuitable substrate or parameter coupling does not universally refute selective neural transport reconstruction.
+- Do not tune thresholds, edit scenes, add heuristics or change evaluation splits after looking at the final result.
 
-The scientific question is not simply whether an image metric becomes worse.
+## 8. Stop / Advancement Rule
 
-The important question is:
+**Do not build a learned transport hierarchy unless oracle-guided partial neural refit first achieves meaningful affected-region recovery, unaffected-state preservation and quality-matched cost reduction relative to appropriate global controls.**
 
-> **Which parts of the learned representation remain semantically valid across the geometry change, and which parts have become stale because they encoded geometry-specific transport?**
+If oracle selective refit fails: attribute whether the cause was insufficient static baseline, learned-parameter nonlocality, invalidation mapping, multi-bounce closure, optimizer coupling, or lack of cost benefit. Stop and report; do not automatically redesign a new substrate in the same batch.
 
----
+If it passes: open a separate controlled batch for practical geometry-to-learned-state radiometric dependency construction. Success is not a full method or paper acceptance.
 
-# 3. Representation-Level View
+## 9. One-Sentence Research Definition
 
-The current research is fundamentally about **representation ownership**.
-
-A useful conceptual distinction is:
-
-## Persistent information
-
-Information that may remain reusable when geometry changes.
-
-Examples may include:
-
-- material identity,
-- local BRDF / BSDF characteristics,
-- texture identity,
-- certain microstructure statistics,
-- transferable appearance priors.
-
-## Geometry-dependent information
-
-Information whose validity depends on the current geometry configuration.
-
-Examples may include:
-
-- self-visibility,
-- contact shadowing,
-- mutual occlusion,
-- cavity structure,
-- inter-part interreflection,
-- geometry-conditioned multiple scattering,
-- some near-field transport dependencies.
-
-The exact boundary is **not yet known**.
-
-Determining that boundary is part of the research.
-
-A useful abstract target is:
-
-\[
-\text{Persistent Appearance}
-+
-\text{Current Geometry}
-\rightarrow
-\text{Current Light Transport}
-\]
-
-However, this equation is only a conceptual framing.
-
-It does **not** imply that explicit factorization is already the chosen solution.
-
----
-
-# 4. What Existing Approaches Already Cover
-
-Do not assume that dynamic neural shading is an unexplored topic.
-
-Existing research already includes approaches that:
-
-1. recompute or predict transport from the current geometry,
-2. generate a new transport state conditioned on pose or deformation,
-3. adapt a neural representation online,
-4. reuse local/object-level transport while dynamically recomputing other components,
-5. generalize transport prediction across multiple geometry or scene configurations.
-
-Therefore:
-
-> **"Use neural compression for deformation" is not itself a novel research contribution.**
-
-The unresolved territory of interest is more specific:
-
-> **Can we understand and redesign the ownership of information inside high-quality neural transport representations so that the fidelity and compression advantages of static neural assets can survive substantially more general geometry changes?**
-
----
-
-# 5. Current Working Hypothesis
-
-The current working hypothesis is:
-
-> A high-quality neural shading / neural light-transport representation trained on a static asset may entangle reusable material appearance with geometry-state-specific light transport.
-
-If this is true, a frozen representation evaluated after intrinsic geometry deformation may retain transport biased toward the original geometry.
-
-Possible observable symptoms include:
-
-- a shadow that should disappear but remains partially encoded,
-- a newly formed cavity whose indirect lighting is not represented correctly,
-- stale interreflection after two surfaces move apart,
-- missing interreflection after two surfaces move closer,
-- incorrect shading around newly formed self-contact,
-- appearance that remains biased toward the canonical pose despite correct current geometry inputs.
-
-This hypothesis must be experimentally tested.
-
-It must not be treated as established fact.
-
----
-
-# 6. Important Distinction: Trivial Failure vs Research-Relevant Failure
-
-A deformation experiment can fail for reasons unrelated to the central research question.
-
-For example:
-
-- the deformed surface queries the wrong spatial feature,
-- canonical/deformed coordinates are mismatched,
-- normals are not updated correctly,
-- tangent frames are stale,
-- the renderer uses inconsistent light/view coordinates,
-- correspondence between canonical and deformed surfaces is broken.
-
-These are implementation or representation-indexing failures.
-
-They are **not sufficient evidence** for geometry-conditioned transport entanglement.
-
-The target phenomenon is stronger:
-
-> The same material/surface identity is preserved correctly, current geometry information is provided correctly, and yet the frozen neural representation still produces transport inconsistent with the new geometry configuration.
-
-Experiments must explicitly separate these cases.
-
----
-
-# 7. Priority Failure Cases
-
-The most informative deformation families currently include:
-
-## Fold Creation / Disappearance
-
-A surface develops or loses a fold or cavity.
-
-Useful for observing:
-
-- new self-shadow,
-- trapped-light regions,
-- new or disappearing interreflection,
-- higher-order cavity transport.
-
-## Cross-Part Approach / Self-Contact
-
-Two surface regions approach, nearly touch, touch, or separate.
-
-Useful for observing:
-
-- mutual visibility changes,
-- contact shadows,
-- near-field transport changes,
-- nonlocal transport dependencies while local surface identity remains mostly unchanged.
-
-## Compound / Open-Ended Deformation
-
-Multiple deformation modes occur together, such as:
-
-- bending + twisting,
-- folding + self-contact,
-- cross-part approach + twist.
-
-Useful for testing whether the representation remains robust outside a simple low-dimensional pose family.
-
----
-
-# 8. Research Sequence
-
-The project should proceed in this order unless evidence motivates a change.
-
-## Stage 1 — Existence
-
-Determine whether high-quality static neural transport representations actually lose validity under meaningful geometry change.
-
-## Stage 2 — Attribution
-
-Determine what causes the failure.
-
-Possible factors include:
-
-- local geometry change,
-- visibility,
-- self-shadowing,
-- interreflection,
-- higher-order transport,
-- representation indexing,
-- insufficient architecture capacity.
-
-## Stage 3 — Boundary
-
-Determine where reuse remains valid and where it breaks.
-
-Questions include:
-
-- which deformation types matter,
-- what deformation magnitude matters,
-- whether failure correlates better with geometric displacement or transport change,
-- whether some transport components remain reusable.
-
-## Stage 4 — Representation Architecture
-
-Only after Stages 1–3 provide evidence, investigate:
-
-- what should remain persistent,
-- what should be conditioned on current geometry,
-- what should be invalidated,
-- what should be updated,
-- what should be recomputed.
-
-## Stage 5 — Dynamic Generalization
-
-Evaluate whether the redesigned representation can extend high-quality neural shading from static assets toward broader dynamic scenes.
-
-## Stage 6 — Inverse Rendering Extension
-
-Only later, if relevant, study how the representation can be recovered from real observations.
-
-Inverse rendering is not required to establish the core representation problem.
-
----
-
-# 9. Research Questions
-
-The current primary research questions are:
-
-### Q1 — Existence
-
-Does a high-quality neural light-transport representation trained on a static asset systematically lose validity when the asset undergoes intrinsic geometry deformation?
-
-### Q2 — Attribution
-
-If failure occurs, which transport components or representation mechanisms are responsible?
-
-### Q3 — Validity Boundary
-
-Under what geometry changes does frozen transport remain reusable, and when does it become invalid?
-
-### Q4 — Representation Ownership
-
-What information should be geometry-invariant, and what information should depend on or be recomputed from current geometry?
-
-### Q5 — Dynamic Reusability
-
-Can a neural asset preserve the fidelity and compression advantages of static neural transport while remaining reusable under substantially more general dynamic geometry?
-
-Q4 and Q5 must not be treated as solved before Q1–Q3 are established experimentally.
-
----
-
-# 10. Current Experimental Philosophy
-
-Experiments should prioritize **directly observable, high-quality failure cases**.
-
-Synthetic scenes are useful for:
-
-- debugging,
-- correspondence validation,
-- controlled attribution.
-
-But synthetic success or failure alone is not enough to establish architectural relevance.
-
-Important claims should ultimately be supported by:
-
-- high-quality neural transport baselines,
-- meaningful non-rigid deformation,
-- path-traced references,
-- quantitative accounting,
-- localized error attribution,
-- human-reviewable visual evidence.
-
-A useful result is not merely:
-
-> "PSNR decreased."
-
-A stronger result is:
-
-> "After surface identity and current local geometry were handled correctly, error became concentrated in newly formed cavity/contact regions where the physical transport changed, while unrelated regions remained stable."
-
----
-
-# 11. What Must Not Be Assumed
-
-Do not assume any of the following without evidence:
-
-- that all modern neural shading methods fail under deformation,
-- that deformation failure is always severe,
-- that neural compression itself is the problem,
-- that explicit factorization is necessarily the correct solution,
-- that online adaptation is inferior,
-- that canonical-space shading is sufficient,
-- that geometry-conditioned MLPs solve the issue,
-- that pose conditioning generalizes to open-ended deformation,
-- that one RNA result generalizes to all neural transport representations,
-- that a synthetic scene proves real high-quality asset behavior,
-- that metric degradation automatically proves transport entanglement.
-
-Negative results are scientifically valid.
-
----
-
-# 12. Premature Solution Space — Do Not Commit Yet
-
-Until the failure is sufficiently established and attributed, do not automatically adopt:
-
-- dynamic latent fields,
-- deformation networks,
-- geometry-conditioned MLPs,
-- temporal networks,
-- online fine-tuning,
-- transport residual prediction,
-- explicit BRDF / transport factorization,
-- canonical-space neural shaders,
-- per-frame adaptation,
-- graph neural networks,
-- transformers,
-- local transport caches.
-
-These remain possible future approaches, not current commitments.
-
----
-
-# 13. Intended Long-Term Direction
-
-If the representation problem is real and can be addressed, the long-term goal is:
-
-> **Extend high-quality static neural shading / neural transport representations into reusable dynamic representations that preserve strong compression and rendering fidelity while remaining physically valid under broader geometry changes.**
-
-Potential downstream domains include:
-
-- animated characters,
-- cloth,
-- hair and fibers,
-- soft-body simulation,
-- interactive game assets,
-- deformable digital twins,
-- destructible or editable assets,
-- physically changing scenes.
-
-The long-term vision may be broad, but early claims must remain bounded by actual evidence.
-
----
-
-# 14. Agent Interpretation Contract
-
-Any Agent working in this repository must keep the following distinction clear:
-
-## Implementation success is not research success.
-
-A script running, a scene rendering, or a metric changing does not establish the research hypothesis.
-
-## Observation and interpretation must remain separate.
-
-Reports should distinguish:
-
-- **IMPLEMENTATION FACT**
-- **MEASUREMENT**
-- **OBSERVATION**
-- **INTERPRETATION**
-- **UNRESOLVED QUESTION**
-
-## Do not optimize toward a desired failure.
-
-Do not:
-
-- tune deformation magnitude purely to maximize error,
-- choose lighting only because it exaggerates a hypothesis,
-- loosen controls because the expected failure is weak,
-- silently modify the baseline representation,
-- interpret bugs as scientific evidence.
-
-## Preserve baselines.
-
-When testing a new mechanism, keep the previous baseline reproducible.
-
-## Stop conditions matter.
-
-If the experiment does not support the hypothesis, report that result rather than adding heuristics until the expected behavior appears.
-
----
-
-# 15. One-Sentence Project Definition
-
-> **This project investigates how high-quality neural shading and neural light-transport representations should partition persistent appearance information and geometry-dependent transport so that their compression and fidelity advantages can remain useful under non-rigid and open-ended geometry change.**
-
----
-
-# 16. Central Intent for Future Agents
-
-When deciding whether a task is aligned with this project, ask:
-
-> **Does this work help determine what information inside a high-quality neural transport representation remains valid across geometry change, what becomes invalid, and how that ownership should eventually be represented?**
-
-If the answer is no, the task is likely peripheral unless explicitly approved.
-
+> **Develop and validate a mechanism for preserving high-quality pretrained neural transport under unforeseen geometry changes by identifying and selectively reconstructing invalid learned transport state, without paying the full cost of recomputation or corrupting valid state.**
