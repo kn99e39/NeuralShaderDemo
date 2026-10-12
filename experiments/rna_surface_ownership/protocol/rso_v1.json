@@ -1,0 +1,82 @@
+{
+  "schema": "rso_protocol/v1",
+  "worklog": 32,
+  "batch": "RNA-Based Representation Ownership, Batch 1 (user prompt 2026-10-12): can a high-quality RNA-style model be decomposed into independently owned surface-domain representations without losing the ability to reproduce the original scene's radiance?",
+  "written": "before any training of this batch; nothing of configuration C2 exists yet",
+
+  "rna": {
+    "repository": "adobe-research/relightable-neural-assets",
+    "commit": "66b5b098e2013db32214e44a439a0cd66d331e4d",
+    "unchanged": "every upstream file; the batch imports rna.models.NeuralSurfaceTriPlane, rna.interfaces.NeuralSurfaceTriplaneModule / NeuralSurfaceDataModule, rna.datasets.NeuralSurfaceDataset and subclasses them in experiments/rna_surface_ownership",
+    "code_facts": {
+      "learned_state": "NeuralSurfaceTriPlane: TriplaneFeatures (three PlaneFeatureGrid parameters, C=8 x 512 x 512, Gaussian-blurred with sigma 8 -> min 1.0 over 20 000 iterations, wrap blur) + ConfigurableMLP (17 -> 512, 4 x 512, -> 6: lit and shadowed RGB)",
+      "optimisation": "Lightning NeuralSurfaceModule: one view (all masked pixels) per step, L2 on log(1+x), shadowed pixels weighted 10 (visibility = binary diffuse_direct), Adam lr 1e-3, StepLR(50 epochs, 0.5), 250 epochs, validation-best checkpoint by val_psnr",
+      "data": "H5 per pixel: color (full GI radiance), position (normalised by the H5 AABB at load), normal, camera_dir, light_dir (per-pixel random directional light), diffuse_direct; produced in this project by experiments/8dna_deformation_replication/rna_bridge.py (worklog 22) from Mitsuba",
+      "renderer": "first hit only; radiance = selected branch x light weight; no path continuation",
+      "identity": "upstream has no part/surface identity: one model per asset, positions in one asset frame"
+    }
+  },
+
+  "ownership_contract": {
+    "unit": "a surface domain of one part, fixed by a partition of the canonical asset surface",
+    "owned_state": "one complete upstream NeuralSurfaceTriPlane per unit (its own triplane framed on the unit's domain AABB + 2% margin, its own MLP); no learned parameter is shared between units",
+    "evaluation_domain": "the unit's surface domain: owner(x) = label of the nearest of 1 000 000 area-uniform surface samples (rso_partition.Owner)",
+    "composition": "each query is evaluated by its owner only (selection, never a sum)",
+    "update_boundary": "all parameters of a unit; a unit update cannot touch another unit's parameters",
+    "preservation": "units not updated keep bit-identical parameters and outputs",
+    "physics": "each unit is supervised by full-scene GI of its own surface (the same H5 targets); ownership does not make transport independent of the rest of the scene"
+  },
+
+  "partitions": {
+    "P1": "one unit (implementation check of the owned path, not bit-identical to A because of the 2% AABB margin)",
+    "P4": "one unit per part (object-level ownership; the coarse-grained instance)",
+    "P16": "surface domains: per part k-means (seed 0) over area-uniform samples, k by area: tray 9, tea pot 4, milk pot 2, tin 1"
+  },
+
+  "capacity": {
+    "matched": "per unit: triplane resolution = round(512 x unit largest extent / dataset AABB largest extent) clamped to [64, 512] (same texel size as A); MLP width = round(512 / sqrt(K)) with the same depth (summed MLP parameters equal to A's); all other model params as A",
+    "unmatched_diagnostic": "P16w: P16 with every unit at A's full size (512^2 triplane, width-512 MLP); reported as a capacity diagnostic only"
+  },
+
+  "configurations": {
+    "C1_canonical": {
+      "scene": "teaset T0, common-light regime (worklog 22, lighting rev 3), Ni_palik Beckmann alpha 0.05 (tray, tea pot) / 0.1 (milk pot, tin)",
+      "data": "worklog-22 H5: teaset_T0_train.h5 sha256 2d4a7d17..., teaset_T0_val.h5 sha256 516ecf4c... (200 / 40 views, 512^2, 512 spp)",
+      "known_limit": "RNA's static ceiling here is weak: worklog 22 val PSNR 18.87 dB, G1 margin 4%; worklog 27's rebuild never satisfied the recovery rule"
+    },
+    "C2_rough": {
+      "scene": "the same geometry, cameras, light distribution and seeds; every part roughconductor Ni_palik alpha 0.3 (Beckmann, Mitsuba default)",
+      "data": "rna_bridge.generate_h5 unchanged with a derived protocol: material alpha 0.3, spp 128, own output directory; 200 / 40 views at 512^2",
+      "reason": "separates RNA's static capacity (limited on near-mirror nickel, worklogs 22/23/27) from the ownership question while keeping glossy conductor interreflection; chosen before any C2 or ownership-arm training",
+      "spp_note": "128 spp chosen for cost (server ~3x slower than the 5080); the rougher lobe lowers per-pixel variance; reported, not tuned"
+    }
+  },
+
+  "arms": {
+    "A": "upstream NeuralSurfaceTriplaneModule, upstream config (rna_teaset_T0.yml values), seed 0",
+    "P1": "OwnedSurfaceTriplaneModule, P1, matched (= A's size)",
+    "P4": "OwnedSurfaceTriplaneModule, P4, matched",
+    "P16": "OwnedSurfaceTriplaneModule, P16, matched",
+    "P16w": "OwnedSurfaceTriplaneModule, P16, unmatched full-size units (diagnostic)",
+    "REINIT": "ownership test from the trained P16: re-initialise unit u* = the P16 tea-pot unit with the most training pixels, freeze every other unit (requires_grad False), train only u* with the same contract (250 epochs); the other 15 units must stay bit-identical (parameters and validation outputs)"
+  },
+  "training": "every arm: the upstream contract above (250 epochs, Adam 1e-3, StepLR 50 / 0.5, log-L2, visibility weight 10), seed 0, validation-best checkpoint written; the final weights (epoch 250) are evaluated (no selection on the evaluation metric)",
+
+  "evaluation": {
+    "data": "the configuration's validation H5 (40 views, one directional light per view), never used for training",
+    "metrics": ["RNA's val PSNR (tonemap x/(1+x), gamma 2.2) over all masked pixels", "display MAE (clamp(x^(1/2.2))) overall, per part, per P16 unit", "boundary vs interior display MAE: pixels whose 4-neighbourhood holds a different P16 owner (same pixel sets for every arm)", "parameters per arm and per unit, training time, inference time per view, peak memory"],
+    "exports": "validation views 0/10/20/30: GT, A, P4, P16, P16w; error maps; P16 owner map; boundary crops"
+  },
+
+  "criteria": {
+    "static_credibility_C1": "RNA (A) static validation error credible for later GI-change experiments if val PSNR >= 25 dB; known to fail (18.87 dB) and reported as such",
+    "static_credibility_C2": "same rule, val PSNR >= 25 dB",
+    "ownership_fidelity": "on a configuration whose A passes static credibility: P16 (matched) val PSNR >= A - 0.5 dB AND P16 display MAE <= 1.10 x A's AND P16 boundary display MAE / A's boundary display MAE <= 1.15 (no extra seam error)",
+    "ownership_semantics": "REINIT: 15 frozen units bit-identical (parameters and outputs); u* validation display MAE after retraining <= 1.10 x its P16 value",
+    "thresholds_are": "predeclared screening values, not physical thresholds; raw numbers reported"
+  },
+
+  "placement": "C1 on LabServer63 (RTX 3080 Ti; worklog-22 data present, sha256 verified) while the RTX 5080 runs worklog 31; C2 data generation and C2 arms on whichever GPU is free first (generation needs Mitsuba: the 5080, or the server with the worklog-23 OptiX libraries)",
+  "out_of_scope": "dependency tracking, dynamic-scene implementation, selective-update efficiency claims, Batch 2",
+  "amendments": []
+}
