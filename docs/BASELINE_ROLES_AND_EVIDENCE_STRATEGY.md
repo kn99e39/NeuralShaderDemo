@@ -1,191 +1,118 @@
-# Baseline Roles and Evidence Strategy — Selective Neural Transport Reconstruction
+# Baseline Roles and Evidence Strategy — Object-Level Selective Neural Transport Recomputation
 
-**Original research operating decision:** 2026-09-28  
-**Last updated:** 2026-10-08  
-**Status:** Active; oracle selective-refit gate F1 run once (worklog 30): negative on the 8DNA teaset triplane
+**Updated:** 2026-10-12  
+**Status:** Active interpretation/control contract; object-level selective recomputation has NOT been experimentally validated  
+**Project:** NeuralShaderDemo / Selective_Recompute
 
-## 0. Why Baseline Roles Must Be Separated
+## 1. Central Scope Correction
 
-This project has strong evidence that learned transport can go stale under changed internal geometry, but **no positive evidence yet that selective neural-state refit is viable**.
+User-defined "selective recomputation" refers to **objects with stale learned transport**, not partial feature grids within a single object/model.
 
-Keep three distinct proof obligations:
+- An invalid object model N_i may be **fully recomputed**, including all its MLP/triplane/directional weights, from scratch or by complete warm-start refitting.
+- A valid object N_j must retain its complete pretrained transport model.
+- A geometry-edited object may affect other **stationary** receiver objects. Discover the radiometric dirty set, not just the moved set.
+- Geometry dirty D_G differs from transport dirty D_T.
+- Current **per-object** ownership and scene-level recomputation semantics are the decision frontier.
 
-1. **Phenomenon:** Does a pretrained neural transport representation fail to follow a physical configuration-dependent GI change?
-2. **Selective-reconstruction feasibility:** Can only affected learned-state units be refit while preserving unaffected transport and saving quality-matched cost?
-3. **Deployable invalidation:** Can an actual non-oracle geometry-edit detector find invalid units efficiently and accurately?
+Previous Worklog 30 tested *inside one 8DNA whole-asset model*: update selected triplane cells, freeze all shared flows, and compare with full-model updating. Negative result valid, but entirely **off-target** as a test of selecting whole object models. Do not include WL30's gate as a blocker for this direction.
 
-Passing one does not establish the others. A synthetic correctness test is not a real-scene architecture proof.
+Prior separate working architectures retained:
+- docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md
+- docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md
 
----
+## 2. Historical Baselines and Evidence Roles
 
-## 1. Historical Problem-Evidence Lineages (Preserve)
+| Lineage | Scientific role | What it does NOT show |
+|---|---|---|
+| RNA/Rain | correspondence, nonrigid failures with known local confounds; fixed-target physical change too weak | generalized failure attribution |
+| 8DNA/Teaset, WL21–22 | stationary receiver's GI changes as another part moves; stable whole-rigid-motion control | that objectwise neural selective recomputation works |
+| RNA/Teaset | independent-backbone repetition of frozen staleness in same scene/light regime | newly proposed model's cross-backbone transfer |
+| WL24–25 | physical attribution: nonlocal indirect-path occlusion plus moved-part reflected radiance | online detector for invalid model owners |
+| WL26–27 | historical full-asset neural and physical ray tracing cost context | same-method per-object quality-matched speedup |
+| WL28–29 | sparse K=32 dynamic transport state candidates negative | selective object rebuilding negative |
+| WL30 | **intra-object** triplane-cell-only refit negative (8DNA triplane with flows frozen) | **whole-object full-model refit** negative |
 
-### 1.1 RNA / Rain — Historical diagnostics
+Do not delete, overwrite, reinterpret, or silently integrate these different questions.
 
-RNA/Rain exposed frozen-deformation failures but had local query/canonical-location confounds. Its fixed-target mechanism probe had a physically weak radiance signal and must not be presented as clean causal proof of missing nonlocal transport.
+## 3. Definition of the Current Substrate
 
-Role: implementation/correspondence/control methodology and historical phenomenon motivation. Do not reopen it just to obtain a positive result.
+Per-object ownership must be real, not nominal. Each object is assigned an independently trainable **complete model N_i** with its own checkpoint and clear surface/radiometric semantics.
 
-### 1.2 8DNA / Teaset — Primary physical stale-state anchor
+Internal model basis can reuse RNA, triplanes, 8DNA, vertex/surface features, directional bases or new components if justified. Never reject an internal representation merely because its partial feature update is difficult.
 
-WL21: stationary receiver surface maintains identity/query while another rigid part changes relation. GT indirect transport changes substantially; frozen 8DNA barely tracks it. Relation-preserving T1 acts as a control. WL27 reproduced an envmap same-state T3 scratch reconstruction near T0 quality; early threshold crossing at 38.9 min was retrospectively identified, not a deployable time-to-recovery. Full schedule ~1.76 h.
+When evaluating a model's quality, ask:
+- Does its output include correct **cross-object** GI at T0/G0?
+- Can it be fully refit on G1 using full-scene reference transport while **other object models** stay frozen?
+- Can the renderer compose object models without double-counting/omitting indirect light?
+- Does its contract support rigid moves, stationary receiver reillumination and valid-object preservation?
+- Are several genuine object owners present, so selection has a nontrivial numerator/denominator?
 
-Role: clean causal stale-state mechanism and historical reconstruction/cost evidence.
+If object-level training or GI composition is inadequate, this is **O0 failure**; stop before invalidation algorithm design.
 
-### 1.3 RNA / Teaset — Same-scene independent-backbone phenomenon replication
+## 4. Matched Scene-Level Experimental Controls
 
-WL22: frozen RNA replicates the nonlocal failure signature under common lighting. RNA static-quality margin is weaker than 8DNA. Common-light rebuild success was not robust: WL22 RNA had borderline recovery, WL27 independent full schedule (~3.24 h) had no rule-satisfying checkpoint.
+Use a genuine multi-object scene, high-quality full-scene transport reference, stable per-object correspondence, physically meaningful T0→T3 indirect transport change, and at least one unaffected object.
 
-Role: cross-backbone **problem replication**, not proof that a new solution transfers between two representations.
+| Arm | Model update scope | Explanation |
+|---|---|---|
+| A — Frozen | no object model updated | shows stale transport baseline |
+| B — All-object scratch | every object model fully retrained from scratch | new-scene capacity/expensive recompute |
+| C — All-object warm-start | all model parameters for every object permitted to refit | strongest obvious global neural adaptation |
+| D — Geometry-dirty only | fully refit directly changed geometry objects | tests mover-only error |
+| E — Oracle transport-dirty | fully refit complete N_i for every radiometrically dirty owner; freeze valid N_j | intended selective object-level upper bound |
+| F — Optional simple spatial selector | fully refit full models of spatially close owners | baseline for dependency selection |
 
-### 1.4 WL24–25 physics/code attribution
+Between C and E **change only which full object models are selected**. Do not freeze shared layers/flow weights within selected models to make them "local". Ensure the comparison uses one partition, architecture, reference, training regime, optimizer and camera/light/material protocol.
 
-Missing transport mixes indirect visibility/occlusion and reflected radiance from the moving part; unchanged receiver local geometry and current direct-visibility features do not carry the needed nonlocal GI. Neither asset result justifies claims about every neural renderer.
+Scratch and warm-start times should be measured independently. A warm refit of *all* objects is not the same as scratch all-object regeneration.
 
-### 1.5 WL28–29 previous architecture candidates
+## 5. Oracle Object Transport-Invalidation and Physical Closure
 
-- WL28: K=32 geometry-only relation state insufficient for held-out T3; richer reference-derived transport oracle through frozen RNA shared operator works.
-- WL29: same K=32 plus aligned runtime frozen-RNA radiometric proxy offers no benefit over zero/shuffled; even exact directional radiance on the same directions fails; proxy state extraction ~3.2 s.
-- Local state, angular support, aggregation, and training-relation coverage are not interchangeable causes. These results falsify the specific tested representations, **not** the whole lifecycle split and **not** the new selective-refit candidate.
+A reference-derived oracle may identify objects whose transport validity changed due to an edit. The classification is not simply "pixels near moving object"; evaluate stable samples on the entire affected object and indirect GI even where its own geometry is static.
 
-Previous RNA sidecar is not automatically the new substrate: partial neural-state refit needs identifiable localizable **trainable GI units**, unlike an unchanged RNA asset with a sidecar residual.
+Track:
+- directly modified geometry objects D_G;
+- all transport-invalid object models D_T, including stationary indirect receivers;
+- objects whose transport remains valid;
+- cross-object dependency paths and higher-bounce propagation;
+- potentially dense dirty closure and cases where no selective cost saving is possible.
 
----
+Predeclare noise floor, affected criterion, surface-sample coverage, object aggregation and independent evaluation split. If output selection validity is uncertain, conservatively invalidate; never claim 100% oracle completeness without justification.
 
-## 2. The New Method-Feasibility Substrate — ONE TESTED (WL30), NEGATIVE
+The oracle detector cost may be reported separately for a conditional upper bound, but cannot disappear in deployment-oriented comparisons.
 
-**Worklog 30:** the released 8DNA teaset asset served as the F1 substrate (criterion-based choice recorded in `experiments/selective_refit_oracle/protocol/sro_v1.json`); Neural Radiosity was audited at code level only and deferred (runtime port and T0/T3 quality unvalidated on this hardware). 8DNA's role therefore extends from problem evidence to **one tested F1 substrate (negative)**; it is still not the method-development base. The negative result is scoped to its triplane state and shared-decoder ownership (section 7, "D fails while C succeeds").
+## 6. Cost and Quality Metrics
 
-The eligibility list below still applies to any further substrate:
+**Quality:** physical reference GI, object-conditioned static T0, all-object T3 oracle comparison, per-object affected/valid error, signed transport-change gain on stationary receivers, glossy reflection bands, global render quality, compositional consistency, light-transport noise.
 
-Prefer an **existing pretrained per-scene neural GI model** with:
-- credible T0 static transport fidelity relative to the changed physical signal;
-- high-frequency glossy/interreflection or multi-bounce transport;
-- localizable learned GI parameters (grid, surface/vertex features, patch blocks, etc.);
-- shared/global parameters that can be held fixed;
-- measurable parameter support under interpolation and hashing;
-- reproducible full train, warm-start refit and targeted optimizer masking;
-- tractable training and reference data on available hardware.
+**Preservation:** complete model tensor identity for retained N_j, same-object prediction stability with appropriate current geometry and light, and scene-level validity. Reusing weights unchanged does not imply physically correct output; transport validity must be checked.
 
-Audit at most two candidate implementations before selection in the F0+F1 batch.
+**Accounting:** object count/size/training steps, |D_G|, |D_T|, updated object percentage and parameter count, per-object reference target generation, path tracing over whole scene, full per-owner optimization, checkpoint traffic, validation, dependency/oracle time, rendering/inference, GPU peak and actual end-to-end wall-clock to matched quality.
 
-Do not choose by model publicity or select RNA/8DNA only because they were historical baselines. Do not create a new neural GI representation in order to satisfy this first gate.
+**Scaling:** scene with low dirty fraction and high dirty fraction; multi-bounce propagation may invalidate many objects. Never use parameter count, object count or traditional reported 8DNA scratch time alone as speedup.
 
-If none qualifies, STOP and report a substrate blocker. This is neither proof nor disproof of general selective neural transport refit.
+**Visual inspection:** moving object, indirectly affected stationary receiver, truly unaffected object, glossy/high-frequency regions, masks and model ownership overlay, image difference maps. Synthetic fixtures for correctness only; real-scene replay needed for method feasibility.
 
----
+## 7. Method and Novelty Comparators (After the Oracle Gate)
 
-## 3. Required F1 Controls (One Substrate / One Scene)
+Traditional selective/hierarchical GI dependency (Drettakis/Sillion, later incremental GI, Enlighten) is explicit prior art. Objectwise neural representation/composition with changing geometry/lighting (NeLT, Superposed Deformable Feature Fields) is also prior art.
 
-| ID | Baseline | Initialization | Trainable parameters | Scientific role |
-|---|---|---|---|---|
-| A | Frozen T0 | pretrained T0 | none | establishes stale-state baseline |
-| B | Scratch full T3 | scratch, same architecture | all ordinarily trainable state | new-configuration reconstruction capacity / quality upper reference |
-| C | Global warm-start T3 | exact pretrained T0 | all ordinarily trainable state | strongest obvious update/continual adaptation alternative |
-| D | Global localized-state T3 | exact pretrained T0 | all eligible local learned-state units, global shared phi frozen | isolates freeze-shared-parameters from selective masking |
-| E | Oracle selective-state T3 | exact pretrained T0 | only reference-derived selected local units, phi and unselected units frozen | tests whether selective refit is possible |
+The defensible technical difference must concern **validity of learned object-owned GI models, correct nonlocal dependency closure, complete object-model incremental refit while retaining others, and measured current-geometry quality/cost improvement**. Neither an object hierarchy nor "per-object neural shaders" is inherently new.
 
-Optional diagnostic: equal-size simple spatial-neighborhood mask, without introducing a new hierarchy.
+Current neural dynamic systems that render new trained transforms without per-object retraining remain important quality/performance baselines; do not assume none exist.
 
-**Fairness:** compare C/D/E with matched supervision, data splits, optimizer schedule, reference, hardware and evaluator. D and E must match trainable-state family and frozen-global contract; only the update mask differs.
+## 8. Interpretation and Stop Conditions
 
-Report separately at fixed training budget and at matched recovered quality. Do not select checkpoints or thresholds based on final held-out T3 evaluation samples.
+- A scene with only one neural-owner model cannot test object-level selection; split ownership or select a new scene.
+- Objectwise GI may be unrepresentable or not composable at enough quality; stop at O0.
+- If a stationarily located receiver has changed indirect transport, a geometry-only selector is insufficient; include it or report error.
+- Oracle update of dirty objects may still require updating most objects; then lack of savings is meaningful negative evidence.
+- A model's whole parameters may be rewritten; selective **within-object** weights are not a required contract.
+- If object models cannot be trained in isolation from each other without inconsistency, attribute the issue and stop before adding a graph.
+- Negative results must be scoped to tested scene/ownership and not generalized to all scene-level learned GI.
 
-**Static-quality prerequisite:** T0 pretrained fidelity must resolve the GT T0→T3 signal. If not, stop prior to candidate verdict. A full T3 scratch fit must demonstrate the chosen substrate can represent the target configuration; otherwise selective failure may be capacity failure.
+## 9. Present Next Question
 
----
+> Can object-owned high-quality neural GI models be recomputed **in their entirety only for the transport-invalid scene objects** while all valid object models remain frozen, with fidelity close to all-object reconstruction and meaningful quality-matched update savings?
 
-## 4. Oracle and Invalid-State Accounting
-
-The oracle can consult high-quality GT at T0/T3 to create a diagnostic affected receiver/query map. This information is allowed in F1 **only to choose the experimental update set**, not as a method-level runtime feature.
-
-The receiver change mask must be mapped to real learned parameter support; report any feature interpolation/hash collisions, global parameter dependencies, and geometry/radiometric influence beyond immediate mover bounds.
-
-A reference-derived affected map is NOT guaranteed to be perfect, especially for:
-- weak-but-nonzero transport changes near the reference noise floor;
-- distant glossy/multi-bounce influence;
-- state units shared across affected and unaffected evaluations;
-- feature hash collisions and learned decoder coupling.
-
-Use disjoint render/validation samples when constructing mask and final quality evaluation. Report mask size, affected query coverage, potentially missed state units and over-invalidation.
-
-Do not use final T3 evaluation radiance to tune mask thresholds, optimizer parameters or checkpoint selection. Report the oracle-building cost separately and do not include it silently in a deployable efficiency claim.
-
----
-
-## 5. Performance / Physical Reference Baselines
-
-**Physical full computation (historical context):** WL26 BMW27 1080p Cycles ~0.22/0.76/3.0 s at 16/64/256 spp on RTX 5080. Different scene/reference and not quality matched to selective-refit tests.
-
-**Neural full regeneration (historical context):** WL27 8DNA envmap T3 scratch first isolated oracle-identified recovery ~38.9 min; fixed schedule ~1.76 h. RNA common-light scratch fixed schedule ~3.24 h with no criterion pass. These pipelines do NOT constitute a global warm-start baseline.
-
-**Required method-level comparators:** same-substrate same-scene B/C/D, end-to-end wall-clock to matched quality, plus optical/physical reference where quality permits. For practical comparisons in later F3/F4, additionally assess NRC/NIRC online cache adaptation, static+dynamic residual GI/Hybrid Rendering, per-frame GI probes and relevant incremental MC as the claims demand.
-
-No method can be declared faster by measuring only optimizer kernel time while ignoring target generation, transfer, masks, validation or loading. Nor is lower parameter count automatically faster.
-
----
-
-## 6. Metrics and Reviewer Exports
-
-**Transport validity:** affected stationary receiver signed T0→T3 change error, relative physical-change error and GT noise floor.
-
-**Reconstruction:** full T3, global warm refit, global-localized refit, and selective refit absolute and change errors in the same regime.
-
-**Preservation:** unaffected query error delta, unintended radiance change, frozen parameter identity, overlap leakage, boundary seams and temporal stability if tested.
-
-**State locality:** eligible unit count, selected count and percentage, genuinely changed units, support coverage, multi-bounce invalidation expansion and memory.
-
-**Cost:** full quality-vs-wall-clock curves; optimization/target generation/mask generation/validation/memory/inference disaggregated; actual matched-quality end-to-end savings vs C and D. A screening target of ~2x vs D with near-D quality is optional only if predeclared.
-
-**Qualitative:** same-exposure GT/frozen/full/global/localized/selective renders, reflection and indirect-occlusion bands, signed difference/error maps, mask/state-support visualizations, unrelated stationary regions and seams.
-
-No synthetic-only architecture pass; no "looks similar" without provenance and error accounting.
-
----
-
-## 7. Interpretation / Stop Rules
-
-- **F0 failure:** no existing substrate with enough quality and localizable state → report substrate limit; do not build another renderer.
-- **B fails:** substrate cannot fit T3 → cannot attribute E failure to selectivity.
-- **D fails while C succeeds:** fixed shared parameters / local-only representation are insufficient → conditional substrate-ownership issue, not oracle mask proof.
-- **E fails while D succeeds:** mask support, parameter locality, multi-bounce closure, data/optimization budget must be disentangled; do not automatically expand masks.
-- **E succeeds but requires nearly all units:** selective locality may be economically meaningless.
-- **E quality succeeds, speed fails:** update mechanism is not a practical selective-recompute result even if parameter masking is correct.
-- **E passes quality and cost:** authorize only a new bounded investigation of actual non-oracle learned-state dependency. Do not declare an entire hierarchy, framework or SIGGRAPH success.
-
-Always separate IMPLEMENTATION FACT, MEASUREMENT, OBSERVATION, INTERPRETATION, UNRESOLVED QUESTION and ARCHITECTURE DECISION.
-
-Stop when the predeclared gate condition is met; do not rescue a negative mechanism with unapproved heuristics, threshold tuning, more model capacity or repeated unbounded optimization.
-
----
-
-## 8. Generality and Publication Claims
-
-One well-controlled teaset case can establish a mechanism, not broad dynamic-GI generality.
-
-A final selective-recompute method should eventually face independent scenes, high-frequency glossy paths, far-field/multi-bounce dependencies, several movers, edit magnitude variation and temporal animation. Nonrigid/contact/fold changes are important long-term but not F1.
-
-The strongest defensible paper claim must show:
-- novelty beyond classic hierarchy / incremental GI / NeLT / Superposed Deformable Feature Fields;
-- genuine learned-state invalidation and partial refit rather than using oracle at runtime;
-- high-quality GI restoration;
-- quantitatively bounded missed dependencies and unaffected-state corruption;
-- cost advantage over same-substrate global adaptation at matched quality.
-
-Cross-backbone problem evidence from WL21–22 is not cross-backbone validation of a new selective-recompute method.
-
----
-
-## 9. Current Decision
-
-**DONE (worklog 30):** one bounded F0+F1 oracle selective-state refit experiment, 8DNA teaset, envmap regime. Outcome: G0, signal and scratch-ceiling gates pass; D (all localized state, shared frozen) recovers only 0.20× of global warm start's stale-error reduction (gate `G_D_meaningful` fails in both seeds); E ≈ D, with unaffected-region degradation (+7.5%) and no cost advantage (2× slower than D to the D-matched target). Cause: shared-decoder ownership plus triplane projection coupling — a substrate result.
-
-**PENDING USER DECISION:** whether to audit a second substrate with 3D-local, decoder-independent state under the same protocol, or to reassess the direction. F2 is not authorized.
-
-**NOT ACTIVE:** K=32 direction-state tuning; RNA sidecar extension; object hierarchy; dependency-predictor implementation; full new renderer; whole-scene dynamic neural GI framework.
-
-**Completion question:**
-
-> With reference-derived oracle invalidation guidance, can we selectively refit a strict subset of pretrained high-quality neural GI state and recover current transport while preserving valid state, with meaningful quality-matched update-cost savings?
-
-A negative answer is a valid result and must be interpreted before selecting the next research hypothesis.
+This is an untested research question. It is not answered by WL30's triplane-cell masking experiment.
