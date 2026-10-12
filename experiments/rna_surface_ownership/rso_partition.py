@@ -102,21 +102,77 @@ def build(name: str):
             "unit_area": np.array([areas[list(PARTS)[unit_part[u]]] * (label == u).sum() / (part == unit_part[u]).sum() for u in range(units)])}
 
 
+def _closest_point_tri(p, a, b, c):
+    """Closest points on triangles (a,b,c) to points p (all (..., 3)); Ericson, Real-Time Collision Detection 5.1.5."""
+    ab, ac, ap = b - a, c - a, p - a
+    d1, d2 = (ab * ap).sum(-1), (ac * ap).sum(-1)
+    bp = p - b
+    d3, d4 = (ab * bp).sum(-1), (ac * bp).sum(-1)
+    cp = p - c
+    d5, d6 = (ab * cp).sum(-1), (ac * cp).sum(-1)
+    vc = d1 * d4 - d3 * d2
+    vb = d5 * d2 - d1 * d6
+    va = d3 * d6 - d5 * d4
+    denom = va + vb + vc
+    denom = np.where(np.abs(denom) < 1e-30, 1e-30, denom)
+    v, w = vb / denom, vc / denom
+    out = a + ab * v[..., None] + ac * w[..., None]                       # interior
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t_ab = np.clip(d1 / (d1 - d3), 0, 1); t_ac = np.clip(d2 / (d2 - d6), 0, 1)
+        t_bc = np.clip((d4 - d3) / ((d4 - d3) + (d5 - d6)), 0, 1)
+    cond = [(d1 <= 0) & (d2 <= 0), (d3 >= 0) & (d4 <= d3), (d6 >= 0) & (d5 <= d6),
+            (vc <= 0) & (d1 >= 0) & (d3 <= 0), (vb <= 0) & (d2 >= 0) & (d6 <= 0),
+            (va <= 0) & ((d4 - d3) >= 0) & ((d5 - d6) >= 0)]
+    cand = [a, b, c, a + ab * np.nan_to_num(t_ab)[..., None], a + ac * np.nan_to_num(t_ac)[..., None],
+            b + (c - b) * np.nan_to_num(t_bc)[..., None]]
+    for cnd, val in zip(reversed(cond), reversed(cand)):
+        out = np.where(cnd[..., None], val, out)
+    return out
+
+
 class Owner:
-    """Nearest-dense-sample owner lookup (scipy cKDTree)."""
+    """Owner lookup.  Part: exact point-to-triangle distance to each part's mesh (32 nearest
+    triangles by centroid); domain: nearest dense sample of that part."""
+
+    K_TRI = 32
 
     def __init__(self, npz):
         from scipy.spatial import cKDTree
 
         z = np.load(npz)
         self.x, self.label, self.part = z["x"], z["label"], z["part"]
-        self.tree = cKDTree(self.x)
         self.units = int(z["units"])
         self.unit_lo, self.unit_hi = z["unit_lo"], z["unit_hi"]
+        self.meshes, self.tri_trees, self.sample_trees = [], [], []
+        for pi, (p, f) in enumerate(PARTS.items()):
+            v, fa = read_obj(TEASET / f)
+            tri = v[fa]
+            self.meshes.append(tri)
+            self.tri_trees.append(cKDTree(tri.mean(1)))
+            m = self.part == pi
+            self.sample_trees.append((cKDTree(self.x[m]), self.label[m]))
+
+    def part_of(self, pos):
+        pos = np.asarray(pos, np.float64)
+        dist = np.empty((len(pos), len(self.meshes)))
+        for pi, (tri, tree) in enumerate(zip(self.meshes, self.tri_trees)):
+            k = min(self.K_TRI, len(tri))
+            _, idx = tree.query(pos, k=k, workers=-1)
+            t = tri[idx]                                   # (N, k, 3, 3)
+            q = _closest_point_tri(pos[:, None, :], t[..., 0, :], t[..., 1, :], t[..., 2, :])
+            dist[:, pi] = np.linalg.norm(q - pos[:, None, :], axis=-1).min(1)
+        return dist.argmin(1), dist.min(1)
 
     def __call__(self, pos):
-        d, i = self.tree.query(np.asarray(pos, np.float64), workers=-1)
-        return self.label[i], d
+        pos = np.asarray(pos, np.float64)
+        part, dpart = self.part_of(pos)
+        lab = np.empty(len(pos), np.int64)
+        for pi, (tree, labels) in enumerate(self.sample_trees):
+            m = part == pi
+            if m.any():
+                _, i = tree.query(pos[m], workers=-1)
+                lab[m] = labels[i]
+        return lab, dpart
 
 
 def main() -> int:
