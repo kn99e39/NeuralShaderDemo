@@ -1,18 +1,22 @@
 # Working On This Repo
 
-## Selective_Recompute research gate (2026-10-08)
+## Selective_Recompute research gate — Corrected object-level intent (2026-10-12)
 
-This branch investigates a **conditional** selective neural-state reconstruction hypothesis, not an already validated new method.
+**User-confirmed definition:** Selective recomputation means **recompute the ENTIRE neural transport model for each scene object whose learned transport was invalidated by a geometry edit**, while keeping **entire models** belonging to transport-valid objects unchanged.
 
-**ACTIVE next experiment: F0+F1 oracle-guided selective partial refit.** Before implementing any hierarchy or dependency detector, determine whether an existing high-quality per-scene neural GI representation has a nontrivial subset of learned transport state that can be refit selectively at comparable quality and lower cost. Preserve unaffected learned units and measure both parameter identity and output-level quality.
+Never reinterpret this as selecting only triplane cells, local features, a subset of MLP layers, or another intra-object parameter mask.
 
-Required matched comparisons on the same substrate/scene: frozen pretrained T0, scratch T3, global warm-start T0→T3, global localized-state refit with shared weights frozen, and oracle-selective local-state refit with identical frozen shared weights.
+**Geometry-dirty D_G and transport-dirty D_T differ.** When a milk pot moves, stationary teapot/tray object models can be transport-invalid because their indirect GI changes. A mover-only rebuild does not necessarily suffice.
 
-**Do NOT** build an object hierarchy, adaptive invalidation predictor, a novel neural renderer or a new transport representation within this feasibility batch. Do not claim oracle-assisted timing is deployable runtime performance. Stop if the selected substrate lacks sufficient quality or localizable trainable state, if selective refit cannot match global-local refit quality while preserving unaffected state, or if update-cost savings vanish.
+**Active research decision frontier: O0/O1 object-level feasibility.** First show high-quality separately-owned neural GI object models can be trained and composed against full-scene GI (O0); then, with an offline oracle object-dirty set, fully refit only invalid object models (O1). Only after this evidence and a new user decision may work on deployable object-to-object transport dependency/hierarchy proceed.
 
-The previous persistent appearance + dynamic GI state approach is on hold and archived at docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md. Worklogs 21–29 are historical evidence; do not modify their outcomes. The old K=32 prototype failures do not constitute proof against every possible dynamic-state architecture.
+**Matched controls:** frozen T0 object models; all-object scratch reconstruction; all-object full-parameter warm-start refit; directly geometry-changed object(s) only; oracle transport-dirty object(s) full-model refit; optional simple spatial object selection. Use the same scene partition, model family, reference supervision and refit contract. **Every parameter of each selected object model is eligible to update.**
 
-Read the four living documents for the active decision frontier; use historic Worklogs for evidence only. Do not proceed automatically from F1 to F2 after a positive result.
+**Historical scope:** Worklog 30 validly tested selective triplane-cell masking inside a single 8DNA all-parts asset while shared layers were frozen; its negative result is **not** a test of this clarified object-level approach. Keep Worklogs 21–30 unchanged. Superseded intra-object hypothesis archived in docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md; previous lifecycle-separation hypothesis archived in docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md.
+
+**Do NOT** resume intra-object feature masking as the main experiment, assume the historical single-asset 8DNA teaset is already decomposed into independent object models, ignore stationary transport-dirty receivers, implement an object hierarchy before proving oracle whole-object update viability, or automatically advance to larger implementation after a result.
+
+Keep actual code changes and future experiments subject to user research decisions. Doc correction is not approval to implement O0/O1.
 
 ---
 
