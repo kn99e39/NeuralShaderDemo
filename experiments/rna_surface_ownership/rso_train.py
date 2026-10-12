@@ -109,10 +109,8 @@ def main() -> int:
     trainer = pl.Trainer(logger=logger, default_root_dir=str(out), accelerator="gpu", max_epochs=conf.num_epochs,
                          devices=[0], callbacks=[ckpt, tcb], enable_progress_bar=False)
     t_fit = time.time()
-    data.setup()
-    t_data = time.time() - t_fit
-    trainer.fit(model, data)
-    rec["seconds"] = {"total": time.time() - t_start, "fit": time.time() - t_fit, "data_setup": t_data}
+    trainer.fit(model, data)  # Lightning calls data.setup() (H5 ingest, owner assignment) inside fit
+    rec["seconds"] = {"total": time.time() - t_start, "fit_including_data_setup": time.time() - t_fit}
     rec["epochs"] = tcb.epochs
     rec["best_ckpt"] = ckpt.best_model_path
     rec["best_val_psnr"] = float(ckpt.best_model_score) if ckpt.best_model_score is not None else None
