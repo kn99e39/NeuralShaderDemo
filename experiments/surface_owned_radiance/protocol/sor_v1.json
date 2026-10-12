@@ -1,0 +1,121 @@
+{
+  "schema": "sor_protocol/v1",
+  "worklog": 31,
+  "purpose": "Representation ownership study: a transport representation whose learned state is radiometric (explicit outgoing >= 2-vertex radiance), owned by surface units of ONE object each, with no learned shared decoder; tested for T0 quality, all-local recovery of the teaset T0 -> T3 change, and whole-object oracle selective refit. Written after the T0-only capacity pilot and before any T3 fit, oracle or evaluation of this batch.",
+  "living_documents": "docs at 6738be1 (object-level intent, 2026-10-12): selection is reported at WHOLE-OBJECT granularity (all units of a dirty part refit; every unit of a clean part frozen). A unit-level oracle subset is run only as a labelled secondary diagnostic (the batch prompt's 'oracle-selected partial-state refit'), never as the main selection result. This batch uses one substrate; the user's O0/O1 preference to compare explicit tables with per-object RNA is recorded for a later batch.",
+  "prior_art_audit": "workflow wf_9eab5e1a-2d3 + critic: Vertex Features (SA 2025), Neural Radiosity (2021) and OctaOctree NR condition a shared decoder that owns directional/glossy structure; Frequency-Aware Spatio-Angular Gaussians (EGSR 2026), Gaussian Light Transport (SA 2026) and N-D Gaussians (SIGGRAPH 2024) own radiance directly but have no runnable code on this hardware; no released implementation satisfies both local ownership and local support. Teaset BSDF verified: roughconductor Ni_palik, Beckmann (Mitsuba default), alpha 0.05 (tray, tea pot) / 0.1 (milk pot, tin).",
+  "representation": {
+    "unit": "one anchor on ONE part (per-part voxel of size h x dominant-normal bin), stored in the part's canonical frame so it moves rigidly with the part",
+    "state": "per unit an RGB table over the full sphere of outgoing directions (octahedral map, res x res, in the anchor's normal frame: upper hemisphere = front side, lower = back side of two-sided surfaces); entries are linear outgoing radiance of paths with >= 2 asset vertices",
+    "query": "L_ind(x, w) = sum_k wgt_k(x) * bilinear(table_{a_k}, oct(frame_{a_k}^T w)); wgt = partition-of-unity Wendland C2 weights, radius 1.5 h, of up to 16 anchors on the same part whose normal agrees with the query's geometric normal (dot > 0.3)",
+    "shared_computation": "fixed only (anchor search, interpolation, frames, octahedral map); no learned shared parameter exists, so 'all-local refit with global computation frozen' coincides with all-object refit",
+    "object_model": "N_i = all units of part i (plate, teapot2 = milk pot (mover), teapot3 = biscuit tin, teapot4 = tea pot)",
+    "direct_light": "not owned: the v = 1 (and camera-emitter v = 0) classes are taken from the physical estimator at the current geometry (worklog-24 class images, 1024 spp seed A), as 8DNA computes direct analytically",
+    "h": 0.02,
+    "res": 32,
+    "resolution_choice": "T0-only pilot (results/surface_owned_radiance/pilot/h02_r32): after 400 steps T0 total display MAE interaction 0.039 / R_aff_stat 0.045 / R_unaff 0.027 vs 8DNA 0.034 / 0.054 / 0.025, still improving; finer configurations were not tried"
+  },
+  "supervision": {
+    "estimator": "experiments/8dna_deformation_replication/transport_decomposition.decompose (worklog 24; Mitsuba 3.5.1 prb/path primal re-implementation, validated against Mitsuba C++ path), unchanged",
+    "query": "area-uniform point on a part, random side, uniform outgoing direction in that side's hemisphere with cos >= 0.05; ray starts 2e-3 outside along w and points at the point; accepted if the first hit is that point on that part (|hit - x| < 2e-4)",
+    "target": "1-spp MC estimate of the >= 2-vertex outgoing radiance in the CURRENT whole scene (cross-object transport included)",
+    "online": "fresh queries and targets every step (no stored dataset)"
+  },
+  "fit_contract": {
+    "loss": "mean squared error in linear radiance over accepted queries",
+    "optimizer": "Adam, lr 0.02, cosine to 0.001 over the arm's steps; trainable units held in a sub-table parameter, frozen units read from a constant table",
+    "pretrain_T0": {
+      "init": "zeros",
+      "steps": 3200,
+      "batch": 524288,
+      "seed": 3,
+      "pool": 32000000
+    },
+    "arms_budget_steps": 1600,
+    "global_batch": 524288,
+    "subset_batch": "round(global_batch x support_fraction), support_fraction = share of area-uniform surface positions whose stencil reads a trainable unit (same per-unit sample density as the all-object arms)",
+    "snapshot_steps": [
+      0,
+      50,
+      100,
+      200,
+      400,
+      800,
+      1600
+    ],
+    "seeds": {
+      "all": 0,
+      "replicate": {
+        "seed": 1,
+        "arms": [
+          "C",
+          "E"
+        ]
+      }
+    }
+  },
+  "oracle": {
+    "role": "offline reference-derived upper-bound control; not a runtime mechanism; its cost is reported separately",
+    "queries": 16777216,
+    "seeds": {
+      "primary": 31031,
+      "replicate": 31032
+    },
+    "method": "the same queries (canonical frame) traced in T0 and T3 with common random numbers; per query dL = |L_T3 - L_T0| (RGB mean, >= 2-vertex class); per unit E_u = sum_q w_qu dL_q; per object E_i = sum over its units",
+    "object_dirty_rule": "object i is transport-dirty if E_i / sum E >= 0.02; sensitivity at 0.01 and 0.05 reported, never used to change the arms",
+    "geometry_dirty": [
+      "teapot2"
+    ],
+    "unit_mask_diagnostic": "M95: smallest top-E_u set covering 95% of sum E_u",
+    "object_dirty_rule_threshold": 0.02,
+    "object_dirty_sensitivity_thresholds": [
+      0.01,
+      0.05
+    ]
+  },
+  "arms": {
+    "A": "frozen: T0 tables evaluated at T3 (units move with their part)",
+    "B": "all-object scratch: every unit, init zeros",
+    "C": "all-object warm start: every unit, init T0 (identical to all-local refit: no learned shared state)",
+    "DG": "geometry-dirty only: every unit of the milk pot, warm start; others frozen",
+    "E": "oracle transport-dirty objects: every unit of each object in D_T, warm start; all other objects frozen (bitwise)",
+    "U": "diagnostic only: unit-level oracle M95, warm start, everything else frozen",
+    "E5": "sensitivity: oracle transport-dirty objects at the predeclared 0.05 sensitivity threshold, whole-object warm refit, others frozen; run regardless of whether it differs from E; never replaces E as the primary selection result"
+  },
+  "evaluation": {
+    "camera": "T3 (and T0 for the own-T0 rule), 512^2, 4 x 4 jittered sub-pixel lattice (seed 5), learned indirect per pixel; total = WL24 class images v0 + v1 of that state + learned indirect",
+    "references": "results/8dna_replication/w21_reference_correction/<state>/gt_A|gt_B.exr; indirect reference = WL24 classes v >= 2 (1024 spp seed A)",
+    "regions": "results/selective_refit_oracle/v1_bc085ea/regions/regions.npz (worklog-30 regions: R_aff_stat, R_unaff, R_mover, R_aff, ...) and per-object pixel masks from its part_T3 map; interaction ROI of gt_design/v2",
+    "metrics": [
+      "display MAE vs reference per region and per object",
+      "indirect linear MAE vs the WL24 indirect reference",
+      "worklog-22 refit rule on the interaction ROI (own T0 = this representation's T0 total)",
+      "transport-change tracking on stable pixels: gain, E_delta, R_delta",
+      "angular fidelity: held-out T3 queries (500 000, 32 spp, seed 51051) relative MAE per object",
+      "preservation: bitwise parameter identity of frozen objects, pixel identity of pixels reading only frozen units",
+      "cost: adaptation latency (T3 handed to snapshot written, excluding evaluation), supervision tracing vs optimisation, samples, updated entries, peak memory"
+    ]
+  },
+  "gates": {
+    "G0_O0_static": "T0 composed total error below the reference T0->T3 change in the interaction ROI and R_aff_stat, AND interaction-ROI T0 error <= 1.25 x the released 8DNA T0 error (0.034)",
+    "G_local": "C (all units, warm) recovers at the budget: interaction-ROI rule (ratio <= 1.25 to own T0 and gain >= 0.5) AND R_delta(R_aff_stat) <= 0.5; if it fails the batch stops before E and attributes",
+    "E_screen": {
+      "quality": "E R_aff <= 1.10 x C R_aff (final, each seed)",
+      "preservation": "frozen objects bitwise identical; pixels reading only frozen units identical",
+      "nontrivial": "D_T is a strict subset of the objects; if D_T = all objects, E = C and the result is reported as dense dirty closure",
+      "cost": "t_C(Q*) / t_E(Q*) >= 2 with Q* = 1.10 x C_final R_aff (snapshot resolution); fixed-budget cost reported regardless"
+    },
+    "thresholds_are": "predeclared screening values; raw numbers reported"
+  },
+  "stop_rules": "one candidate; no resolution sweep, new basis, threshold change or extra arm after T3 results",
+  "amendments": [
+    {
+      "when": "before any evidence run (2026-10-12, smoke profiling)",
+      "what": "global batch 1 048 576 -> 524 288 and steps doubled (T0 pretraining 1600 -> 3200, arms 800 -> 1600; snapshots rescaled) to keep the same sample budget: at 1 M queries per step the DrJit wavefront state pushed whole-GPU memory to 15.8 GB (WDDM spill), slowing tracing 3-4x and backward 7x; at 524 288 the step uses 9.4 GB and takes ~0.39 s. No T3 fit, oracle or evaluation had run."
+    },
+    {
+      "when": "before any evidence run (2026-10-12)",
+      "what": "added arm E5 (dirty set at the already-predeclared 0.05 sensitivity threshold). Disclosure: a 2 M-query smoke oracle (pipeline check, not evidence) had shown object shares plate 0.59 / milk pot 0.25 / tea pot 0.13 / tin 0.027, i.e. the primary 0.02 rule may mark every object dirty (E = C). The primary threshold is unchanged; E5 only adds a labelled sensitivity arm so a strict-subset selection is also measured."
+    }
+  ]
+}
