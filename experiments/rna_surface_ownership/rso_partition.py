@@ -134,7 +134,9 @@ class Owner:
     """Owner lookup.  Part: exact point-to-triangle distance to each part's mesh (32 nearest
     triangles by centroid); domain: nearest dense sample of that part."""
 
-    K_TRI = 32
+    K_TRI = 96          # parts with more triangles than ALL_TRI: this many nearest triangles by centroid
+    ALL_TRI = 600       # parts with at most this many triangles (tray 285, tin 555): every triangle
+    CHUNK = 20000
 
     def __init__(self, npz):
         from scipy.spatial import cKDTree
@@ -156,11 +158,15 @@ class Owner:
         pos = np.asarray(pos, np.float64)
         dist = np.empty((len(pos), len(self.meshes)))
         for pi, (tri, tree) in enumerate(zip(self.meshes, self.tri_trees)):
-            k = min(self.K_TRI, len(tri))
-            _, idx = tree.query(pos, k=k, workers=-1)
-            t = tri[idx]                                   # (N, k, 3, 3)
-            q = _closest_point_tri(pos[:, None, :], t[..., 0, :], t[..., 1, :], t[..., 2, :])
-            dist[:, pi] = np.linalg.norm(q - pos[:, None, :], axis=-1).min(1)
+            for s0 in range(0, len(pos), self.CHUNK):
+                pp = pos[s0:s0 + self.CHUNK]
+                if len(tri) <= self.ALL_TRI:
+                    t = np.broadcast_to(tri[None], (len(pp),) + tri.shape)
+                else:
+                    _, idx = tree.query(pp, k=self.K_TRI, workers=-1)
+                    t = tri[idx]                           # (n, k, 3, 3)
+                q = _closest_point_tri(pp[:, None, :], t[..., 0, :], t[..., 1, :], t[..., 2, :])
+                dist[s0:s0 + self.CHUNK, pi] = np.linalg.norm(q - pp[:, None, :], axis=-1).min(1)
         return dist.argmin(1), dist.min(1)
 
     def __call__(self, pos):
