@@ -2,7 +2,7 @@
 H5 producer (rna_bridge.generate_h5, unchanged) on the teaset T0 with every part's roughconductor
 alpha set to 0.3 (Beckmann, Mitsuba default), 128 spp, written to this batch's own directory.
 
-    windows/run.ps1 ../rna_surface_ownership/rso_data_c2.py --out <batch dir> --split train|val
+    windows/run.ps1 ../rna_surface_ownership/rso_data_c2.py --batch-dir <batch dir> --split train|val
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ SPP = 128
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--batch-dir", required=True)
     ap.add_argument("--split", required=True, choices=("train", "val"))
     args = ap.parse_args()
     import ednalib as L
@@ -32,7 +32,7 @@ def main() -> int:
 
     L.init_upstream()
     base = json.loads((REPL / "protocol" / "teaset_cross_backbone_locked.json").read_text(encoding="utf-8"))
-    out = Path(args.out).resolve()
+    out = Path(args.batch_dir).resolve()
     ds_dir = out / "datasets_c2"
     ds_dir.mkdir(parents=True, exist_ok=True)
     derived = dict(base)
