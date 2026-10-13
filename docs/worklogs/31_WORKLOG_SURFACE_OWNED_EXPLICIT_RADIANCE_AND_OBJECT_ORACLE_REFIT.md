@@ -100,8 +100,8 @@ only as a labelled diagnostic.
 ## IMPLEMENTATION FACT
 
 - **Code:** `experiments/surface_owned_radiance/` (README lists every file). Commits:
-  `2fe3a10` (all code, protocol, tests, evidence chain) and `d726b5a`-era helpers. Every evidence
-  stage ran at `2fe3a10` from a clean tree.
+  `2fe3a10` (all code, protocol, tests, evidence chain). Every evidence stage ran at `2fe3a10`
+  from a clean tree.
 - **Protocol `protocol/sor_v1.json`:** predeclared, with four amendments before any T3 fit:
   1. batch 524 288 with doubled steps (1 M batches spilled GPU memory);
   2. arm E5 added, with disclosure that a 2 M-query smoke oracle had shown the tin near the 2%
