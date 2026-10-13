@@ -85,7 +85,13 @@ class OwnedTriplaneSet(nn.Module):
             if not bool(sel.any()):
                 continue
             local = ((world[sel] - self.lo[k]) / (self.hi[k] - self.lo[k])).clamp(0.0, 1.0)
-            o = unit(local.unsqueeze(0), camera_dir[sel].unsqueeze(0), light_dir[sel].unsqueeze(0), normal[sel].unsqueeze(0))
+            c, l, n = camera_dir[sel], light_dir[sel], normal[sel]
+            single = local.shape[0] == 1
+            if single:  # upstream PlaneFeatureGrid squeezes (1, 1, 2) to (2,); evaluate a duplicate, keep one
+                local, c, l, n = (t.repeat(2, 1) for t in (local, c, l, n))
+            o = unit(local.unsqueeze(0), c.unsqueeze(0), l.unsqueeze(0), n.unsqueeze(0))
+            if single:
+                o = o[:, :1]
             if out is None:
                 out = torch.zeros(*pos.shape[:-1], o.shape[-1], dtype=o.dtype, device=o.device)
             out[sel] = o.squeeze(0)
