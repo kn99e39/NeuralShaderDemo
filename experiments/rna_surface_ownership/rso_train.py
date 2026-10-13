@@ -67,7 +67,11 @@ def main() -> int:
 
         with h5py.File(conf.training_dataset, "r") as f:
             aabb = (np.array(f.attrs["aabb_min"], np.float64), np.array(f.attrs["aabb_max"], np.float64))
-        specs = M.unit_specs(args.partition, dict(conf.model_params), aabb, matched=bool(args.matched))
+        from omegaconf import OmegaConf
+
+        # plain containers: with K=1 or --matched 0 the params pass through unchanged (ListConfig is not JSON-serialisable)
+        base_params = OmegaConf.to_container(conf.model_params, resolve=True)
+        specs = M.unit_specs(args.partition, base_params, aabb, matched=bool(args.matched))
         owner = Owner(args.partition)
         model = M.OwnedSurfaceTriplaneModule(conf, specs=specs, dataset_aabb=aabb, **conf.interface_params)
         data = M.OwnedSurfaceDataModule(conf, owner=owner, **conf.data_interface_params)
