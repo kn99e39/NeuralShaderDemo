@@ -154,20 +154,44 @@ class Owner:
             m = self.part == pi
             self.sample_trees.append((cKDTree(self.x[m]), self.label[m]))
 
+    MARGIN = 0.010      # parts whose nearest dense sample is within this of the best one are candidates
+
+    def _exact(self, pos, pi):
+        tri, tree = self.meshes[pi], self.tri_trees[pi]
+        out = np.empty(len(pos))
+        for s0 in range(0, len(pos), self.CHUNK):
+            pp = pos[s0:s0 + self.CHUNK]
+            if len(tri) <= self.ALL_TRI:
+                t = np.broadcast_to(tri[None], (len(pp),) + tri.shape)
+            else:
+                _, idx = tree.query(pp, k=self.K_TRI, workers=-1)
+                t = tri[idx]
+            q = _closest_point_tri(pp[:, None, :], t[..., 0, :], t[..., 1, :], t[..., 2, :])
+            out[s0:s0 + self.CHUNK] = np.linalg.norm(q - pp[:, None, :], axis=-1).min(1)
+        return out
+
     def part_of(self, pos):
+        """Part by exact point-to-triangle distance.  Fast path: per-part nearest dense sample; a
+        point whose best part is not challenged by another part within MARGIN takes it directly
+        (the true part's nearest sample is at most the sample spacing away, ~2.4 mm on average);
+        challenged points (contact zones) get exact distances to every candidate part's triangles."""
         pos = np.asarray(pos, np.float64)
-        dist = np.empty((len(pos), len(self.meshes)))
-        for pi, (tri, tree) in enumerate(zip(self.meshes, self.tri_trees)):
-            for s0 in range(0, len(pos), self.CHUNK):
-                pp = pos[s0:s0 + self.CHUNK]
-                if len(tri) <= self.ALL_TRI:
-                    t = np.broadcast_to(tri[None], (len(pp),) + tri.shape)
-                else:
-                    _, idx = tree.query(pp, k=self.K_TRI, workers=-1)
-                    t = tri[idx]                           # (n, k, 3, 3)
-                q = _closest_point_tri(pp[:, None, :], t[..., 0, :], t[..., 1, :], t[..., 2, :])
-                dist[s0:s0 + self.CHUNK, pi] = np.linalg.norm(q - pp[:, None, :], axis=-1).min(1)
-        return dist.argmin(1), dist.min(1)
+        d = np.stack([tree.query(pos, workers=-1)[0] for tree, _ in self.sample_trees], 1)
+        best = d.min(1)
+        cand = d <= best[:, None] + self.MARGIN
+        part = d.argmin(1)
+        dist = best.copy()
+        amb = np.flatnonzero(cand.sum(1) > 1)
+        if len(amb):
+            de = np.full((len(amb), len(self.meshes)), np.inf)
+            for pi in range(len(self.meshes)):
+                m = cand[amb, pi]
+                if m.any():
+                    de[m, pi] = self._exact(pos[amb[m]], pi)
+            part[amb] = de.argmin(1)
+            dist[amb] = de.min(1)
+        self.last_ambiguous = len(amb)
+        return part, dist
 
     def __call__(self, pos):
         pos = np.asarray(pos, np.float64)
