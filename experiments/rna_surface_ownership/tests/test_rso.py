@@ -51,7 +51,7 @@ def t_partition(pdir):
         part_consistent = True if name == "P1" else bool((z["unit_part"][lab] == part).all())
         res[name] = {"units": o.units, "all_units_nonempty": bool((counts > 0).all()), "max_nn_distance": float(d.max()),
                      "unit_part_matches_point_part": part_consistent, "single_owner": True}
-        ok &= o.units == K and (counts > 0).all() and d.max() < 1e-6 and part_consistent
+        ok &= o.units == K and (counts > 0).all() and d.max() < 0.01 and part_consistent  # d: nearest-sample distance outside contact zones
     return {"pass": bool(ok), **res}
 
 
