@@ -149,7 +149,9 @@ def main() -> int:
     ap.add_argument("--partitions", required=True)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
-    out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
+    out = Path(args.out).resolve(); out.mkdir(parents=True, exist_ok=True)
+    import os
+    os.chdir(out)  # upstream RNA writes feature-grid dumps (yz_grid.exr) into the working directory
     tests = {"partition": lambda: t_partition(args.partitions), "routing": t_routing,
              "single_unit_equivalence": t_single_unit_equivalence, "isolation_and_checkpoint": lambda: t_isolation_and_checkpoint(out)}
     res = {}

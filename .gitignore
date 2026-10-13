@@ -9,3 +9,6 @@ results/
 # under an explicit artifact directory may be committed.
 *.ckpt
 *.h5
+
+# upstream RNA writes feature-grid dumps into the working directory
+experiments/rna_surface_ownership/*.exr
