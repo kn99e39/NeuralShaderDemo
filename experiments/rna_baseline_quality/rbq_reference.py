@@ -83,13 +83,19 @@ def main() -> int:
             jobs.insert(0, ("orig", gen["spp"], seed))
         rec["views"][v] = {"origin": origin.tolist(), "to_light": to_light[0].tolist(), "dataset_seed": seed}
         for name, spp, s in jobs:
+            if (out / f"{args.config}_view{v}_{name}.npz").exists():  # resume after an interrupted run (deterministic seeds)
+                print(args.config, v, name, "exists, skipped", flush=True)
+                continue
             t0 = time.time()
             view = B.render_view(scene, sensor, res, tl, spp, gen["chunk"], s, gen["irradiance"])
             rec["seconds"][f"{v}_{name}"] = time.time() - t0
             np.savez_compressed(out / f"{args.config}_view{v}_{name}.npz", color=view["color"].astype(np.float32),
                                 alpha=view["alpha"].astype(np.float32))
             print(args.config, v, name, spp, f"{rec['seconds'][f'{v}_{name}']:.0f}s", flush=True)
-    (out / f"{args.config}_reference.json").write_text(json.dumps(rec, indent=1))
+    old = out / f"{args.config}_reference.json"
+    if old.exists():  # keep the timings of the interrupted run's views
+        prev = json.loads(old.read_text()); prev["seconds"].update(rec["seconds"]); rec["seconds"] = prev["seconds"]
+    old.write_text(json.dumps(rec, indent=1))
     return 0
 
 

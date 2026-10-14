@@ -126,6 +126,12 @@ def main() -> int:
         row["gt_logl1_ref"] = float(np.abs(np.log1p(gt) - np.log1p(np.clip(ref, 0, None))).mean())
         row["gt_rel_std_lit"] = float(np.sqrt(((gt - rep) ** 2 / 2).mean(1)[vis > 0].mean()) / max(ref[vis > 0].mean(), 1e-9)) if (vis > 0).any() else None
         row["gt_max"] = float(gt.max()); row["ref_max"] = float(ref.max())
+        cp = rd.parent / "clamped" / f"{args.cfg}_view{v}_clamped.npz"
+        if cp.exists():  # control B2a
+            cl = np.load(cp)["color"][m]
+            for k, (a, b) in {"clamped_ref": (cl, ref), "A_clamped": (pred, cl), "gt_clamped": (gt, cl)}.items():
+                row[k + "_psnr"] = psnr(mse(a, b))
+                agg.setdefault(k, []).append((mse(a, b), len(gt)))
         if (rd / f"{args.cfg}_view{v}_orig.npz").exists():
             orig = np.load(rd / f"{args.cfg}_view{v}_orig.npz")["color"][m]
             o16 = orig.astype(np.float16).astype(np.float32)
