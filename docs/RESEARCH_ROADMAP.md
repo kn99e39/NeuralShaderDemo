@@ -1,150 +1,94 @@
-# Research Roadmap — Object-Level Selective Neural Transport Recomputation
+# Research Roadmap — Surface-Owned Selective Neural Transport Recomputation
 
-**Updated:** 2026-10-12  
+**Updated:** 2026-10-14 (worklog 32)  
 **Branch:** Selective_Recompute  
-**Status:** Object-level intent clarified; first matched whole-object oracle experiment NOT YET RUN  
+**Status:** Architecture Batch 1 (RNA-based independent units) reported — ownership contract exact; stopped on the baseline-credibility precondition; Batch 2 NOT authorised  
 **Venue planning:** SIGGRAPH 2027, official paper deadline to be separately verified.
 
-## 0. Research Decision / Scope Correction
+## 0. Decision Record
 
-The user explicitly clarified:
+- **2026-10-12:** the user clarified that "selective" means recomputing complete owned models, never intra-model parameter subsets. The archived object-level-only framing is at docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md.
+- **2026-10-13:** the user adopted ten decisions, listed in full in docs/RESEARCH_CENTRIC_TOPIC.md §2:
+  - RNA is the initial baseline;
+  - ownership may be finer than objects;
+  - Surface-Owned Transport Units are the active hypothesis;
+  - each invalidated unit's full state may be recomputed;
+  - object-level recompute is the coarse comparison;
+  - at least five architecture batches come before a broad viability judgment;
+  - a single negative result does not falsify the hypothesis;
+  - 2007–2013 dynamic GI is the priority design reference;
+  - the 1997 line-space hierarchy is not the starting point;
+  - efficiency and scaling come after feasibility.
 
-> Selective recomputation means **fully recompute neural transport for the scene objects whose learned transport was invalidated by a geometry change**, preserving the complete neural transport models of objects that remain valid.
-
-**Selection unit = scene Object; update unit = entire object-owned neural model**, which may include every feature grid, triplane, MLP, flow, or directional state owned by that object.
-
-This corrects the previous assistant interpretation of "selective" as an **intra-object subset of triplane cells**. Worklog 30 is a valid negative test of its narrower feature-level hypothesis but **NOT a test or rejection of this object-level approach**. The prior intra-object architecture is archived at docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md.
-
-Existing dynamic-state architecture history remains at docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md.
-
-Read docs/RESEARCH_CENTRIC_TOPIC.md, docs/Architecture.md and docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md as the active contracts.
+Active contracts: docs/RESEARCH_CENTRIC_TOPIC.md, docs/Architecture.md, docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md.
 
 ## 1. Central Intent
 
-> Does a scene composed of independently owned high-quality neural transport models admit correct and cheaper updates when geometry edits invalidate only a subset of **object models**, provided we fully retrain/refit each invalidated model and keep valid models frozen?
+> Can learned neural transport be owned by independently reconstructible surface units such that, after a geometry edit, recomputing the complete state of only the transport-invalid units restores high-quality full-scene GI while all valid units are reused unchanged?
 
-Scientific target:
-1. **Transport-dirty detection:** distinguish directly changed geometry objects D_G from radiometrically stale object models D_T. Stationary surfaces can become stale.
-2. **Whole-object ownership:** an affected object can update every parameter in its object model; unchanged object models are reused exactly.
-3. **Transport correctness:** each object must model its incoming/outgoing indirect transport conditional on the current *whole scene*, not on its geometry alone.
-4. **Update economics:** compare end-to-end objectwise selective rebuild against recomputing all object models at quality matched to physical reference.
-
-**A dependency hierarchy may later accelerate discovery of D_T.** Dependency-guided selective GI recomputation is classic prior art; novelty must be a credible neural learned transport specific mechanism/evidence, not "objects update selectively."
-
-## 2. Historical Evidence: Preserve / Interpret Correctly
+## 2. Evidence So Far
 
 | Worklogs | Established | Not established |
 |---|---|---|
-| 21–22 | Canonical teaset stationary receiver GI becomes stale when internal part moves; frozen RNA and 8DNA signatures | Objectwise learned transport update |
-| 24–25 | Dominant change is indirect occlusion and moved-part reflection; absent current cross-part information | Every dynamic neural GI method must fail |
-| 26–27 | Physical and historical neural whole-asset recomputation can be costly (different scenes/regimes) | Quality-matched per-object incremental cost |
-| 28–29 | Two sparse K=32 current relational-state candidates fail held-out near-mirror T3 | Entire lifecycle split falsified |
-| 30 | Selecting only 8DNA triplane cells with shared weights frozen fails (quality/preservation/time) | **Object-level full-model selective recomputation fails** |
+| 21–25 | stale nonlocal GI at stationary receivers under a part edit; indirect occlusion and moved-part reflection dominate | that every dynamic neural GI method fails |
+| 26–27 | physical and historical whole-asset neural recompute are costly (different regimes) | a quality-matched unit-level cost |
+| 28–29 | two sparse K=32 relational-state candidates fail held-out near-mirror T3 | that owned-unit recompute fails |
+| 30 | triplane-cell masking inside one 8DNA model (shared flows frozen) fails | anything about complete owned units |
+| 31 | explicit per-part surface units (no learned decoder) reach 8DNA-level T0 and recover T3 when refitted; object-level D_T = all objects on the compact teaset; no wall-clock saving in that implementation | unit-level D_T sparsity; neural units |
+| 32 | RNA split into complete independent units: exact parameter/output preservation and full-state unit reconstruction; P16 costs 1.15× HDR log error and visible seam steps vs RNA (C2), not fixed by 16× capacity | static fidelity under a credible baseline (gate failed: 17.97 / 24.92 dB); recovery after a physical edit; cost |
 
-WL30's triplane-only D/E are not substitutes for the new oracle **object set** selection experiment; the historical multi-part teaset's learned model was single-owner.
+## 3. Architecture Batch Program (≥ 5 batches before a broad viability judgment)
 
-## 3. New Ordered Gates — Do Not Jump Ahead
-
-| Gate | Status | Question | Stop condition |
+| Batch | Status | Question | Outcome / stop |
 |---|---|---|---|
-| P — Stale transport phenomenon | CLOSED (21–25) | Does nonlocal GI become stale under cross-part editing? | Historical result retained |
-| C — Cost motivation | CALIBRATED (26–27) | Is full recomputation expensive? | Not a method-level denominator |
-| H — Earlier compact state | CLOSED NEGATIVE for tested cases (28–29) | Did K=32 candidates recover T3? | No patch/sweep |
-| X — Intra-object feature masking | CLOSED NEGATIVE for 8DNA triplane (30), **off-target** | Are selected feature cells sufficient? | Not an objectwise decision gate |
-| O0 — Per-object learned transport feasibility | **NEXT** | Can independent object-owned neural models represent correctly composed full-scene GI? | If high-quality composition impossible, stop |
-| O1 — Oracle objectwise selective full refit | **NEXT, conditional on O0** | Can every dirty object's whole neural model be retrained while valid objects remain fixed, at lower quality-matched cost than all-object rebuild? | If failed, stop, attribute |
-| O2 — Actual transport dependency / hierarchy | FUTURE; requires O1 evidence and user's decision | Can D_T be determined online without oracle? | O1 not supported |
-| O3 — Integrated larger scenes and independent benchmarks | FUTURE | Does complete system scale and preserve glossy/multi-bounce transport? | O2 not supported |
-| O4 — Paper-level validation | FUTURE | Is there robust novelty and evidence for SIGGRAPH? | Insufficient breadth, quality, controls |
+| 1 — RNA independent units (worklog 32) | **REPORTED; stopped on the baseline-credibility condition** | Can RNA be split into independently owned units with full-state reconstruction and preservation, without unacceptable static-GI loss? | Ownership exact; fidelity verdict not adjudicated; costs: HDR log +12–15%, seam steps |
+| 2 | **AWAITING USER DECISION** | Recommended, after resolving credibility: radiometric validity of unit-level full recompute under a physical T0 → T3 edit (oracle dirty units vs all units vs whole objects). Alternative: a representation variant (frozen shared decoder + owned features; or blended overlapping units) | — |
+| 3–5 | FUTURE | Chosen from evidence: representation variants, D_T sparsity on scenes where it is physically plausible, non-RNA substrates | — |
+| After feasibility | FUTURE | Dependency/invalidation discovery (deployable), hierarchy as an optional accelerator, efficiency and scaling (decision 10) | requires feasibility evidence and a user decision |
 
-## 4. Immediate Bounded Batch — O0 + Conditional O1
+Gates retained from the object-level framing:
+- **P:** phenomenon, CLOSED.
+- **C:** cost motivation, CALIBRATED.
+- **H:** compact state, CLOSED NEGATIVE for the tested cases.
+- **X:** intra-object masking, CLOSED NEGATIVE and off-target.
+- **O0/O1:** object-level feasibility and oracle refit. Worklog 31 answered them on an explicit substrate (O0 pass; O1 dense at object granularity). They remain a coarse comparison for unit-level results.
 
-### Direction
+## 4. Precondition Before Batch 2: Static Credibility
 
-Test scene-level selection of **whole object models** after learned transport invalidation. Reuse RNA/triplane/8DNA or other available neural GI components as appropriate; coding difficulty alone should not force the substrate choice.
+Worklog 32's original RNA failed the predeclared 25 dB static-credibility bar:
+- C1 (canonical near-mirror teaset): 17.97 dB;
+- C2 (rough nickel α 0.3): 24.92 dB.
 
-### Purpose
+The batch therefore stopped on its first stop condition. The user chooses, before any Batch-2 training, between:
+- **(a)** a predeclared scene/material configuration where original RNA clears the bar; or
+- **(b)** a prospectively revised credibility criterion, written as a new protocol and never applied retroactively to Batch 1.
 
-Establish whether object-owned learned transport can be trained independently yet correctly reflect full-scene interactions, and whether retraining only radiometrically dirty object models saves real work.
+Do not select scenes, gates or thresholds after seeing candidate results.
 
-### Central Intent
+## 5. Rules for Every Batch
 
-> If full-object neural recomputation is allowed, does selecting only transport-invalid objects preserve high-quality GI and reduce quality-matched scene update cost?
+- **Controls.** Compare A (original substrate) against B (owned candidate), changing only the ownership boundary and the changes strictly necessary for it. Account for capacity openly; label a comparison capacity-confounded instead of forcing equivalence.
+- **Static GI evaluation:**
+  - full-image metrics plus per-unit, boundary/interior and seam metrics;
+  - an HDR-appropriate metric beyond PSNR;
+  - high-frequency/glossy regions;
+  - parameters, convergence, load/inference time and memory.
+- **Unit reconstruction.** Report parameter preservation, output preservation and radiometric validity separately. A synthetic intervention proves semantics, not GI recovery.
+- **Exports.** Reviewer exports go in `results/evaluation/<worklog>/` with a manifest. Tests must cover mapping, ownership, isolation, checkpoint, dispatch, boundary evaluation and composition.
+- **Interpretation.** Do not treat one negative candidate as falsifying the hypothesis. Do not claim speedups from parameter counts. Do not advance automatically.
 
-### Required model/scene design
+## 6. Preserve
 
-A genuine multi-object scene with separately trainable complete model N_i per object O_i. A single large model containing many objects is *not* a valid object-level control unless separable ownership is implemented.
+- Worklogs 21–32 unchanged; worklog 30 as the historical intra-object masking result.
+- Original RNA/8DNA outputs, checkpoints and scripts as historical baselines.
+- Archived architectures under docs/history/.
 
-Each object model is supervised using reference transport in the **entire current scene** (including cross-object effects). Prefer the controlled teaset if an object partition can preserve the physical GI question. Add or choose a genuinely unaffected object to verify nontrivial preservation.
+## 7. SIGGRAPH 2027 Planning
 
-Object boundaries and transport predictions (incident/outgoing radiance, near-field, transfer, lighting conditioning) must be defined before training. If it is impossible to compose per-object models at credible T0 quality, **STOP at O0**.
+Replan durations from measured training and reference wall-clock. For reference, one P16 RNA arm takes about 1.5 h on the RTX 5080 and about 2.8 h on LabServer63. Human coding burden is not a veto for a scientifically better architecture. Publication aims never override predeclared stop conditions.
 
-### Required matched experimental arms
+## 8. Document Synchronisation
 
-- **A — Frozen:** T0 object models evaluated after the G1 geometry edit, with current geometry/direct visibility as the chosen representation permits.
-- **B — All-object scratch:** rebuild full models of every object for G1 from scratch; capacity/recompute-cost reference.
-- **C — All-object warm-start:** fully refit every object's trainable parameters from T0 on G1.
-- **D — Geometry-dirty only:** fully refit models whose geometry directly changed; intentionally test omission of stationary receivers.
-- **E — Oracle transport-dirty:** fully refit the complete models of every radiometrically invalid object under G1, preserving all noninvalidated model parameters.
-- **F — Optional naive proximity:** full refit on proximity-selected objects using a transparent matched rule; baseline, not a required mechanism.
+Update this file, docs/Architecture.md and docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md when a batch closes, a hypothesis is adopted or rejected, a baseline role changes, or implementation is authorised.
 
-Change **only which whole models are selected** between C and E. The optimizer may modify all parameters inside a selected object, not only feature cells.
-
-Use the same substrate, object partition, scene, reference, target quality, optimizer rules and resource allocation across arms. Use fixed-budget and matched-quality comparisons. Report alternate warm-start/scratch choices transparently.
-
-### Oracle / affected closure
-
-Before final testing, define a conservative reference-derived oracle transport dirty-object set D_T (versus geometry-dirty D_G), based on actual physical GI differences and model validity by object. Include stationary receivers and far indirect effects. Handle uncertainty/noise and test splits explicitly. Report cases where dirty closure reaches the full scene.
-
-Any derived cost excluding oracle construction is an **upper bound** on a future practical selective mechanism. Measure reference/GT generation and per-object target generation separately; tracing one object can still traverse every scene object.
-
-### Quantitative + qualitative evidence
-
-Quantitative: object count, dirty set fractions, model sizes, per-owner geometry/transport changes, per-object affected/unaffected image/surface error, signed GI change tracking, multi-bounce propagation, whole-image error, forgotten unchanged object output, cost-to-quality including scene supervision, training, checkpoint and model composition, GPU peak, reference noise, comparison with all-object rebuilt quality.
-
-Qualitative: images and difference maps of a moved object, indirectly changed stationary receiver, truly valid preserved object, glossy reflection and other representative high-frequency features; show actual model IDs/owner provenance as useful.
-
-Synthetic tests establish semantics only. Real-scene multi-object replay and reviewer-facing exports are required for architectural viability.
-
-### Preserve
-
-- Worklogs 21–30 unchanged, including their negative conclusions in their original experimental scope.
-- Existing static RNA/8DNA and original scripts/checkpoints as historical baselines.
-- Worklog 30's feature-masking code for archival reproducibility.
-- Canonical physical reference/regime wherever scientifically compatible.
-
-### DO NOT
-
-- repeat triplane cell masks, frozen-within-object MLP controls or Jacobian-locality arguments as requirements for "selective";
-- demand that object-internal feature-level computation be sparse;
-- rebuild only the moving object if unaffected geometry receives changed GI;
-- claim an unchanged geometry object always has a valid transport model;
-- use one all-parts 8DNA checkpoint as multiple owned models without actual partition;
-- implement scene hierarchy / dependency predictor before O1 passes;
-- assume changing one object's model requires changing every other object model;
-- invent new representation mechanisms unless necessary for credible independent ownership/composition, and report if scope must expand;
-- tune thresholds after final metrics or automatically proceed to O2.
-
-### Completion condition
-
-> Can a scene of separately owned neural GI models fully recompute transport-invalid objects only and retain transport-valid models without materially losing high-quality global illumination, at a lower quality-matched end-to-end recomputation cost than rebuilding every object's model?
-
-If no, attribute ownership failure, scene-level coupling, oracle coverage, physical quality or cost.
-
-## 5. O2 Dependency Mechanics — Only After O1
-
-Research actual geometry-to-object radiometric dependencies with multi-bounce closure. Compare against simple spatial proximity, object-to-object visibility/path link heuristics, classical incremental GI, and oracle. Hierarchy is optional. Claim novelty only for new learned-model validity/dependency semantics, not standard selective GI recomputation.
-
-## 6. SIGGRAPH 2027 Planning
-
-Replan experiment durations based on actual training/reference wall-clock and availability of coding agents. **Do not use human coding burden as the primary veto** for a scientifically better architecture. Scientific uncertainty and GPU training/quality-matching remain real costs.
-
-Official submission dates must be independently checked. Publication aim cannot supersede predeclared stop conditions or scientific validity.
-
-## 7. Document Synchronization and Testing
-
-Keep docs/Architecture.md, docs/RESEARCH_CENTRIC_TOPIC.md and docs/BASELINE_ROLES_AND_EVIDENCE_STRATEGY.md aligned on **object-level selection**; no "feature subset F1 is the required next gate" language.
-
-Meaningful implementation units: focused tests first; full suite only for shared production contract change or major closure. Worklogs numbered append-only and reviewers' quantitative and qualitative artifacts both required.
-
-The next implementation batch is **not authorized automatically by this document update**; this document specifies a proposed controlled question, to be reviewed before implementation.
+This document does not authorise Batch 2.

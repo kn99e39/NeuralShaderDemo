@@ -1,179 +1,169 @@
-# Architecture — Object-Level Selective Neural Transport Recomputation
+# Architecture — Surface-Owned Neural Transport Units
 
-**Updated:** 2026-10-12  
-**Status:** Architecture intent CLARIFIED; oracle object-level feasibility NOT YET TESTED  
+**Updated:** 2026-10-14 (worklog 32)  
+**Status:** Batch 1 of ≥ 5 reported. Ownership contract demonstrated exactly on an RNA-based candidate; static-fidelity verdict NOT adjudicated (baseline-credibility stop condition); radiometric recovery after a real edit NOT YET TESTED  
 **Branch:** Selective_Recompute  
-**Historical references:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md and docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md
+**Historical architectures:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md, docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md, docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
 
-## 1. The Actual Architecture Question
+## 1. The Architecture Question
 
-After an edit to scene geometry, which **objects have transport-invalid learned neural models**, and can we rebuild the **complete models for only those objects** while preserving the complete models of transport-valid objects?
+After a geometry edit, which **transport units** hold invalid learned transport, and can the **complete owned neural state of only those units** be recomputed while every valid unit is reused unchanged?
 
-**Selective unit: Object O_i. Recompute unit: Entire object-owned learned neural transport model N_i.**
+- **Selection unit:** a Surface Transport Unit U_i = (S_i, Θ_i). It can be finer than a scene object (user decision 2); a whole object is the coarsest unit.
+- **Recompute unit:** all of Θ_i (decision 4). This is never a subset of cells, channels or layers inside a jointly owned model; that was worklog 30's tested and negative hypothesis.
+- **Coarse comparison:** object-level full recomputation, where every unit of an object is recomputed together (decision 5).
+- **Baseline substrate:** RNA, adobe-research `66b5b098` (decision 1). It is a substrate, not a commitment.
 
-The user did NOT request selective recomputation of individual triplane cells, feature channels, learned vertices, MLP layers, or a subset of parameters within a neural asset.
+## 2. Unit Contract (mandatory for every candidate)
 
-If O_i's learned transport is invalid, its whole model may be retrained/refit, including all triplane features, shared-within-object MLPs, decoder, directional parameters and relevant object-owned caches. If O_j remains valid, its entire N_j must be preserved. Refit from pretrained weights or scratch within an invalid object are both possible; compare rather than silently assuming one.
+**Surface ownership:**
+- every evaluated surface sample resolves to one owner, or to a declared explicit composition of owners;
+- report coverage, identity, boundary behaviour, overlap semantics, mapping stability and coordinate conventions;
+- the owner function must be identical across training, rendering and later updates.
 
-## 2. Scene / Ownership Model
+**Learned-parameter ownership:**
+- each unit has an identifiable trainable set Θ_i;
+- updating U_i changes no Θ_j (j ≠ i);
+- every parameter in Θ_i may change.
 
-Represent the scene as objects O={O_1,...,O_n} with geometry G_i and associated **independently owned** learned transport state N_i.
+**Shared components.** A shared component is allowed only with defined semantics, either:
+- frozen forever (a fixed function), or
+- declared as a coupling.
+
+If a shared trainable decoder must change to recover one unit, that is a representation coupling to report, never to hide with optimiser masks.
+
+**Transport semantics:**
+- a unit's targets are full-scene GI, including light from other objects, so ownership does not mean physical locality;
+- keep RNA's semantics: outgoing radiance under the dataset light distribution, with direct visibility selecting the lit or shadowed output;
+- declare any change to these semantics as a confound.
+
+**Report separately:**
+1. parameter preservation;
+2. output preservation;
+3. radiometric validity.
+
+## 3. Update Model
 
 ~~~text
-T0 scene geometry G0
-   -> learn a separate high-quality transport model N_i^0 for each O_i
-      (each model supervised by physically correct transport in the WHOLE scene)
-
-A geometry edit produces G1
-   -> identify which objects are geometry dirty: D_G
-   -> identify which objects' LEARNED TRANSPORT is stale: D_T
-      (includes stationary receivers affected by other objects)
-   -> for i in D_T: full-object recomputation N_i^0 -> N_i^1 on G1
-   -> for j not in D_T: preserve N_j^0, including all its parameters
-   -> compose final GI from updated and preserved object models at G1
+T0 geometry G0 -> train all units U_i^0 on full-scene transport
+edit G0 -> G1
+   D_G: units/objects whose geometry changed
+   D_T: units whose learned transport is invalid under G1 (includes stationary receivers)
+   for i in D_T:  Θ_i^1 = FULL_RECOMPUTE(Θ_i^0 or init, supervision_i(G1))   # all of Θ_i eligible
+   for j not in D_T: Θ_j^1 = Θ_j^0  (bit-identical)
+   render: compose all units on G1
 ~~~
 
-D_G and D_T are not identical. Example: moving the milk pot can invalidate transport on stationary teapot/tray models due to indirect visibility and glossy reflection. It is incorrect to recompute only the moved object when stationary receivers have changed transport.
+**D_G ≠ D_T** (worklogs 21–25, confirmed in worklog 31). Whether D_T is sparse at unit granularity is an open empirical question. At object granularity on the compact teaset it was all objects (worklog 31).
 
-**Object-level reuse is the intended contribution boundary**, not a promise that a model's features are local.
+## 4. Batch 1 Candidate (worklog 32): Independent Complete RNA Units
 
-Mathematical notation: let R(G,{N_i}) denote the renderer composing object-owned learned transport under current geometry G; D_T(G0,G1) is a conservative set of objects for which retaining N_i^0 would violate a radiometric validity criterion. Define the candidate updated models as
+**Representation.** K complete upstream `NeuralSurfaceTriPlane` models. Each unit has:
+- its own triplane, framed on the unit's AABB (+2% margin);
+- its own MLP.
 
-~~~text
-N_i^1 = FULL_REFIT(N_i^0, G1, supervision_i(G1))    when i belongs to D_T
-N_i^1 = N_i^0                                       otherwise
-~~~
+Nothing trainable is shared.
 
-Here FULL_REFIT means **all model parameters of that object may change**, not necessarily initialization from scratch. The supervised target for O_i may involve light paths through every other object of the scene.
+**Partitions (geometry only, predeclared):**
+- P1: whole asset;
+- P4: one unit per part;
+- P16: k-means per part (tray 9, tea pot 4, milk pot 2, tin 1).
 
-## 3. What a Valid Per-Object Neural Model Must Mean
+The owner of a point is its exact part (point-to-triangle distance at contact zones), then the nearest dense sample's unit.
 
-The architecture cannot merely split geometry into names while retaining one indivisible scene-wide MLP.
+**Dispatch:** the owner id is appended as a 4th position channel, and each pixel is evaluated by its owner only (hard selection).
 
-For each object establish:
+**Training:** upstream Lightning module, loss, optimiser and schedule, unchanged.
 
-- **Ownership**: a distinct neural model/checkpoint N_i, with all trainable tensors attributable to O_i. Optionally a globally frozen reusable encoder/decoder, if its output is valid under updates; an editable shared scene-wide model defeats strict per-object freezing unless safely partitioned.
-- **Radiometric semantics**: identify whether N_i predicts outgoing radiance, incident GI, transport function, or another scene-conditioned quantity; whether changing scene lights requires an update; which transport orders it covers.
-- **Cross-object transport**: N_i can encode effects originating from other objects. Per-object storage does NOT imply per-object radiometric independence.
-- **Geometry/correspondence**: robust object identity across rigid transforms, changes of geometry, visibility and interaction.
-- **Composition**: renderer must evaluate each N_i on its owning surface and combine current geometry, direct transport, learned indirect transport and any cross-object terms without double-counting.
-- **Update contract**: freeze all N_j for j not in D_T (bitwise model parameters), optimize **all** trainable parameters in invalidated N_i, and evaluate downstream consistency.
-- **Multi-bounce**: geometry edit may create indirect dirty receivers arbitrarily far away or across chains. A recomputation closure must be considered; object hierarchy alone does not guarantee sparse D_T.
+**Capacity:**
+- matched: A's texel size per unit and MLP width 512/√K. Matched P16 still holds 1.89× A's parameters because unit AABBs overlap.
+- P16w: full-size units, 16× A (diagnostic only).
 
-RNA, 8DNA, triplanes, vertex features, octree directional maps and spatial-angular primitives are candidate **internal representations of each N_i**. Do not preemptively reject them because of intra-object feature locality results. No requirement to invent a new spatial/angular basis. Per-object data assembly and transport/lighting semantics, not a feature-level encoder, are the primary design tasks.
+Code is in `experiments/rna_surface_ownership/`; the protocol is in `protocol/rso_v1.json`.
 
-## 4. Prior Evidence Reinterpreted Without Changing Historical Results
+**Evidence** (details in worklog 32; C2 = rough nickel α 0.3; C1 = canonical near-mirror):
 
-### Worklogs 21–27 — VALID PROBLEM EVIDENCE
+| property | result |
+|---|---|
+| static credibility of original RNA (predeclared ≥ 25 dB) | **FAIL** — C1 17.97 dB, C2 24.92 dB (stop condition; fidelity verdict not adjudicated) |
+| P16 vs A, C2, descriptive | −0.19 dB, display MAE 1.02×, boundary 1.05×, HDR logL1 **1.15×**, seam discontinuity **1.16×** (C1: 1.11×, 1.39×) |
+| P16w (16× params) vs A, C2 | logL1 1.12×, seams 1.14× — the cost is **not** a capacity shortfall |
+| P1 (local frame only) vs A | equal (C2) / better (C1) — local normalisation is harmless |
+| REINIT (unit re-initialised + fully retrained, 15 frozen) | parameters of 15 units and **100% of their pixels bit-identical**; u* recovers to 0.95× / 1.00× of its prior error |
+| composition | correct; hard selection leaves **visible shading steps at intra-part seams** |
 
-The canonical teaset first-hit receiver is unchanged yet nonlocal indirect GI changes after a part moves. The current frozen RNA and 8DNA variants lack an updated representation of intra-asset transport and fail to respond appropriately. Historical all-asset retraining can be expensive. This establishes motivation, not an object-model update result.
+**Inherent limits of this candidate:**
+- seam steps under hard selection;
+- no cross-unit sharing of angular/material learning (hypothesised cause of the HDR cost);
+- capacity overhead from overlapping per-unit grids.
 
-The historical 8DNA teaset model represented the *whole multi-part asset* as one learned transport owner. Therefore the old T3 refit is not a test of scene-level object selection. It cannot measure preservation of separate valid object models because none were partitioned that way.
+**Unknowns:**
+- radiometric recovery after a physical edit;
+- D_T sparsity at unit granularity;
+- any cost advantage (REINIT training cost is 0.65× of a full P16 run with this implementation, because all pixels still pass through all units).
 
-### Worklogs 28–29 — SEPARATE ON-HOLD DYNAMIC-STATE HYPOTHESIS
+## 5. Candidate Space for Later Batches (not authorised)
 
-K=32 sparse current relational/radiometric-state candidates did not recover held-out near-mirror T3. Do not tune those results as a substitute for the object-level selective test.
+Each is a different realisation of the same contract, to be compared one factor at a time:
+- **B1 (Batch 1):** independent complete units with hard selection.
+- **Frozen shared decoder + owned per-unit features.** The decoder is trained once and frozen forever, so it is a fixed function; units own features (and optionally a small head). The semantics must state what happens if the decoder becomes inadequate.
+- **Overlapping units with explicit partition-of-unity blending.** This is an explicit composition of owners that removes seam steps. The cost is that a boundary pixel reads several units, which changes output-preservation bookkeeping.
+- **Non-RNA substrates** (decision 1 allows replacing RNA later), e.g. worklog 31's explicit surface radiance units or other neural surface representations.
 
-### Worklog 30 — MIS-SCOPED FOR THE CURRENT GOAL
+## 6. Historical Design References (decisions 8–9)
 
-Worklog 30 validly tested triplane **cell-level masking** in one 8DNA model with shared flow/cubemap parameters frozen. It failed on that feature-level architecture. In the intended object-level scenario, an invalid N_i can have **all its triplane and flow/MLP weights fully refitted**, so the "D triplane-only did not approach C" conclusion does not invalidate object-level selective recomputation.
+The priority references are 2007–2013 interactive/dynamic GI:
+- Temporal Radiance Caching (TVCG 2007);
+- Instant Caching (CGF 2009);
+- An Efficient GPU-Based Approach for Interactive GI (SIGGRAPH 2009);
+- Voxel Cone Tracing (CGF/PG 2011).
 
-Retain Worklog 30, its code, and previous intra-object Architecture in history. Do not rewrite Worklog 30's measurements as successes or pretend the gate tested the present hypothesis.
+They inform caching, invalidation and scheduling design. None defines **learned-parameter ownership**, which is this architecture's question. Keep distinct:
+- surface representation;
+- radiance caching;
+- learned parameter ownership;
+- transport invalidation;
+- sampling/scheduling.
 
-## 5. Current Design Hypothesis — Object Transport Ownership
+The 1997 line-space hierarchy is prior art, not the starting point. See docs/RESEARCH_CENTRIC_TOPIC.md §5.
 
-> Scene-scale learned transport can be maintained incrementally when learned transport models are owned by identifiable objects and only models with invalid radiometric scene dependencies are fully recomputed after geometry edits, rather than globally rebuilding the entire scene's learned transport.
+## 7. Prior Evidence (preserved, scoped)
 
-This is **unvalidated** and depends on:
-1. good baseline fixed-scene quality for object-owned neural models;
-2. fair objectwise all-rebuild reference;
-3. correct radiometric dirty-object closure after edits;
-4. compositional consistency of updated and reused model predictions;
-5. meaningful end-to-end cost savings when D_T is smaller than the whole scene.
+- Worklogs 21–27: stale nonlocal transport under a part edit (problem evidence) and recompute-cost context.
+- Worklogs 28–29: compact relational-state candidates negative on held-out T3 (separate, on hold).
+- Worklog 30: intra-object triplane-cell masking negative. This is a different hypothesis, not a test of owned units.
+- Worklog 31: explicit per-part surface radiance units (no learned decoder):
+  - compose to 8DNA-level T0 quality;
+  - all-local refit recovers T3 (tracking gain ≈ 1);
+  - object-level D_T = all four objects, so no saving at object granularity;
+  - whole-object refit degrades unaffected regions inside dirty objects (MC noise), which motivates finer ownership;
+  - no wall-clock saving in that implementation.
+- Worklog 32: section 4.
 
-Failure of any one is material. A scene where almost every object becomes dirty is a valid negative result.
+## 8. Implementation Frontier and Non-Goals
 
-## 6. Next Controlled Gate — Object-Level Oracle Selective Rebuild
+**Next decision (user):**
+1. How to meet the static-credibility precondition (a predeclared scene/material where RNA clears the bar, or a prospectively revised criterion).
+2. Then either:
+   - radiometric validity of unit recompute under a physical T0 → T3 edit (recommended in worklog 32); or
+   - a representation variant from §5.
 
-**Central Intent:** Does object-level selection itself work if the complete transport-invalid object set is provided by an offline reference oracle?
+**Not before feasibility (decision 10):**
+- dependency tracking;
+- dirty-unit detection;
+- hierarchy;
+- efficiency/scaling claims;
+- automatic advance to the next batch.
 
-### Substrate / scene contract
+## 9. Completion Condition (per batch)
 
-Select or adapt a neural transport model whose entire learned weights can belong to one scene object. A per-object RNA/triplane is permitted, as are other existing codebases. No requirement of independently maskable feature subsets.
+> Can a learned transport representation be divided into independently owned surface units whose complete state can be reconstructed while all other units are preserved, without unacceptable static-GI fidelity loss — and, in later batches, can recomputing only the transport-invalid units recover current-scene GI?
 
-Construct at least one **multi-object** controlled scene, with several radiometrically distinguishable owners:
-- moving geometry object;
-- stationary indirectly affected receiver(s);
-- stationary transport-valid object(s) as a real preservation/control case;
-- high-quality glossy or multi-bounce reference signal above noise;
-- separately reconstructible object-owned models supervised against the **whole current scene**.
-
-Prefer reuse of canonical teaset physical edit if the partition and independent models are scientifically sound. If the canonical scene has no truly transport-valid object, select an additional valid control object/scene rather than quietly dropping the preservation test.
-
-### Oracle object dirty set
-
-Use a reference-derived, conservative, **object-level** D_T^oracle. Compare high-quality current-geometry reference transport for each object using stable object-identity surface samples, including indirect effects on stationary objects. The actual threshold, noise handling and classification protocol must be predeclared before final runs.
-
-The oracle is for scientific upper-bound attribution only. It is not a production transport dependency tracker; measure its time separately. Recognize that changed pixels and model-invalid objects are not identical; verify output validity per owner after composition.
-
-### Matched comparison arms
-
-| Arm | Training / update | Purpose |
-|---|---|---|
-| A Frozen scene | preserve all T0 pretrained N_i; render G1 | stale-baseline quality |
-| B All-object scratch | train ALL N_i from scratch at G1 | matched new-configuration capacity/cost reference |
-| C All-object warm start | fully refit ALL N_i from their T0 checkpoints on G1 | strongest obvious full-scene adaptation comparator |
-| D Geometry-dirty only | fully refit N_i for i in D_G; freeze others | demonstrate why mover-only selection may miss stationary receiver transport |
-| E Oracle transport-dirty | fully refit N_i for i in D_T^oracle; freeze all other complete N_j | intended selective architecture feasibility |
-| F Optional naive spatial proximity | fully refit models selected by geometric closeness, with declared equivalent budget/criteria | simpler dependency baseline |
-
-**Changed between C and E: only which WHOLE OBJECT MODELS are selected for complete refit.** Each selected object's internal training architecture, trainable parameter coverage and supervision remain the same as C.
-
-Do NOT perform an intra-object mask, freeze selected object MLPs to mimic triplane-only update, or force 8DNA/RNA's historical whole-asset checkpoint to masquerade as several independent neural models.
-
-### Evaluation
-
-Quantitative:
-- object counts total, D_G count, oracle D_T count, valid retained count;
-- per-object and cross-object transport-change magnitude;
-- radiance reconstruction for directly edited, indirectly affected stationary, and unaffected objects separately;
-- global image quality, signed transport-change tracking, glossy/multi-bounce behavior;
-- model parameter identity for valid retained objects, output-level validity after scene composition;
-- missed affected objects / dependency closure, fidelity vs all-object adaptation;
-- total supervision generation, optimizer training, model load/store, rendering, scene acceleration/update, oracle cost separately, full wall-clock to matched quality, peak GPU memory;
-- scene-size and affected-object fraction scaling if feasible.
-
-Qualitative:
-- changed mover;
-- stationary changed receiver;
-- unchanged valid object;
-- indirect reflection/occlusion and high-frequency features;
-- error/difference maps and object ownership visualization.
-
-Synthetic contracts plus **real-scene multi-object** evaluation; synthetic PASS does not establish method viability.
-
-## 7. No Hierarchy Yet: Dependency Tracking Is the Next Question
-
-If and only if oracle selective whole-object refit works, test a deployable geometry-to-transport dependency/invalidation mechanism. Use classic incremental GI, light-path/visibility links and object hierarchies as prior-art comparators, not as new discoveries.
-
-A hierarchy is optional optimization, not a prerequisite. Where multi-bounce paths connect nearly all objects, report dense invalidation rather than hiding quality errors.
-
-## 8. Explicit Non-Goals for the Next Batch
-
-Do NOT:
-- add per-feature masks or optimizer subset tuning;
-- reattempt Worklog 30 triplane-locality controls as the primary gate;
-- invent a new neural spatial-angular representation merely to guarantee parameter locality;
-- restrict updates to geometry-dirty objects when stationary receivers are transport dirty;
-- omit the full scene during supervision tracing for an object whose correct radiance depends on other objects;
-- promise realtime update without measuring training/target generation;
-- claim novelty for classic object hierarchy / incremental GI;
-- implement deployable dependency tracking before object-level oracle evidence;
-- silently treat object-wise scratch and warm-start as identical costs;
-- proceed automatically to full dynamics / final method if the gate passes.
-
-## 9. Completion Condition
-
-> **When oracle identifies all transport-invalid object models, can completely recomputing only those object models preserve the valid models and recover current-scene high-quality GI at substantially lower end-to-end cost than recomputing all scene-object models?**
-
-A negative result requires precise attribution to scene partition, model semantics, dependency closure, insufficient quality, or update economics—not intra-object feature locality by default.
+A negative result must be attributed to one of the following before it is interpreted:
+- baseline limitation;
+- candidate limitation;
+- ownership isolation;
+- optimisation/capacity;
+- partition;
+- supervision/correspondence;
+- compositing.

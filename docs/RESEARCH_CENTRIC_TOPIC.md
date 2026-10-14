@@ -1,115 +1,94 @@
-# Research Centric Topic — Object-Level Selective Neural Transport Recomputation
+# Research Centric Topic — Surface-Owned Selective Neural Transport Recomputation
 
-**Last updated:** 2026-10-12  
-**Status:** Active problem and explicitly clarified architectural direction; full method not validated  
-**Target:** SIGGRAPH 2027 (official Technical Papers deadline to be verified separately)
+**Last updated:** 2026-10-14 (worklog 32)  
+**Status:** Active problem; Surface-Owned Transport Units are the active representation hypothesis (Batch 1 of ≥ 5 architecture batches reported); full method not validated  
+**Target:** SIGGRAPH 2027 (official Technical Papers deadline to be verified separately)  
+**Superseded framing:** object-level-only selection (2026-10-12), archived at docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
 
 ## 1. Fundamental Research Problem
 
 High-quality neural shading / learned global illumination fitted to a fixed geometry configuration can retain stale interreflection, indirect-path occlusion, glossy and multi-bounce transport after a geometry edit. Re-evaluating the frozen shader with current local surface inputs is not necessarily sufficient.
 
-**Fundamental question:** Can we reuse *entire pretrained neural transport models belonging to scene objects whose transport remains valid*, while fully recomputing/refitting the **entire neural transport model of every object whose transport has become invalid**?
+**Fundamental question:** after a geometry edit, can learned transport be repaired by recomputing the **complete owned neural state of every invalidated transport unit**, while every still-valid unit is reused unchanged?
 
-The selection unit is the **scene object**, not a cell, latent feature, vertex, parameter or partial model layer. All learned parameters belonging to an invalid object may be recomputed. No intra-object parameter masking is required by the research intent.
+A single large object can contain regions whose learned transport has become invalid while other regions remain valid. The representation should therefore be able to divide an object's surface into multiple independently reconstructible ownership domains.
 
-The approach is selectively *which object models* are rebuilt, not selectively *which weights within a model* are retrained.
+## 2. User Decisions in Force (2026-10-13, recorded in worklog 32)
 
-## 2. Critical Distinction: Geometry-Dirty and Transport-Dirty
+1. RNA (Relightable Neural Assets, adobe-research @ `66b5b098`) is the **initial implementation baseline** — a research substrate, not a permanent constraint or the required final model.
+2. The ownership architecture **may be finer than a scene object**.
+3. **Surface-Owned Transport Units** are the active research hypothesis.
+4. Each invalidated unit **may have its complete owned neural state recomputed** (every parameter it owns).
+5. **Object-level full recomputation remains a valid coarse-grained comparison.**
+6. At least **five meaningful architecture batches** come before a broad viability judgment.
+7. A negative result for one candidate does **not** falsify the general ownership hypothesis.
+8. Dynamic-GI research of roughly **2007–2013** is the priority historical design reference (section 5).
+9. The 1997 line-space hierarchy (Drettakis & Sillion) is **not** the primary architectural starting point.
+10. Full efficiency and scaling validation come **after representation feasibility**.
 
-Let O={O_1,...,O_n} denote a declared object partition, G0/G1 the former/current scene geometry, and N_i the **complete owned neural transport model** of object i, fitted to the scene's transport configuration.
+Never reinterpret "selective" as a mask over triplane cells, feature channels or MLP layers inside one jointly owned model (worklog 30's tested and negative hypothesis). Selection is over **owned units**, each of which is recomputed whole.
 
-- Geometry dirty D_G: objects directly transformed, edited or deformed.
-- Transport dirty D_T: objects whose **learned transport model is invalid under G1**, including stationary receivers whose indirect lighting changes when another object moves.
+## 3. Transport Unit Contract
 
-**D_G is not equal to D_T.** In the canonical teaset case, moving the milk pot changes reflections and indirect occlusion on stationary teapot/tray surfaces. Recomputing the milk pot alone cannot repair those other objects' baked transport if their models store full scene-conditioned GI.
+A unit is U_i = (S_i, Θ_i):
+- S_i — a well-defined owned surface domain; every evaluated surface sample resolves to exactly one owner (or a declared explicit composition of owners);
+- Θ_i — the full set of learned parameters owned by that domain; updating U_i never changes Θ_j (j ≠ i).
 
-The intended update is:
+Unit ownership is **storage and update ownership, not physical locality**: a unit's targets are full-scene GI, including light from other objects. A shared trainable decoder that must change to recover one unit is a representation coupling to report, never to hide with optimizer masks.
 
-~~~text
-Current scene edit G0 -> G1
-    -> discover affected *object transport dependencies*
-    -> compute conservative transport-invalid object set D_T
-    -> for every i in D_T: fully refit/retrain N_i on current-scene transport
-    -> for every i not in D_T: keep N_i unchanged
-    -> compose current scene using the mixture of updated and reused object models
-~~~
+Separate properties, always reported separately:
+- **parameter preservation** (Θ_j bit-identical),
+- **output preservation** (predictions read only from preserved units are unchanged),
+- **radiometric validity** (a preserved unit's prediction is still correct for the current scene).
+The first two are contracts of the representation; the third depends on the scene edit.
 
-"Fully recompute object" means recomputing the object's **complete learned transport representation**; it does not require scratch initialization. Both complete-object retraining from scratch and complete-object warm-start may be tested; all parameters owned by an invalid object remain eligible. Supervision may require rays that traverse other objects or the whole scene.
+## 4. Geometry-Dirty vs Transport-Dirty
 
-One globally shared trainable decoder with no object-level ownership cannot simply be updated for one object without affecting other objects. That is a model-boundary issue to solve/test, **not evidence that triplanes or RNA are impossible**. A per-object RNA/8DNA/triplane model is a permissible base.
+- D_G: units/objects whose geometry was directly edited.
+- D_T: units whose **learned transport is invalid under G1**, including stationary receivers whose indirect light changed.
 
-## 3. Established Evidence and Correct Scope
+D_G ≠ D_T. Worklog 31 measured this on the canonical teaset: mover-only refit left the stationary receivers as stale as the frozen model; at object granularity every object was transport-dirty, so whole-object selection could save nothing there. Finer ownership is the motivation for the current hypothesis — whether D_T becomes usefully sparse at unit granularity is an open empirical question.
 
-- Worklogs 21–22: a changed relative placement within the canonical teaset produces nonlocal indirect transport changes at stationary surfaces; frozen 8DNA and RNA do not track it adequately. Relation-preserving rigid scene motion is an essential control.
-- Worklogs 24–25: indirect-path occlusion and radiance reflected from the moved part dominate; current local geometry and direct visibility do not fully determine the learned GI.
-- Worklog 26: physical ray-traced recomputation is expensive on its own benchmark; not quality-matched to any proposed method.
-- Worklog 27: historical **asset-level scratch** neural refits are expensive and vary by light regime; not object-by-object rebuild timings.
-- Worklogs 28–29: two compact relational state attempts fail their held-out near-mirror regime; lifecycle-separated state remains a different on-hold candidate.
-- Worklog 30: a **mis-scoped intra-object experiment** tested selective masking of 8DNA triplane cells while freezing shared weights. It fails on that one substrate, but this does **not test or falsify the object-level selective recomputation proposed here**. The experiment remains a valid historical result for feature-level selection only.
+## 5. Prior Art and Historical Design References
 
-The canonical teaset was previously authored as one learned 8DNA asset. For an object-level test, the scene partition and per-object neural ownership must be defined explicitly; calling a single all-part asset an "object" makes the object-level selection test degenerate.
+Priority references (advisor-approved direction; design references only, nothing implemented automatically):
 
-## 4. Prior Art and Novelty Boundary
+| Reference | What it contributes | Category |
+|---|---|---|
+| Gautron, Bouatouch, Pattanaik, *Temporal Radiance Caching*, IEEE TVCG 13(5), 2007 | reuses cached (ir)radiance records across animation frames with temporal gradients; glossy GI in animated scenes | radiance caching, temporal reuse / invalidation by age-gradient |
+| Debattista, Dubla, Banterle, Santos, Chalmers, *Instant Caching for Interactive Global Illumination*, CGF 28(8), 2009 | irradiance cache + instant radiosity; updates only light paths invalidated by geometry changes | radiance caching, transport invalidation |
+| Wang, Zhou, Pan, Bao, *An Efficient GPU-Based Approach for Interactive Global Illumination*, SIGGRAPH 2009 | clusters shading points (adaptive seeding + k-means), final gather at cluster centres, interpolation | sampling and scheduling (clustered evaluation) |
+| Crassin, Neyret, Sainz, Green, Eisemann, *Interactive Indirect Illumination Using Voxel Cone Tracing*, CGF 30(7) (PG) 2011 | on-the-fly voxel octree of the scene, cone-traced visibility/incoming energy, 2 bounces incl. glossy | surface/volume representation rebuilt per frame |
 
-Object-level incremental GI, hierarchical dependency/visibility structures and selective recomputation already exist (e.g. Drettakis and Sillion 1997; Luksch et al. 2019; Enlighten workflows). Neural per-object composition and dynamic inference already exist (NeLT 2023; Superposed Deformable Feature Fields 2024).
+Keep five concepts distinct: **surface representation**, **radiance caching**, **learned parameter ownership**, **transport invalidation**, **sampling/scheduling**. These papers mainly contribute caching, invalidation and scheduling ideas; none defines learned-parameter ownership, which is this project's representation question.
 
-Do **not** claim novelty for "a hierarchy", "only update affected objects", or "per-object neural representation" alone.
+Also prior art (not the starting point): hierarchical/line-space dependency structures (Drettakis & Sillion 1997), Luksch et al. 2019, Enlighten workflows; neural per-object composition (NeLT 2023, Superposed Deformable Feature Fields 2024). Do **not** claim novelty for "a hierarchy", "update affected parts only", or "per-object/per-region neural representations" alone.
 
-The research opportunity, if experimentally supported, is to make **scene-wide learned GI object models** reusable across unforeseen edits using meaningful transport-validity dependencies, conservative update closure, accurate full-object neural rebuilds, and favorable quality/cost scaling compared with rebuilding every scene object's learned transport.
+## 6. Established Evidence and Scope
 
-Compared with dynamic-object inference conditioned on trained transforms, the intended operation is **post-training repair** when the previous learned transport has become invalid. Compare fairly rather than asserting that neural GI cannot handle motion.
+- Worklogs 21–25: a changed relative placement within the canonical teaset produces nonlocal indirect transport changes at stationary surfaces; frozen 8DNA and RNA do not track it; indirect-path occlusion and moved-part reflection dominate.
+- Worklogs 26–27: physical and historical whole-asset neural recomputation are expensive (different regimes).
+- Worklogs 28–29: two compact relational-state candidates fail held-out near-mirror T3.
+- Worklog 30: intra-object triplane-cell masking in one 8DNA model (shared flows frozen) fails — a valid negative result **for that feature-level hypothesis only**.
+- Worklog 31: explicit (non-neural) per-part surface radiance units with no shared decoder compose to 8DNA-level T0 quality and, refitted, recover the T3 change (tracking gain ≈ 1); at object granularity D_T = all objects; no wall-clock saving in that implementation.
+- Worklog 32 (Batch 1): RNA split into K complete RNA units (P1/P4/P16, matched and full-size). Parameter and output ownership hold exactly (REINIT: 15 frozen units bit-identical, every frozen-unit pixel bit-identical, re-initialised unit recovers its P16 error). Static fidelity of P16 is within ~0.2 dB / 1.03× MAE of original RNA, with a measurable excess discontinuity at intra-part seams. **But the predeclared static-credibility gate (original RNA ≥ 25 dB) failed in both configurations** (C1 17.97 dB; C2 24.92 dB), so the ownership-fidelity verdict is not adjudicated.
 
-## 5. Object Ownership Is the Key Design Boundary
+## 7. Immediate Scientific Frontier
 
-Define for each object:
-1. The identity and transform/correspondence of O_i.
-2. Its entire neural model N_i (all trainable parameters and optionally any object-local cache).
-3. What transport N_i predicts: outgoing surface radiance under specified lighting, incident transport, transfer coefficients, or other semantics.
-4. Whether and how N_i encodes **scene context** including other objects.
-5. How recomputing N_i can use the **current entire scene** for supervision without changing unchanged objects' learned models.
-6. How final rendering composes all object contributions, avoiding double-counting or missing cross-object transport.
-
-If N_i represents transport affected by other objects, its geometry may remain unchanged yet N_i becomes transport dirty.
-
-Scene-level dependencies can propagate over multiple bounces. One mover may invalidate many or all objects; do not assume that affected sets are always small or spatially close.
-
-The granularity can later be hierarchical objects or parts if physically and semantically justified, but **a partial feature subset within N_i is not the required meaning of selective**.
-
-## 6. Immediate Scientific Frontier
-
-**Before a deployable dependency predictor**, test object-level recomputation with an offline reference-derived oracle object invalidation set:
-
-- Establish a multi-object scene and a *per-object* learned transport model capable of good fixed-scene high-quality GI.
-- Pretrain all N_i at G0.
-- Change geometry (prefer the physical teaset T0/T3 edit if a meaningful object partition and scene supervision can be constructed).
-- Identify transport-dirty objects D_T^oracle from reference radiance changes on stable/current object surface samples. Distinguish geometry dirtiness from receiver transport dirtiness.
-- Fully rebuild all parameters of each selected object model, with unchanged object models held bit-identical.
-- Compare with full objectwise rebuild of every model, changed-geometry-only rebuild, frozen scene, and whole-object warm-start/scratch controls.
-- Test rendering fidelity, multi-bounce consistency, cross-object effects and total wall-clock (supervision generation included).
-
-The first gate tests **object ownership and whole-object update economics**, not feature-level localizability or mask efficiency. Once that works, test automated dependency detection. If updating almost every object is necessary, report that negative locality result.
-
-## 7. Distinct Sources of Update Cost
-
-Separate:
-- discovery of dirty object set (oracle cost vs runtime detector);
-- current-geometry ray tracing/reference/supervision generation per object (may traverse the entire scene);
-- fully optimizing the selected object's entire model, from scratch or warm start;
-- checkpoint load/store, validation, inference/rendering composition;
-- any multi-object consistency iteration and dependent recomputations.
-
-Object-level selective retraining can be useful even when within-object computation is entirely dense. Lower object count is not, by itself, proof of lower actual update latency.
+Representation feasibility first (decision 10). Open questions, in order:
+1. a credible static baseline under a predeclared protocol (worklog 32's stop condition);
+2. unit-level reconstruction after a **physically grounded** geometry edit (radiometric validity, not just ownership semantics);
+3. whether D_T is sparse at unit granularity on a scene where that is physically plausible;
+4. seam/composition quality and capacity cost of ownership;
+5. only then dependency discovery, hierarchy, efficiency and scaling.
 
 ## 8. Research Conduct / Stop Conditions
 
-- Preserve historical scripts, Worklogs 21–30 and prior architecture snapshots; never reinterpret Worklog 30 as object-level failure.
-- Synthetic correctness + actual multi-object real-scene evidence; quantify object counts, dirty fractions, affected receiver error, negative controls and total cost.
-- Do not hide far-away invalidated objects to make selective speedups look larger.
-- If object models are not independently trainable/composable with physically meaningful GI, stop and attribute a **model ownership** problem before implementing a hierarchy.
-- If the oracle dirtiness set is effectively the whole scene, stop and report the transport coupling rather than optimizing a mask threshold.
-- A hierarchy is a candidate acceleration structure, not the primary architecture hypothesis.
-- No automatic proceeding from an oracle gate to a full dynamic framework or paper-success claim.
+- Preserve historical scripts, worklogs 21–32 and archived architecture snapshots; never reinterpret worklog 30 as a test of unit-level or object-level ownership.
+- Predeclare scenes, quality gates and thresholds; never move them after seeing results.
+- A stop condition ends the current experimental route, not the research direction; attribute a negative result (baseline limitation, candidate limitation, ownership isolation, optimisation/capacity, partition, supervision/correspondence, compositing) before interpreting it.
+- No automatic advance to the next batch; each batch needs a user decision.
 
 ## 9. One-Line Research Definition
 
-> **Preserve high-quality neural transport scene-wide by tracking which objects' pretrained transport has become invalid after geometry changes, fully recomputing only those object-owned neural models, and reusing all models that remain radiometrically valid.**
+> **Keep high-quality learned GI valid under geometry edits by owning learned transport in independently reconstructible surface units, recomputing the complete state of only the units whose transport became invalid, and reusing every unit that remains valid.**

@@ -144,6 +144,35 @@ def t_isolation_and_checkpoint(tmp):
             "checkpoint_roundtrip_identical": same}
 
 
+def t_composition_reproducible(tmp):
+    """The composed output is a pure function of (state, inputs): repeated evaluation, a
+    shuffled pixel order and a save/load round trip give bit-identical per-pixel predictions."""
+    import numpy as np
+    import torch
+
+    K = 4
+    specs = []
+    for k in range(K):
+        lo = np.array(AABB[0]) + np.array([k * 0.36, 0, 0]); hi = lo + np.array([0.36, 0.70, 1.46])
+        specs.append({"params": dict(BASE), "lo": lo, "hi": hi})
+    torch.manual_seed(3)
+    m = M.OwnedTriplaneSet(specs, AABB).cuda().eval()
+    owner_fn = lambda w: np.clip(((w[:, 0] - AABB[0][0]) / 0.36).astype(int), 0, K - 1)
+    pos, cam, light, nrm, _, _ = _inputs(4000, 5, owner_fn)
+    p = Path(tmp) / "compose.pt"
+    torch.save(m.state_dict(), p)
+    m2 = M.OwnedTriplaneSet(specs, AABB).cuda().eval(); m2.load_state_dict(torch.load(p))
+    perm = torch.randperm(pos.shape[1], device="cuda"); inv = torch.argsort(perm)
+    with torch.no_grad():
+        a, b = m(pos, cam, light, nrm), m(pos, cam, light, nrm)
+        c = m2(pos, cam, light, nrm)
+        d = m(pos[:, perm], cam[:, perm], light[:, perm], nrm[:, perm])[:, inv]
+    repeat = bool(torch.equal(a, b)); reload = bool(torch.equal(a, c))
+    shuffled = float((a - d).abs().max())  # pixel order changes GEMM blocking only
+    return {"pass": repeat and reload and shuffled < 1e-5, "repeat_bit_identical": repeat,
+            "reload_bit_identical": reload, "shuffled_order_max_abs_diff": shuffled}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--partitions", required=True)
@@ -153,7 +182,8 @@ def main() -> int:
     import os
     os.chdir(out)  # upstream RNA writes feature-grid dumps (yz_grid.exr) into the working directory
     tests = {"partition": lambda: t_partition(args.partitions), "routing": t_routing,
-             "single_unit_equivalence": t_single_unit_equivalence, "isolation_and_checkpoint": lambda: t_isolation_and_checkpoint(out)}
+             "single_unit_equivalence": t_single_unit_equivalence, "isolation_and_checkpoint": lambda: t_isolation_and_checkpoint(out),
+             "composition_reproducible": lambda: t_composition_reproducible(out)}
     res = {}
     for n, fn in tests.items():
         try:

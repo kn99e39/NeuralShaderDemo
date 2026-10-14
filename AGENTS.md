@@ -1,22 +1,46 @@
 # Working On This Repo
 
-## Selective_Recompute research gate — Corrected object-level intent (2026-10-12)
+## Selective_Recompute research gate — Surface-Owned Transport Units (2026-10-13; updated 2026-10-14, worklog 32)
 
-**User-confirmed definition:** Selective recomputation means **recompute the ENTIRE neural transport model for each scene object whose learned transport was invalidated by a geometry edit**, while keeping **entire models** belonging to transport-valid objects unchanged.
+**User-confirmed definition:** Selective recomputation means **recompute the COMPLETE owned learned state of every transport unit whose learned transport was invalidated by a geometry edit**, while keeping the complete state of every still-valid unit unchanged. A unit U_i = (S_i, Θ_i) owns a surface domain S_i and all of its trainable parameters Θ_i. Units **may be finer than a scene object** (the user's decision of 2026-10-13); a whole object is the coarsest unit, and **object-level full recomputation remains a valid coarse comparison**.
 
-Never reinterpret this as selecting only triplane cells, local features, a subset of MLP layers, or another intra-object parameter mask.
+Never reinterpret this as selecting only triplane cells, local features, a subset of MLP layers, or another parameter mask inside a jointly owned model. Every parameter of a selected unit is eligible to update. A shared trainable component that must change to recover one unit is a coupling to report, never to hide with optimiser masks.
 
-**Geometry-dirty D_G and transport-dirty D_T differ.** When a milk pot moves, stationary teapot/tray object models can be transport-invalid because their indirect GI changes. A mover-only rebuild does not necessarily suffice.
+**User decisions in force (2026-10-13):**
+1. RNA (`66b5b098`) is the initial implementation baseline, not a permanent constraint.
+2. Ownership finer than objects is allowed.
+3. Surface-Owned Transport Units are the active hypothesis.
+4. An invalidated unit's complete state may be recomputed.
+5. Object-level recompute is the coarse comparison.
+6. At least five architecture batches come before a broad viability judgment.
+7. One negative candidate does not falsify the hypothesis.
+8. 2007–2013 dynamic-GI work is the priority historical reference.
+9. The 1997 line-space hierarchy is not the starting point.
+10. Efficiency and scaling come after representation feasibility.
 
-**Active research decision frontier: O0/O1 object-level feasibility.** First show high-quality separately-owned neural GI object models can be trained and composed against full-scene GI (O0); then, with an offline oracle object-dirty set, fully refit only invalid object models (O1). Only after this evidence and a new user decision may work on deployable object-to-object transport dependency/hierarchy proceed.
+Full list: docs/RESEARCH_CENTRIC_TOPIC.md §2.
 
-**Matched controls:** frozen T0 object models; all-object scratch reconstruction; all-object full-parameter warm-start refit; directly geometry-changed object(s) only; oracle transport-dirty object(s) full-model refit; optional simple spatial object selection. Use the same scene partition, model family, reference supervision and refit contract. **Every parameter of each selected object model is eligible to update.**
+**Geometry-dirty D_G and transport-dirty D_T differ.** Stationary receivers can hold invalid transport when another part moves; a mover-only rebuild does not necessarily suffice.
 
-**Historical scope:** Worklog 30 validly tested selective triplane-cell masking inside a single 8DNA all-parts asset while shared layers were frozen; its negative result is **not** a test of this clarified object-level approach. Keep Worklogs 21–30 unchanged. Superseded intra-object hypothesis archived in docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md; previous lifecycle-separation hypothesis archived in docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md.
+**Unit-level preservation:** report parameter preservation, output preservation and radiometric validity separately. They are different properties.
 
-**Do NOT** resume intra-object feature masking as the main experiment, assume the historical single-asset 8DNA teaset is already decomposed into independent object models, ignore stationary transport-dirty receivers, implement an object hierarchy before proving oracle whole-object update viability, or automatically advance to larger implementation after a result.
+**Current frontier:** Batch 1 (worklog 32) showed exact ownership and full-state unit reconstruction on independent RNA units, but stopped because original RNA failed the predeclared static-credibility gate (17.97 / 24.92 dB vs 25 dB). **Batch 2 is not authorised.** The user first decides how to meet the credibility precondition, then what Batch 2 tests (docs/RESEARCH_ROADMAP.md §3–4).
 
-Keep actual code changes and future experiments subject to user research decisions. Doc correction is not approval to implement O0/O1.
+**Historical scope:**
+- Worklog 30 validly tested triplane-cell masking inside one 8DNA asset with shared layers frozen; its negative result is not a test of owned units.
+- Worklog 31 tested explicit (non-neural) surface units and object-level oracle refit.
+- Keep worklogs 21–32 unchanged.
+- Archived architectures: docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md, docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md, docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md.
+
+**Do NOT:**
+- resume intra-model feature masking as the main experiment;
+- treat a single jointly owned asset model as several owned units;
+- ignore stationary transport-dirty receivers;
+- build a dependency hierarchy or dirty detector before unit-level feasibility;
+- move scenes, gates or thresholds after seeing results;
+- automatically advance to the next batch after a result.
+
+Keep code changes and future experiments subject to user research decisions. A doc correction is not approval to implement.
 
 ---
 
