@@ -1,0 +1,33 @@
+{
+ "schema": "rna_baseline_quality/v1",
+ "worklog": 33,
+ "batch": "RNA static baseline quality - root-cause attribution (diagnostic; not architecture Batch 2)",
+ "written": "2026-10-15 ~00:00 KST, after control A, the Rain/Einar control and control C for C2 were seen; BEFORE any result of control C for C1, control D1 (factorial) or control B2 (clamped estimator) existed. Controls A/C/D1 were defined in their scripts' docstrings before their runs.",
+ "question": "Is the existing RNA baseline a valid reference for evaluating Surface-Owned Neural Transport, and if not, which implementation, data, optimisation or representation factor prevents it?",
+ "fixed": {
+  "rna": "upstream 66b5b098, unmodified (git diff empty)",
+  "threshold": "the worklog-32 static-credibility value 25 dB is NOT changed; every result is reported under both aggregations (pooled = worklog-32 gate; view-mean = upstream Lightning val_psnr) and both checkpoint rules (final; best-by-val labelled as validation-selected)",
+  "checkpoints": "worklog-32 C1/C2 arm A (final state.pt; C1 best ckpt), upstream-generator Rain/Einar last.ckpt; no new training unless a rule below triggers it"
+ },
+ "controls": {
+  "A_eval_paths": "rbq_eval_paths.py: same weights through upstream DataModule+Lightning validate (blur index pinned to the end of the sigma schedule) and through rso_eval's loader; per-pixel agreement and both aggregations",
+  "B0_known_good": "Rain and Einar (official Cycles generator, identical RNA config) scored with the same two aggregations, final weights",
+  "B1_generator_settings": "rbq_blend_settings.py: Cycles settings and materials stored in the generator .blend files + generator overrides (blender_render_dataset.py:230-240)",
+  "C_reference": "rbq_reference.py + rbq_analyze.py: val views 0/10/20/30; replay check; same-spp replicate; 8x-spp reference; noise share; tails; lit/shadow strata",
+  "D1_factorial": "rbq_factorial.py + rbq_analyze.py: camera {train, val} x light {per-pixel, per-image}, 4 views per cell, plus stored train views (C1 only: the C2 train H5 is on LabServer63)",
+  "D0_existing_curves": "train vs val loss/PSNR of every existing run (worklog-32 arms, Rain, Einar)"
+ },
+ "B2_clamped_estimator": {
+  "B2a_render": "render val views 0/10/20/30 of C1 and C2 at the dataset spp with an upstream-like estimator emulated in a copy of rna_bridge.trace_directional (unchanged bridge): per-sample direct (first vertex) contribution clamped to 20 and indirect sum clamped to 10 (Cycles: scale so the max channel equals the clamp), at most 4 bounces after the camera hit (glossy_bounces 4); NOT emulated: blur_glossy, Blackman-Harris filter. Compare to the unbiased 8x-spp reference.",
+  "B2a_runs_if": "always (render-only, cheap)",
+  "B2b_retrain": "train arm A (upstream config, seed 0, 250 epochs) on a C1 train+val set regenerated with the B2a estimator, everything else identical, and evaluate against BOTH the clamped val set and the unbiased worklog-22 val set",
+  "B2b_runs_if": "on C1 the B2a targets differ from the unbiased reference by more than A's own error, i.e. pooled PSNR(B2a val render, 8x reference) < pooled PSNR(A, 8x reference); otherwise the estimator difference is smaller than the model error and cannot explain it, and B2b is not run"
+ },
+ "attribution_rules": {
+  "evaluation_defect": "U/O per-view PSNR disagreement > 0.01 dB or GT disagreement > 0 -> defect",
+  "aggregation_effect": "pooled vs view-mean gap on identical predictions is reported as a contract difference, not a defect",
+  "reference_noise": "noise share = MSE(GT, ref)/MSE(A, GT); A vs ref reported as the noise-free estimate",
+  "generalisation": "D1 cell differences > 1 dB pooled attribute the train/val gap to the factor that changes between the cells",
+  "capacity": "existing P16w (16x params) vs A: lower train loss without lower val loss -> not a capacity shortfall"
+ }
+}
