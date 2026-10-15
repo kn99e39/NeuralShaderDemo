@@ -206,6 +206,12 @@ def main() -> int:
     key["control_A"] = {p.stem: {k: v for k, v in json.loads(p.read_text()).items() if k not in ("U", "O")} | {
         "U_pooled": json.loads(p.read_text())["U"]["pooled_psnr"], "U_view_mean": json.loads(p.read_text())["U"]["mean_per_view_psnr"]}
         for p in sorted((root / "A_eval_paths").glob("*.json"))}
+    if (root / "batch1_arms_vs_reference.json").exists():
+        key["batch1_arms_vs_converged_reference_views_0_10_20_30"] = json.loads((root / "batch1_arms_vs_reference.json").read_text())
+    if (root / "d2" / "A100" / "train.json").exists():
+        t = json.loads((root / "d2" / "A100" / "train.json").read_text())
+        key["D2_train_100_views"] = {"best_val_psnr_lightning": t.get("best_val_psnr"), "seconds": t["seconds"]["total"],
+                                     "final_eval": key["control_A"].get("C1_A100_final")}
     (out / "05_key_numbers.json").write_text(json.dumps(key, indent=1)); files.append("05_key_numbers.json")
     (out / "manifest.json").write_text(json.dumps({"worklog": "docs/worklogs/33_WORKLOG_RNA_STATIC_BASELINE_ROOT_CAUSE_ATTRIBUTION.md",
                                                    "generator": "experiments/rna_baseline_quality/rbq_exports.py", "source": "results/rna_baseline_quality",

@@ -1,6 +1,6 @@
 # Baseline Roles and Evidence Strategy — Surface-Owned Selective Neural Transport Recomputation
 
-**Updated:** 2026-10-14 (worklog 32)  
+**Updated:** 2026-10-15 (worklog 33)  
 **Status:** Active interpretation/control contract. Owned-unit recomputation is NOT validated; Batch 1 established the ownership contract on RNA but stopped on baseline credibility  
 **Project:** NeuralShaderDemo / Selective_Recompute
 
@@ -25,6 +25,7 @@
 | WL28–29 | sparse K=32 dynamic-state candidates negative | owned-unit recompute negative |
 | WL30 | **intra-object** triplane-cell-only refit negative (8DNA, flows frozen) | complete-unit or whole-object refit negative |
 | WL31 | explicit per-part surface units: O0 pass, T3 recovered by refit, object-level D_T = all objects | neural units; unit-level D_T sparsity; cost advantage |
+| WL33 | integrated RNA pipeline = faithful upstream RNA (eval identical, contract audited, estimator clamping not explanatory); teaset C1 = RNA representation-limited; C2 gate measurement noise-limited | that RNA cannot be credible on rough conductors; a positive proof of the C1 representation limit |
 | WL32 | RNA independent complete units: exact parameter/output preservation and unit reconstruction; HDR/seam fidelity cost; **baseline-credibility gate failed** | static fidelity under a credible baseline; recovery after a physical edit |
 
 Do not delete, overwrite, reinterpret, or silently merge these questions.
@@ -45,6 +46,12 @@ Implementation baselines are not scientific replications. A credibility failure 
 ## 4. Static-Credibility Precondition
 
 Before a candidate's fidelity is judged, A must clear a predeclared static bar on the chosen scene. Worklog 32 used 25 dB RNA val PSNR on final weights; A reached 17.97 dB (C1) and 24.92 dB (C2). The bar and the scene are chosen before training. A failure is reported, not repaired by changing the threshold, the metric, the checkpoint selection or the scene after the fact. Any revision is a new, prospective protocol.
+
+Lessons from worklog 33 for every future credibility gate:
+- **Score against converged targets.** At 128 spp the GT noise floor was 29.4 dB, which caps any model's measured PSNR.
+- **State the aggregation.** Pooled vs view-mean differs by up to 0.6 dB.
+- **State the checkpoint rule.** Best-by-val selects on the evaluation set.
+- **Check the substrate's material regime first.** RNA on near-mirror conductors under a delta light is representation-limited (worklog 33), so a gate failure there is a baseline limitation, not a candidate failure.
 
 ## 5. Controlled Comparison Rules
 

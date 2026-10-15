@@ -1,6 +1,6 @@
 # Architecture — Surface-Owned Neural Transport Units
 
-**Updated:** 2026-10-14 (worklog 32)  
+**Updated:** 2026-10-15 (worklog 33)  
 **Status:** Batch 1 of ≥ 5 reported. Ownership contract demonstrated exactly on an RNA-based candidate; static-fidelity verdict NOT adjudicated (baseline-credibility stop condition); radiometric recovery after a real edit NOT YET TESTED  
 **Branch:** Selective_Recompute  
 **Historical architectures:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md, docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md, docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
@@ -143,7 +143,11 @@ The 1997 line-space hierarchy is prior art, not the starting point. See docs/RES
 ## 8. Implementation Frontier and Non-Goals
 
 **Next decision (user):**
-1. How to meet the static-credibility precondition (a predeclared scene/material where RNA clears the bar, or a prospectively revised criterion).
+1. How to meet the static-credibility precondition (a predeclared scene/material where RNA clears the bar, or a prospectively revised criterion). Worklog 33 found no integration defect:
+   - near-mirror C1 is an RNA representation limit, which only a different substrate would lift (decision 1);
+   - the C2 regime is viable if scored against converged targets.
+
+   Against converged targets, Batch-1 ownership costs on C2 are slightly larger (P16 −0.67 dB, logL1 1.28×; 4 views).
 2. Then either:
    - radiometric validity of unit recompute under a physical T0 → T3 edit (recommended in worklog 32); or
    - a representation variant from §5.

@@ -24,7 +24,12 @@ Full list: docs/RESEARCH_CENTRIC_TOPIC.md §2.
 
 **Unit-level preservation:** report parameter preservation, output preservation and radiometric validity separately. They are different properties.
 
-**Current frontier:** Batch 1 (worklog 32) showed exact ownership and full-state unit reconstruction on independent RNA units, but stopped because original RNA failed the predeclared static-credibility gate (17.97 / 24.92 dB vs 25 dB). **Batch 2 is not authorised.** The user first decides how to meet the credibility precondition, then what Batch 2 tests (docs/RESEARCH_ROADMAP.md §3–4).
+**Current frontier:** Batch 1 (worklog 32) showed exact ownership and full-state unit reconstruction on independent RNA units, but stopped because original RNA failed the predeclared static-credibility gate (17.97 / 24.92 dB vs 25 dB). **Batch 2 is not authorised.** Worklog 33 audited the RNA baseline:
+- no integration defect;
+- C1 is an RNA representation limit on near-mirror conductors;
+- the C2 gate miss is dominated by 128-spp target noise.
+
+The user first decides the static-reference protocol, then what Batch 2 tests (docs/RESEARCH_ROADMAP.md §3–4).
 
 **Historical scope:**
 - Worklog 30 validly tested triplane-cell masking inside one 8DNA asset with shared layers frozen; its negative result is not a test of owned units.

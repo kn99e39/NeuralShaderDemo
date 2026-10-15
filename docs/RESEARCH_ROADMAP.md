@@ -1,6 +1,6 @@
 # Research Roadmap — Surface-Owned Selective Neural Transport Recomputation
 
-**Updated:** 2026-10-14 (worklog 32)  
+**Updated:** 2026-10-15 (worklog 33)  
 **Branch:** Selective_Recompute  
 **Status:** Architecture Batch 1 (RNA-based independent units) reported — ownership contract exact; stopped on the baseline-credibility precondition; Batch 2 NOT authorised  
 **Venue planning:** SIGGRAPH 2027, official paper deadline to be separately verified.
@@ -35,6 +35,7 @@ Active contracts: docs/RESEARCH_CENTRIC_TOPIC.md, docs/Architecture.md, docs/BAS
 | 28–29 | two sparse K=32 relational-state candidates fail held-out near-mirror T3 | that owned-unit recompute fails |
 | 30 | triplane-cell masking inside one 8DNA model (shared flows frozen) fails | anything about complete owned units |
 | 31 | explicit per-part surface units (no learned decoder) reach 8DNA-level T0 and recover T3 when refitted; object-level D_T = all objects on the compact teaset; no wall-clock saving in that implementation | unit-level D_T sparsity; neural units |
+| 33 | RNA baseline audit: integration and evaluation faithful to upstream (no defect); C1 failure = RNA representation limit on near-mirror Ni (by exclusion: not noise, estimator, distribution, capacity, resolution, convergence or data density 100-200 views); C2 gate miss dominated by 128-spp target noise (A vs converged ref 26.7 dB on 4 views) | a credible static reference (needs a prospective protocol); a positive test of the C1 representation limit |
 | 32 | RNA split into complete independent units: exact parameter/output preservation and full-state unit reconstruction; P16 costs 1.15× HDR log error and visible seam steps vs RNA (C2), not fixed by 16× capacity | static fidelity under a credible baseline (gate failed: 17.97 / 24.92 dB); recovery after a physical edit; cost |
 
 ## 3. Architecture Batch Program (≥ 5 batches before a broad viability judgment)
@@ -59,9 +60,13 @@ Worklog 32's original RNA failed the predeclared 25 dB static-credibility bar:
 - C1 (canonical near-mirror teaset): 17.97 dB;
 - C2 (rough nickel α 0.3): 24.92 dB.
 
-The batch therefore stopped on its first stop condition. The user chooses, before any Batch-2 training, between:
+The batch therefore stopped on its first stop condition. Worklog 33 attributed the failure:
+- **C1:** RNA's representation limit on near-mirror conductors. No integration defect; more data, capacity or resolution did not help.
+- **C2:** target noise in the measurement. 37.5% of A's error is 128-spp GT noise; against converged targets A scored 26.7 dB on 4 views.
+
+The user chooses, before any Batch-2 training, between:
 - **(a)** a predeclared scene/material configuration where original RNA clears the bar; or
-- **(b)** a prospectively revised credibility criterion, written as a new protocol and never applied retroactively to Batch 1.
+- **(b)** a prospectively revised credibility criterion, written as a new protocol and never applied retroactively to Batch 1. Worklog 33's recommendation: the C2 material regime scored against converged (≥ 8× spp) validation targets, pooled, final weights.
 
 Do not select scenes, gates or thresholds after seeing candidate results.
 

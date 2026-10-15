@@ -1,6 +1,6 @@
 # Research Centric Topic — Surface-Owned Selective Neural Transport Recomputation
 
-**Last updated:** 2026-10-14 (worklog 32)  
+**Last updated:** 2026-10-15 (worklog 33)  
 **Status:** Active problem; Surface-Owned Transport Units are the active representation hypothesis (Batch 1 of ≥ 5 architecture batches reported); full method not validated  
 **Target:** SIGGRAPH 2027 (official Technical Papers deadline to be verified separately)  
 **Superseded framing:** object-level-only selection (2026-10-12), archived at docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
@@ -72,6 +72,12 @@ Also prior art (not the starting point): hierarchical/line-space dependency stru
 - Worklog 30: intra-object triplane-cell masking in one 8DNA model (shared flows frozen) fails — a valid negative result **for that feature-level hypothesis only**.
 - Worklog 31: explicit (non-neural) per-part surface radiance units with no shared decoder compose to 8DNA-level T0 quality and, refitted, recover the T3 change (tracking gain ≈ 1); at object granularity D_T = all objects; no wall-clock saving in that implementation.
 - Worklog 32 (Batch 1): RNA split into K complete RNA units (P1/P4/P16, matched and full-size). Parameter and output ownership hold exactly (REINIT: 15 frozen units bit-identical, every frozen-unit pixel bit-identical, re-initialised unit recovers its P16 error). Static fidelity of P16 is within ~0.2 dB / 1.03× MAE of original RNA, with a measurable excess discontinuity at intra-part seams. **But the predeclared static-credibility gate (original RNA ≥ 25 dB) failed in both configurations** (C1 17.97 dB; C2 24.92 dB), so the ownership-fidelity verdict is not adjudicated.
+
+- Worklog 33 (baseline attribution):
+  - The project's RNA integration is faithful to upstream.
+  - The C1 gate failure is an RNA representation limit on near-mirror conductors.
+  - The C2 miss is dominated by reference noise in the gate measurement.
+  - A credible static reference needs a prospective protocol scored against converged targets.
 
 ## 7. Immediate Scientific Frontier
 
