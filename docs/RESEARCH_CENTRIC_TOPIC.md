@@ -79,6 +79,11 @@ Also prior art (not the starting point): hierarchical/line-space dependency stru
   - The C2 miss is dominated by reference noise in the gate measurement.
   - A credible static reference needs a prospective protocol scored against converged targets.
 
+- Worklog 34 (Batch 2):
+  - Seams between owned units come from independent per-unit error fields, exposed by hard selection.
+  - An explicit partition-of-unity composition (P16-PU) removes most of the seam excess. It does so with exact output-influence accounting and without changing any learned state.
+  - Independent decoders still cost fidelity inside units.
+
 ## 7. Immediate Scientific Frontier
 
 Representation feasibility first (decision 10). Open questions, in order:

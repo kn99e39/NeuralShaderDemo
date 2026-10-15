@@ -25,6 +25,7 @@
 | WL28–29 | sparse K=32 dynamic-state candidates negative | owned-unit recompute negative |
 | WL30 | **intra-object** triplane-cell-only refit negative (8DNA, flows frozen) | complete-unit or whole-object refit negative |
 | WL31 | explicit per-part surface units: O0 pass, T3 recovered by refit, object-level D_T = all objects | neural units; unit-level D_T sparsity; cost advantage |
+| WL34 | P16 seams = decorrelated independent unit errors exposed by hard selection; P16-PU composition (no learned-state change) removes most of the excess with exact output-influence accounting | interior per-unit fidelity recovery; a shared-decoder ownership variant |
 | WL33 | integrated RNA pipeline = faithful upstream RNA (eval identical, contract audited, estimator clamping not explanatory); teaset C1 = RNA representation-limited; C2 gate measurement noise-limited | that RNA cannot be credible on rough conductors; a positive proof of the C1 representation limit |
 | WL32 | RNA independent complete units: exact parameter/output preservation and unit reconstruction; HDR/seam fidelity cost; **baseline-credibility gate failed** | static fidelity under a credible baseline; recovery after a physical edit |
 
@@ -37,6 +38,7 @@ Do not delete, overwrite, reinterpret, or silently merge these questions.
 | **Implementation / quality control (A)** | original RNA (`66b5b098`, upstream config, seed 0) on the same data | the static-fidelity reference that every owned candidate is compared with; must first pass a predeclared credibility bar |
 | **Owned candidate (B)** | worklog 32: K complete RNA units (P1/P4/P16 matched, P16w full-size) | change only the ownership boundary |
 | **Capacity control** | matched-texel units (P16) and full-size units (P16w); P1 isolates local framing | separate capacity from ownership effects |
+| **Composition control** | the same learned units under hard selection vs P16-PU (worklog 34) | isolates composition effects from learned-function effects |
 | **Ownership-semantics control** | REINIT: re-initialise one unit, retrain it fully with all others frozen | parameter and output preservation; reconstruction to prior quality |
 | **Coarse comparison** | whole-object full recompute (worklog 31 on an explicit substrate) | the granularity that finer units must beat or match |
 | **Physical reference** | Mitsuba full-scene path-traced radiance (worklog-22 producer), T0 and T3 | supervision and evaluation; never simplified to local transport |

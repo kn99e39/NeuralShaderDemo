@@ -1,6 +1,6 @@
 # Architecture — Surface-Owned Neural Transport Units
 
-**Updated:** 2026-10-15 (worklog 33)  
+**Updated:** 2026-10-15 (worklog 34)  
 **Status:** Batch 1 of ≥ 5 reported. Ownership contract demonstrated exactly on an RNA-based candidate; static-fidelity verdict NOT adjudicated (baseline-credibility stop condition); radiometric recovery after a real edit NOT YET TESTED  
 **Branch:** Selective_Recompute  
 **Historical architectures:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md, docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md, docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
@@ -102,12 +102,32 @@ Code is in `experiments/rna_surface_ownership/`; the protocol is in `protocol/rs
 - D_T sparsity at unit granularity;
 - any cost advantage (REINIT training cost is 0.65× of a full P16 run with this implementation, because all pixels still pass through all units).
 
+## 4b. Batch 2 (worklog 34): Boundary Attribution and P16-PU Composition
+
+**Seam attribution** (C2; 4 dev views vs 8× references, existing checkpoints):
+- **Independent learned functions (H2), dominant.** Seam-pair error correlation is 0.24 vs 0.71 inside units; A shows no drop. A neighbour evaluated across the cut is about as accurate as the owner, yet disagrees with it by as much as each errs.
+- **Hard-selection composition (H3) exposes the mismatch.**
+- **Supervision starvation is contradicted.** The band has full light coverage, and error is uncorrelated with per-unit sample counts.
+- **A small near-seam error elevation** (≈ 13% of the excess) has an unresolved mechanism.
+
+**P16-PU (composition contract, no learned-state change).**
+- **Composition:** output = (1 − w) f_own + w f_nbr, within h = 7.2 mm of same-part seams; outside the band it is exactly f_own.
+- **Ownership:** parameter ownership unchanged. A unit's output influence is S_i ∪ B_i (its neighbours' band).
+- **Held-out results** (36 C2 views vs 1024-spp references):
+  - removes 86% of P16's excess seam discontinuity;
+  - lowers seam and band error (−9% / −6%);
+  - interior, logL1 and high-frequency error unchanged;
+  - +0.025 dB image-wide.
+- **REINIT regression:** changed outputs equal S_12 ∪ B_12 exactly (3.2% in neighbour bands); recovery 0.993×.
+- **C1 stress:** the jump is reduced without an accuracy gain.
+- **What it does not fix:** P16's remaining fidelity loss is interior and per-unit (−0.20 dB, logL1 1.18× vs A). Composition cannot fix it.
+
 ## 5. Candidate Space for Later Batches (not authorised)
 
 Each is a different realisation of the same contract, to be compared one factor at a time:
 - **B1 (Batch 1):** independent complete units with hard selection.
 - **Frozen shared decoder + owned per-unit features.** The decoder is trained once and frozen forever, so it is a fixed function; units own features (and optionally a small head). The semantics must state what happens if the decoder becomes inadequate.
-- **Overlapping units with explicit partition-of-unity blending.** This is an explicit composition of owners that removes seam steps. The cost is that a boundary pixel reads several units, which changes output-preservation bookkeeping.
+- **Overlapping units with explicit partition-of-unity blending.** Implemented as P16-PU in worklog 34; output influence is accounted as S_i ∪ B_i.
 - **Non-RNA substrates** (decision 1 allows replacing RNA later), e.g. worklog 31's explicit surface radiance units or other neural surface representations.
 
 ## 6. Historical Design References (decisions 8–9)
