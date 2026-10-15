@@ -34,5 +34,27 @@
   "training_contract": "if a candidate needs training: C2 data, upstream loss/optimiser/schedule, 250 epochs, seed 0, P16 partition and matched capacity unchanged unless the hypothesis itself requires otherwise (declared before training); final weights",
   "evaluation": "held-out 36 views vs 8x references: pooled PSNR (RNA tonemap), logL1, hf (top-10% GT-gradient) error, per part and per unit, seam jump excess and seam/interior error on clean pairs, plus all-40-view metrics vs dataset GT; controls A, P16, P16w unchanged",
   "reinit_regression": "u* = the P16 tea-pot unit with the most training pixels (unit 12, worklog-32 rule); re-initialise/reconstruct its complete owned state; report parameter groups changed/unchanged, pixels whose output can change, and recovered quality"
- }
+ },
+ "amendments": [
+  {
+   "written": "2026-10-15 ~14:50 KST, after the dev-view diagnostics (results/rna_surface_ownership_b2/diag) and BEFORE any held-out view was evaluated or any candidate code existed",
+   "diagnostic_verdicts_C2": {
+    "H1": "SUPPORTED (weak) by rule (b) only: P16/A error ratio near seams [0,2) footprints 1.149 vs >=16 footprints 1.029 (x1.116 >= 1.10); rule (a) fails (Spearman count vs ratio +0.20); C1 stress 1.077 (not met); P16w 1.069",
+    "H2": "SUPPORTED: P16 seam-pair error correlation 0.238 vs matched interior 0.710 (drop 0.47), A 0.641 vs 0.649 (drop 0.008); cross-evaluation median disagreement 0.0251 >= median own error 0.0210 (neighbour error 0.0242, 98.6% of band points inside the neighbour AABB)",
+    "H3": "SUPPORTED: fixed-parameter blend (half-width 2 footprints) brings P16 seam J 0.0268 -> 0.0144 vs A 0.0137 (1.05x) while band error falls 0.0311 -> 0.0293"
+   },
+   "dominance": "H3 removes 95% of P16's seam J excess over A. The protocol's H2 'jump threshold' was not specified in advance; operationalised here (declared now, before held-out evaluation) by the Gaussian decomposition E|e_p - e_q| ~ sigma*sqrt(2(1-rho)): seam/interior J ratio for P16 = magnitude factor 1.078 (H1-type) x decorrelation factor 1.621 (H2-type), i.e. ~13% / ~87% of the log ratio. H2 is the dominant MECHANISM, H3 the dominant removable LEVER; they are complementary (independent errors exposed by hard selection), not competing. Mapping rule 'H3 supported -> explicit overlap composition contract' applies.",
+   "candidate": {
+    "name": "P16-PU (partition-of-unity boundary composition over unchanged P16 units)",
+    "hypothesis": "the visible within-object seams of independently owned units are hard-selection exposure of decorrelated per-unit errors; an explicit, geometry-defined composition across ownership boundaries removes the excess discontinuity without changing any learned parameter and without degrading physical accuracy",
+    "changes": "composition only: output(x) = (1-w(x)) f_owner(x)(x) + w(x) f_nbr(x)(x), nbr = nearest other unit of the same part (dense partition samples), w = clip(0.5 - (d_nbr - d_own)/(2h), 0, 0.5); outside the band output = f_owner exactly",
+    "h": "0.0072 m = 2 x median dev-view pixel footprint (0.0036 m), derived from the diagnostic band, fixed now, not tuned",
+    "unchanged": "P16 partition, every unit's parameters (worklog-32 C2 P16 state.pt), training contract, capacity, data",
+    "ownership": "parameter ownership unchanged (Theta_i = unit i's triplane+MLP; no shared trainable or immutable learned state); composition parameters: h and the partition samples (fixed geometry)",
+    "output_influence": "unit i influences S_i and B_i = {x not in S_i : nbr(x)=i, w(x)>0}; after updating unit i only outputs on S_i U B_i may change; outputs elsewhere are guaranteed bit-identical (to be verified on REINIT); a valid unit j's band adjacent to a dirty unit i depends on f_i, so invalidating i stales B_i inside S_j (reported, not hidden)",
+    "secondary": "the same composition applied to P16w is reported as secondary evidence only",
+    "evaluation": "held-out 36 C2 views vs 8x references (primary), dev views (labelled), all 40 vs dataset GT (secondary), C1 stress; REINIT regression = REINIT parameters (unit 12 retrained, worklog 32) composed with P16-PU vs P16-PU"
+   }
+  }
+ ]
 }
