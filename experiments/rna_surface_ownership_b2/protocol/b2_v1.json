@@ -1,0 +1,38 @@
+{
+ "schema": "rna_surface_ownership_b2/v1",
+ "worklog": 34,
+ "batch": "Architecture Batch 2 - Surface-Owned Neural Transport boundary fidelity (attribution first; at most one candidate)",
+ "written": "2026-10-15, before any Batch-2 diagnostic was computed; worklog-32/33 results known",
+ "preserved": "worklog-32 arms A/P1/P4/P16/P16w/REINIT (code experiments/rna_surface_ownership/, state.pt files), worklogs 21-33, upstream RNA 66b5b098; new code only in experiments/rna_surface_ownership_b2/",
+ "reference_protocol": {
+  "primary_config": "C2 (rough Ni alpha 0.3, worklog-32 data); C1 is a stress test only",
+  "dev_views": "C2 val views 0/10/20/30 with the worklog-33 8x-spp references (results/rna_baseline_quality/reference) - all diagnostics and any candidate design decisions use only these",
+  "held_out_views": "the other 36 C2 val views, each re-rendered at 8x spp (1024) with seed 950000+view by b2_reference.py (unchanged rna_bridge.render_view) - selected as 'all remaining views', independent of any candidate; used only for the final candidate-vs-control comparison",
+  "reference_noise": "reported from the worklog-33 replicate (dataset GT vs 8x ref, 29.4 dB pooled on dev views); an 8x reference has 1/8 of the dataset GT variance (~38.4 dB equivalent)",
+  "secondary": "all 40 val views against the stored dataset GT (worklog-32 contract), labelled noisy",
+  "historical_gate": "the worklog-32 25 dB gate is historical and is not applied or changed"
+ },
+ "diagnostics": {
+  "pairs": "4-neighbour pixel pairs (right, down) on dev views; both alpha >= 0.999 (no silhouette/partial coverage); classes by P16 owner and part: seam (same part, different P16 unit), interior (same P16 unit), cross_part, plus a geometric-continuity test applied to seam and interior pairs: 3D hit distance <= 3 x the view's median interior-pair distance AND normal dot >= cos(20 deg); seam/interior pairs failing it are reclassified geometric_edge; pairs whose two pixels have different visibility labels are reported separately (shadow boundaries are physical radiance edges)",
+  "matched_comparison": "interior pairs are reweighted to the seam pairs' distribution of reference radiance variation |d ref| (10 quantile bins of the seam pairs' |d ref| in RNA-tonemap space), so seam vs interior compares like physical variation",
+  "metrics_per_arm": "A, P4, P16, P16w on C2 (and C1 stress): jump excess J = | |d pred| - |d ref| | (RNA tonemap, channel mean); signed error correlation rho(e_p, e_q); mean |e| at seam vs matched interior pixels",
+  "distance_profile": "for every clean (alpha>=0.999) masked pixel: 3D distance to the nearest dense partition sample (partition_P16.npz x) of a DIFFERENT unit of the SAME part, in units of the view's median interior-pair distance (pixel footprint f); bins [0,1),[1,2),[2,4),[4,8),[8,16),[16,32),[32,inf); mean |e| per arm and P16/A, P16w/A ratio per bin",
+  "cross_evaluation": "at seam pairs (p owned by i, q owned by j): evaluate unit j at p and unit i at q with the unchanged unit modules (local frame clamped as in OwnedTriplaneSet); report |f_i(p) - f_j(p)|, own error |f_i(p) - ref(p)|, neighbour error |f_j(p) - ref(p)|, and whether p lies inside unit j's AABB",
+  "posthoc_composition": "learned parameters held fixed: partition-of-unity blend of the two nearest same-part units within a band of half-width 2f around the seam (weight linear in signed distance difference to the two units' nearest dense samples), all other pixels unchanged; measures how much of the seam excess a composition change alone removes and at what error cost; band width is derived from the pixel footprint, not tuned",
+  "training_support": "from the C1 worklog-22 train H5 (C2 used the same cameras, light directions and seeds; only radiance differs): per P16 unit: sample count (= the decoder's whole training set), samples per unit area, samples within 2f of a same-part seam, light- and view-direction coverage (fraction of 128 equal-area upper-hemisphere bins hit, world frame)"
+ },
+ "hypothesis_rules": {
+  "H1_support": "SUPPORTED if (a) per-unit P16/A error ratio (C2 dev, vs ref) has Spearman rho <= -0.5 with the unit's training sample count, OR (b) the P16/A ratio in distance bins [0,2) is >= 1.10 x its value in bins >= 16; CONTRADICTED if neither holds and P16w (same per-unit samples, 16x capacity) leaves the ratio unchanged; else UNRESOLVED",
+  "H2_independent_functions": "SUPPORTED if P16's seam-pair error correlation is >= 0.2 lower than its matched-interior correlation while A's drop is < 0.05, AND the median cross-evaluation disagreement |f_i(p)-f_j(p)| at seam pixels is >= the median own error there; CONTRADICTED if the correlation drop is < 0.05; else UNRESOLVED",
+  "H3_composition": "SUPPORTED as a removable mechanism if the fixed-parameter post-hoc blend brings P16's seam jump excess to within 10% of A's matched value while seam-band pixel error does not increase by more than 2%; CONTRADICTED if the blend leaves >= 50% of P16's excess over A; else UNRESOLVED",
+  "H4_other": "local frame normalisation is tested by P1 vs A (worklog 32: equal); routing determinism by the existing tests; any other measured mechanism is reported as found"
+ },
+ "candidate_rule": {
+  "at_most_one": true,
+  "mapping": "H1 supported and dominant -> support-extended unit training (each unit trains on its owned samples plus same-part samples within a geometry-derived band beyond its boundary; rendering unchanged hard selection; parameter AND output ownership unchanged). H2 supported and H3 not -> immutable shared decoder (decoder trained once, frozen forever; each unit owns its triplane features). H3 supported -> explicit overlap composition contract (output influence widens to the band; must be accounted). If no hypothesis is SUPPORTED, or two are with no dominance, stop without a candidate.",
+  "dominance": "the hypothesis whose mechanism accounts for the larger share of P16's seam jump excess over A on dev views (H3: share removed by the post-hoc blend; H1: share located within distance bins [0,2) attributable to elevated own error; H2: share of seam pairs where cross-evaluation disagreement exceeds the jump threshold)",
+  "training_contract": "if a candidate needs training: C2 data, upstream loss/optimiser/schedule, 250 epochs, seed 0, P16 partition and matched capacity unchanged unless the hypothesis itself requires otherwise (declared before training); final weights",
+  "evaluation": "held-out 36 views vs 8x references: pooled PSNR (RNA tonemap), logL1, hf (top-10% GT-gradient) error, per part and per unit, seam jump excess and seam/interior error on clean pairs, plus all-40-view metrics vs dataset GT; controls A, P16, P16w unchanged",
+  "reinit_regression": "u* = the P16 tea-pot unit with the most training pixels (unit 12, worklog-32 rule); re-initialise/reconstruct its complete owned state; report parameter groups changed/unchanged, pixels whose output can change, and recovered quality"
+ }
+}
