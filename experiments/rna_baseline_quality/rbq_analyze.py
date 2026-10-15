@@ -117,7 +117,7 @@ def main() -> int:
         rep = np.load(rd / f"{args.cfg}_view{v}_rep.npz")["color"][m]
         ref = np.load(rd / f"{args.cfg}_view{v}_ref.npz")["color"][m]
         e = {"A_gt": mse(pred, gt), "A_ref": mse(pred, ref), "gt_ref": mse(gt, ref), "rep_ref": mse(rep, ref), "gt_rep": mse(gt, rep)}
-        for k in agg:
+        for k in e:  # agg also gains the B2a keys below; e holds this view's base comparisons
             agg[k].append((e[k], len(gt)))
         row = {k + "_psnr": psnr(x) for k, x in e.items()}
         row["noise_share_of_A_error"] = e["gt_ref"] / e["A_gt"]

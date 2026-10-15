@@ -29,5 +29,17 @@
   "reference_noise": "noise share = MSE(GT, ref)/MSE(A, GT); A vs ref reported as the noise-free estimate",
   "generalisation": "D1 cell differences > 1 dB pooled attribute the train/val gap to the factor that changes between the cells",
   "capacity": "existing P16w (16x params) vs A: lower train loss without lower val loss -> not a capacity shortfall"
- }
+ },
+ "amendments": [
+  {
+   "written": "2026-10-15 ~11:10 KST, after controls A, C (C1, C2), D1 and B2a were seen; BEFORE any D2 training",
+   "B2b_outcome": "not run: on C1 pooled PSNR(B2a clamped, 8x ref) = 25.90 dB > pooled PSNR(A, 8x ref) = 18.28 dB, so the rule's trigger is not met",
+   "D2_supervision_density": {
+    "question": "with evaluation, reference noise, estimator semantics, camera/light distribution, capacity and spatial resolution excluded, is the C1 out-of-sample error limited by the density of (view, light) training samples or by RNA's representation / inductive bias?",
+    "design": "train arm A (upstream config, seed 0) on the FIRST 100 of the 200 worklog-22 C1 training views (h5 copy of views 0-99, unchanged values), with optimisation matched per step: num_epochs 500, decay_iters 100 (StepLR every 10 000 steps as in A), iterations_to_sigma_1 unchanged (iteration-based); total 50 000 steps as A. Evaluate final weights on the unchanged worklog-22 val set, pooled and view-mean.",
+    "rule": "if A_100 pooled final val PSNR <= A_200 (17.97) - 1.0 dB, supervision density is a material factor at this density (data-limited regime; more views would be the next control); if within 1.0 dB, the result does not support a data-density limit at 100-200 views and the representation / inductive-bias explanation remains; 1.0 dB exceeds the observed run-to-run spread (T1 vs C1 A best: 0.5 dB)",
+    "not_concluded": "a single seed and a single reduction step; no claim about >200 views"
+   }
+  }
+ ]
 }
