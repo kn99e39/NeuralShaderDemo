@@ -133,7 +133,11 @@ def main() -> int:
         fig.savefig(out / "04_training_curves.png", dpi=130, bbox_inches="tight"); plt.close(fig); files.append("04_training_curves.png")
     key = {"fig8_like": json.loads((root / "compare_fig8.json").read_text()) if (root / "compare_fig8.json").exists() else None,
            "val_eval": {k: {kk: vv for kk, vv in v.items() if kk != "per_view_psnr"} for k, v in evals.items()},
-           "qualify": json.loads((root / "qualify.json").read_text()) if (root / "qualify.json").exists() else None}
+           "qualify": json.loads((root / "qualify.json").read_text()) if (root / "qualify.json").exists() else None,
+           "n1_noise": {p.stem: {kk: vv for kk, vv in json.loads(p.read_text()).items() if kk != "note"} for p in sorted((root / "val_eval_n1").glob("*.json"))}
+           if (root / "val_eval_n1").exists() else None,
+           "n1_check": json.loads((root / "n1_check.json").read_text()) if (root / "n1_check.json").exists() else None,
+           "train_timing": json.loads((root / "train_timing.json").read_text()) if (root / "train_timing.json").exists() else None}
     (out / "05_key_numbers.json").write_text(json.dumps(key, indent=1, default=str)); files.append("05_key_numbers.json")
     (out / "manifest.json").write_text(json.dumps({"worklog": "docs/worklogs/35_WORKLOG_RNA_REFERENCE_REPRODUCTION_LEGO.md", "generator": "experiments/rna_reproduction/rr_exports.py",
                                                    "source": "results/rna_reproduction", "files": {x: hashlib.sha256((out / x).read_bytes()).hexdigest() for x in files}}, indent=1))

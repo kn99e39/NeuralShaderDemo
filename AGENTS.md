@@ -29,7 +29,7 @@ Full list: docs/RESEARCH_CENTRIC_TOPIC.md §2.
 - C1 is an RNA representation limit on near-mirror conductors;
 - the C2 gate miss is dominated by 128-spp target noise.
 
-Batch 2 (worklog 34) attributed the P16 seams to independent per-unit error fields exposed by hard selection. P16-PU composition removes most of the seam excess; the interior per-unit fidelity loss remains. **Batch 3 is not authorised** (docs/RESEARCH_ROADMAP.md §3).
+Batch 2 (worklog 34) attributed the P16 seams to independent per-unit error fields exposed by hard selection. P16-PU composition removes most of the seam excess; the interior per-unit fidelity loss remains. **Batch 3 is not authorised** (docs/RESEARCH_ROADMAP.md §3). Worklog 35 qualified native RNA on the official Lego: it reproduces the released checkpoints, and the gap to the paper is validation-target noise (classification: comparable). Static gates must use converged references.
 
 **Historical scope:**
 - Worklog 30 validly tested triplane-cell masking inside one 8DNA asset with shared layers frozen; its negative result is not a test of owned units.

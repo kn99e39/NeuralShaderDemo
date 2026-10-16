@@ -1,6 +1,6 @@
 # Architecture — Surface-Owned Neural Transport Units
 
-**Updated:** 2026-10-15 (worklog 34)  
+**Updated:** 2026-10-17 (worklog 35)  
 **Status:** Batch 1 of ≥ 5 reported. Ownership contract demonstrated exactly on an RNA-based candidate; static-fidelity verdict NOT adjudicated (baseline-credibility stop condition); radiometric recovery after a real edit NOT YET TESTED  
 **Branch:** Selective_Recompute  
 **Historical architectures:** docs/history/ARCHITECTURE_LIFECYCLE_SEPARATION_2026-10-07.md, docs/history/ARCHITECTURE_INTRA_OBJECT_FEATURE_REFIT_2026-10-08.md, docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
@@ -171,6 +171,8 @@ The 1997 line-space hierarchy is prior art, not the starting point. See docs/RES
 2. Then either:
    - radiometric validity of unit recompute under a physical T0 → T3 edit (recommended in worklog 32); or
    - a representation variant from §5.
+
+**Baseline qualification (worklog 35).** Native RNA reproduces its published Lego quality: released and retrained checkpoints agree within 0.2 dB, and against 4096-spp targets they reach the Table 1 level. RNA is therefore a credible substrate on its material class. Future static gates use converged references (≥ 4096 spp or 8× the training spp) and state the aggregation and checkpoint rule.
 
 **Not before feasibility (decision 10):**
 - dependency tracking;

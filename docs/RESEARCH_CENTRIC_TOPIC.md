@@ -1,6 +1,6 @@
 # Research Centric Topic — Surface-Owned Selective Neural Transport Recomputation
 
-**Last updated:** 2026-10-15 (worklog 33)  
+**Last updated:** 2026-10-17 (worklog 35)  
 **Status:** Active problem; Surface-Owned Transport Units are the active representation hypothesis (Batch 1 of ≥ 5 architecture batches reported); full method not validated  
 **Target:** SIGGRAPH 2027 (official Technical Papers deadline to be verified separately)  
 **Superseded framing:** object-level-only selection (2026-10-12), archived at docs/history/ARCHITECTURE_OBJECT_LEVEL_SELECTION_2026-10-12.md
@@ -83,6 +83,11 @@ Also prior art (not the starting point): hierarchical/line-space dependency stru
   - Seams between owned units come from independent per-unit error fields, exposed by hard selection.
   - An explicit partition-of-unity composition (P16-PU) removes most of the seam excess. It does so with exact output-influence accounting and without changing any learned state.
   - Independent decoders still cost fidelity inside units.
+
+- Worklog 35:
+  - Native RNA on the official Lego reproduces the released checkpoints (classification: comparable).
+  - The remaining gap to the paper is validation-target noise.
+  - RNA is a credible substrate when evaluated against converged targets.
 
 ## 7. Immediate Scientific Frontier
 

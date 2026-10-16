@@ -1,6 +1,6 @@
 # Research Roadmap — Surface-Owned Selective Neural Transport Recomputation
 
-**Updated:** 2026-10-15 (worklog 33)  
+**Updated:** 2026-10-17 (worklog 35)  
 **Branch:** Selective_Recompute  
 **Status:** Architecture Batch 1 (RNA-based independent units) reported — ownership contract exact; stopped on the baseline-credibility precondition; Batch 2 NOT authorised  
 **Venue planning:** SIGGRAPH 2027, official paper deadline to be separately verified.
@@ -35,6 +35,7 @@ Active contracts: docs/RESEARCH_CENTRIC_TOPIC.md, docs/Architecture.md, docs/BAS
 | 28–29 | two sparse K=32 relational-state candidates fail held-out near-mirror T3 | that owned-unit recompute fails |
 | 30 | triplane-cell masking inside one 8DNA model (shared flows frozen) fails | anything about complete owned units |
 | 31 | explicit per-part surface units (no learned decoder) reach 8DNA-level T0 and recover T3 when refitted; object-level D_T = all objects on the compact teaset; no wall-clock saving in that implementation | unit-level D_T sparsity; neural units |
+| 35 | RNA qualified on its published asset (Lego). Native generation and training with unchanged upstream code. Retraining matches the released checkpoints within 0.2 dB on the same val set. The gap to Table 1 (−1.9 HQ / −0.8 small) is explained by 1024- vs 4096-spp validation targets (+1.7 / +0.6 dB). Overall COMPARABLE | performance claims (production renderer unreleased) |
 | 34 | Batch 2: seams = independent per-unit error fields (decorrelated across cuts) exposed by hard selection; not supervision starvation. P16-PU composition removes 86% of the seam excess on held-out C2 with lower boundary error, exact output-influence accounting (S_i ∪ B_i), and REINIT intact | recovery of P16's interior fidelity loss (−0.20 dB, logL1 1.18×); C1 accuracy gain |
 | 33 | RNA baseline audit: integration and evaluation faithful to upstream (no defect); C1 failure = RNA representation limit on near-mirror Ni (by exclusion: not noise, estimator, distribution, capacity, resolution, convergence or data density 100-200 views); C2 gate miss dominated by 128-spp target noise (A vs converged ref 26.7 dB on 4 views) | a credible static reference (needs a prospective protocol); a positive test of the C1 representation limit |
 | 32 | RNA split into complete independent units: exact parameter/output preservation and full-state unit reconstruction; P16 costs 1.15× HDR log error and visible seam steps vs RNA (C2), not fixed by 16× capacity | static fidelity under a credible baseline (gate failed: 17.97 / 24.92 dB); recovery after a physical edit; cost |
