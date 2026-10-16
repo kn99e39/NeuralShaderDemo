@@ -21,6 +21,16 @@ def main() -> None:
 
     sys.modules.setdefault("neumat", rna)
     sys.modules.setdefault("neumat.config", rna.config)
+    import os
+
+    if os.environ.get("RR_SEED"):  # diagnostic N1 only: make the (otherwise unseeded) generator replayable
+        import random
+
+        import numpy as np
+        import torch
+
+        s = int(os.environ["RR_SEED"])
+        random.seed(s); np.random.seed(s); torch.manual_seed(s)
     script = sys.argv[1]
     sys.argv = [script] + sys.argv[2:]
     runpy.run_path(script, run_name="__main__")

@@ -3,10 +3,17 @@
  "worklog": 35,
  "batch": "RNA reference reproduction & environment qualification (prerequisite; not architecture Batch 3)",
  "written": "2026-10-16 ~12:35 KST, after the runtime qualification and the five native lego_cmp renders were seen, BEFORE any validation-set evaluation, dataset or training result existed",
- "upstream": {"repo": "adobe-research/relightable-neural-assets", "rev": "66b5b098e2013db32214e44a439a0cd66d331e4d", "modified": false,
-              "artifacts_sha256": {"data/ckpts/lego.ckpt": "f9b6aedb3d2635b931399d4a5df4f5815f35fcb23a8bf503b45d398bbdc365fd",
-                                   "data/ckpts/lego_rt.ckpt": "22db5c95f297638fedddd6180a1a4b72021f2826e64fca0d120bd3e440a331d7",
-                                   "data/scenes/Lego.zip": "542fea142c53fc4d (prefix)", "Lego_rough_aovs_normalized.blend": "b5d859577e4f8b2af08a5ef7aecfc6c682079203fdbaf04e1eac79f28e427ee3"}},
+ "upstream": {
+  "repo": "adobe-research/relightable-neural-assets",
+  "rev": "66b5b098e2013db32214e44a439a0cd66d331e4d",
+  "modified": false,
+  "artifacts_sha256": {
+   "data/ckpts/lego.ckpt": "f9b6aedb3d2635b931399d4a5df4f5815f35fcb23a8bf503b45d398bbdc365fd",
+   "data/ckpts/lego_rt.ckpt": "22db5c95f297638fedddd6180a1a4b72021f2826e64fca0d120bd3e440a331d7",
+   "data/scenes/Lego.zip": "542fea142c53fc4d (prefix)",
+   "Lego_rough_aovs_normalized.blend": "b5d859577e4f8b2af08a5ef7aecfc6c682079203fdbaf04e1eac79f28e427ee3"
+  }
+ },
  "adapters": {
   "neumat_alias": "experiments/rna_reproduction/rr_run.py registers neumat/neumat.config as aliases of rna/rna.config so the released checkpoints unpickle (their hyper-parameters reference neumat.config.BaseNeuMatConfig, the package's pre-release name); without it torch.load fails (ModuleNotFoundError: neumat). Non-behavioural.",
   "render_json_path": "the released render yml names config/render/jsons/lego.json but the file is config/render/lego.json; the workspace holds a byte-identical copy at the named path; yml unchanged",
@@ -14,20 +21,51 @@
   "workspace": "results/rna_reproduction/work (cwd), PYTHONPATH = upstream checkout; upstream scripts run unchanged"
  },
  "targets": {
-  "table1_HQ_4x512": {"value": 34.09, "metric": "average validation PSNR, Lego (paper Table 1); code-defined as mean over 40 views of PSNR(tonemap(pred), tonemap(gt)), tonemap = clamp, x/(1+x), ^(1/2.2), alpha>0 pixels", "checkpoint_rule": "not stated"},
-  "table1_small_4x64": {"value": 28.77},
-  "released_ckpt_logged_best": {"HQ": 33.94, "small": 28.95, "source": "ModelCheckpoint state inside the released last checkpoints (epoch 236 / 222)"},
-  "fig8_full_image": {"HQ": 32.44, "small": 28.28, "note": "view, mask, reference spp and transform unpublished - comparable only"},
-  "training_time": {"HQ": "1h13m (Table 1) / ~90-120 min (text), A100 40GB", "small": "31m17s / 30-40 min"}
+  "table1_HQ_4x512": {
+   "value": 34.09,
+   "metric": "average validation PSNR, Lego (paper Table 1); code-defined as mean over 40 views of PSNR(tonemap(pred), tonemap(gt)), tonemap = clamp, x/(1+x), ^(1/2.2), alpha>0 pixels",
+   "checkpoint_rule": "not stated"
+  },
+  "table1_small_4x64": {
+   "value": 28.77
+  },
+  "released_ckpt_logged_best": {
+   "HQ": 33.94,
+   "small": 28.95,
+   "source": "ModelCheckpoint state inside the released last checkpoints (epoch 236 / 222)"
+  },
+  "fig8_full_image": {
+   "HQ": 32.44,
+   "small": 28.28,
+   "note": "view, mask, reference spp and transform unpublished - comparable only"
+  },
+  "training_time": {
+   "HQ": "1h13m (Table 1) / ~90-120 min (text), A100 40GB",
+   "small": "31m17s / 30-40 min"
+  }
  },
- "known_contract_discrepancies": ["paper Lego training data 4096 spp vs released generate_Lego.yml 1024 spp (the released config is followed)",
-                                  "generator light/camera RNG is unseeded - regenerated sets are distribution-equivalent, not identical",
-                                  "render reference is OIDN-denoised 2048 spp; training/validation data is not denoised",
-                                  "paper keeps 3 best checkpoints, code top-10"],
+ "known_contract_discrepancies": [
+  "paper Lego training data 4096 spp vs released generate_Lego.yml 1024 spp (the released config is followed)",
+  "generator light/camera RNG is unseeded - regenerated sets are distribution-equivalent, not identical",
+  "render reference is OIDN-denoised 2048 spp; training/validation data is not denoised",
+  "paper keeps 3 best checkpoints, code top-10"
+ ],
  "classification_rules": {
   "released_checkpoint_route": "evaluate lego.ckpt / lego_rt.ckpt (final, epoch 249) on the natively regenerated 40-view validation set through the unchanged Lightning validate path: REPRODUCED if |view-mean PSNR - Table 1| <= 1.0 dB for both variants, COMPARABLE if <= 2.0 dB, otherwise DISCREPANT (to be attributed). 1.0 dB covers the observed run/val-set spread (worklog 33: 0.5 dB between identical-config runs) plus final-vs-best (released logs: best 33.94 vs Table 34.09)",
   "training_route": "if the 400-view set is generated: train lego_vis.yml and lego_vis_rt.yml unchanged (seed 0, 250 epochs); REPRODUCED if the logged best val_psnr is within 1.0 dB of Table 1 and the final within 1.0 dB of the released final checkpoint's value on the same validation set; COMPARABLE within 2.0 dB",
   "fig8_route": "masked LDR PSNR of the lego_cmp frames is reported as COMPARABLE only (unpublished protocol)",
   "performance": "path-tracer timings (Fig. 6/7) are BLOCKED: the production renderer is not released; PyTorch/deferred timings are reported separately and never compared with them"
- }
+ },
+ "amendments": [
+  {
+   "written": "2026-10-16 ~13:15 KST, after the released checkpoints were evaluated on the native 40-view validation set (HQ 32.16, small 27.96 view-mean) and BEFORE any noise diagnostic or training result",
+   "released_route_outcome": "COMPARABLE by the rule (HQ -1.93 dB, small -0.81 dB vs Table 1)",
+   "N1_reference_noise": {
+    "question": "does 1024-spp validation-target noise (released config) vs the paper's 4096-spp data explain the larger HQ gap?",
+    "design": "rr_run.py with RR_SEED=1234 seeds torch/numpy/random before the unchanged generator; generate 8 validation views twice with config copies differing ONLY in sample_count (1024 vs 4096) and num_images 8 (identical cameras/lights; Cycles' fixed seed makes the 1024 samples a prefix of the 4096 estimate, so the two targets are positively correlated - reported, it understates the noise difference); evaluate released HQ and small on both",
+    "rule": "if view-mean PSNR(HQ vs 4096) - PSNR(HQ vs 1024) >= 1.0 dB, target noise accounts for a material part of the HQ gap; < 0.3 dB: not explanatory; between: partial"
+   },
+   "training_data": "the 400-view training set follows the released generate_Lego.yml (1024 spp), not the paper's 4096 spp; declared, not changed"
+  }
+ ]
 }
