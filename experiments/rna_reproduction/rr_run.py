@@ -31,6 +31,17 @@ def main() -> None:
 
         s = int(os.environ["RR_SEED"])
         random.seed(s); np.random.seed(s); torch.manual_seed(s)
+    if os.environ.get("RR_RESUME_CKPT"):  # resume adapter (worklog 35): upstream train.py has no resume flag
+        import pytorch_lightning as pl
+
+        _fit = pl.Trainer.fit
+        ck = os.environ["RR_RESUME_CKPT"]
+
+        def fit_resumed(self, *a, **k):
+            k.setdefault("ckpt_path", ck)  # Lightning restores weights, optimiser, LR scheduler, epoch and step
+            return _fit(self, *a, **k)
+
+        pl.Trainer.fit = fit_resumed
     script = sys.argv[1]
     sys.argv = [script] + sys.argv[2:]
     runpy.run_path(script, run_name="__main__")

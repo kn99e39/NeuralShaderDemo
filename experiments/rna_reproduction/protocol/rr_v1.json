@@ -71,6 +71,11 @@
    "written": "2026-10-16 ~19:45 KST, after the first HQ training attempt (data on GPU per the released yml) ran at ~7.3 min/epoch with 15.9/16 GB GPU memory (suspected WDDM spill; ~31 h projected) and was stopped at the user's request; BEFORE the retry",
    "resource_adaptation": "config/train/lego_vis_cpudata.yml and lego_vis_rt_cpudata.yml = the released ymls with data_interface_params.device 'cuda' -> 'cpu' (ops_device stays 'cuda'): the dataset lives in host RAM (pinned) and each one-view batch is moved to the GPU; this is the DataModule's default and the yml's own commented alternative. Data, order, seed, model, loss, optimiser and schedule are unchanged; only placement differs. The first attempt's partial run (checkpoints/tog-lego/version_0, 1 epoch) is not a result.",
    "N1": "rerun alone (not concurrent with data loading); the first N1 attempt failed with ENOMEM while the training process loaded the dataset"
+  },
+  {
+   "written": "2026-10-16 ~22:00 KST",
+   "pause_resume": "HQ training (checkpoints/tog-lego/version_1) stopped at the user's request right after the epoch-64 last.ckpt was written (global_step 26000, lr 5e-4; backup checkpoints/tog-lego/resume_from_last_epoch64.ckpt). It will be resumed with rr_run.py RR_RESUME_CKPT (Lightning Trainer.fit(ckpt_path=...)): weights, optimiser, LR scheduler, epoch and step are restored; the dataloader shuffle RNG is not, so the resumed run is labelled 'resumed', not bit-identical to an uninterrupted one. Training wall-clock is reported per segment; epochs ~2-5 of segment 1 were slowed by CPU contention (N1) and memory pressure.",
+   "chains": "follow-up chains (small training, N1 completion) were stopped and must be relaunched after the HQ resume"
   }
  ]
 }
