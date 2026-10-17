@@ -1,0 +1,40 @@
+{
+ "schema": "rna_surface_ownership_lego/v1",
+ "worklog": 36,
+ "batch": "Architecture Batch 3 - native RNA surface ownership generalization (official Lego)",
+ "written": "2026-10-18 ~00:50 KST, before any Batch-3 candidate was trained or evaluated (only the mesh inspection, the partition and the dev-view pixel footprint exist)",
+ "preserved": "worklogs 21-35 and their artifacts; upstream RNA 66b5b098 unmodified; worklog-32 owned-unit code (rso_model / rso_train) reused unchanged; worklog-34 composer reused in spirit with the declared transfer adaptation below",
+ "baseline": {
+  "A_primary": "worklog-35 reproduced HQ: results/rna_reproduction/work/checkpoints/tog-lego/version_2/checkpoints/last.ckpt (final weights, resumed run)",
+  "A_secondary": "released data/ckpts/lego.ckpt (final weights)",
+  "training_data": "worklog-35 native set Lego_hq.h5 (400 views, 1024^2, 1024 spp) and val Lego_hq_val_val.h5 (40 views)"
+ },
+ "partition": {
+  "file": "results/rna_surface_ownership_lego/partition_L16.npz (b3_partition.py; json summary alongside)",
+  "rule": "surface identity = the mesh triangle a rendered point lies on (12 nearest-centroid candidates, exact point-triangle distance, normal compatibility |n_t.n| >= 0.3); unit = k-means cell (K=16, area-weighted, seed 0) of that on-surface point; component = the triangle's connected component",
+  "K": "16, chosen for correspondence with worklogs 32/34 before any quality evaluation; unit extents 0.38-0.59 (asset 0.89 x 1.60 x 0.94); 259 of 1832 sampled components are cut by unit boundaries",
+  "superseded_variant": "whole triangles assigned by centroid: rejected before training because large planar triangles inflated unit AABBs to the full asset length (extents up to 1.58)"
+ },
+ "arms": {
+  "A": "native RNA HQ (above)",
+  "B": "L16 independent owned units: worklog-32 OwnedTriplaneSet, matched capacity (rso_model.unit_specs: per-unit triplane at A's texel size, MLP width 512/sqrt(16)=128), trained with the unchanged worklog-32 trainer on the native Lego data (config = worklog-35 lego_vis_cpudata.yml with absolute dataset paths and name only), seed 0, 250 epochs, final weights",
+  "C": "B's parameters unchanged, composed with the worklog-34 partition-of-unity rule: output = (1-w) f_own + w f_nbr, w = clip(0.5 - s/(2h), 0, 0.5), only across an ownership cut inside one connected component (continuous surface), h = 2 x median dev-view pixel footprint = 2 x 2.25 mm = 4.5 mm",
+  "C_transfer_adaptation": "s = exact Euclidean distance of the on-surface point to the Voronoi bisector between its unit's and the neighbour unit's k-means centres, instead of worklog 34's nearest-dense-sample approximation: on Lego the 1 M-sample spacing (~5 mm) exceeds the band (4.5 mm), so the sample approximation cannot resolve it; the contract (linear PU weight within h of the ownership boundary, same-surface constraint, unchanged learned state) is unchanged",
+  "REINIT": "u* = the L16 unit with the most training pixels (rule fixed now); re-initialise its complete owned state and retrain it with every other unit frozen, same contract as worklog 32; composed both hard (B) and with C"
+ },
+ "evaluation": {
+  "primary_heldout": "16 validation-distribution views at 4096 spp (seeded RR_SEED=5678, b3_heldout_4096.h5), generated before any candidate existed; never used for design",
+  "dev": "the worklog-35 N1 8 views at 4096 spp (n1_4096_val.h5) - diagnostics only",
+  "secondary": "native 40-view val (1024 spp, noisy; Lightning view-mean metric)",
+  "metrics": "view-mean PSNR (code tonemap, alpha>0) and pooled; logL1; high-frequency |e| (top-10% reference gradient); per unit; per material; seam jump excess J and |e| on clean seam pairs (full coverage, same component, different unit, 3D gap <= 3 x view footprint, normal angle <= 20 deg, same visibility) vs |d ref|-matched clean interior pairs; band (w>0) vs off-band |e|; parameters, training time, peak memory, load and inference time",
+  "screening": {
+   "Case_A_preserved": "B or C held-out view-mean PSNR >= A - 0.5 dB AND logL1 <= 1.10 x A",
+   "Case_B_significant_loss": "B held-out view-mean PSNR < A - 1.0 dB OR logL1 > 1.20 x A",
+   "Case_C_boundary_without_interior": "C removes >= 50% of B's seam J excess over A while C's off-band |e| stays > 1.10 x A's",
+   "otherwise": "conditional; reported with the measured ranges",
+   "note": "screening values, fixed now; raw numbers always reported"
+  }
+ },
+ "cost_rule": "a bounded pilot (1-2 epochs) measures B's epoch time before the full run; if the full B run exceeds ~24 h on the 5080 the batch reports the limitation instead of silently reducing views, resolution or capacity",
+ "non_goals": "no shared decoder, no new blending heuristic, no partition tuning on validation PSNR, no invalidation/dependency work, no Batch 4"
+}
