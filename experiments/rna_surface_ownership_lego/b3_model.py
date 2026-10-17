@@ -1,7 +1,8 @@
 """Architecture Batch 3 (worklog 36): Lego surface ownership for the worklog-32 owned-unit RNA (RNA venv).
 
-* LegoOwner: the surface point is first placed on the mesh triangle it lies on (candidates = the 12
-  triangles with nearest centroids; exact point-to-triangle distance, rso_partition._closest_point_tri,
+* LegoOwner: the surface point is first placed on the mesh triangle it lies on (candidates = the 8
+  triangles with nearest centroids plus the triangles of the 8 nearest of 8 M area-uniform auxiliary
+  surface points, seed 0, ~1.8 mm spacing - centroids alone miss large planar triangles; exact point-to-triangle distance, rso_partition._closest_point_tri,
   restricted to triangles whose geometric normal agrees with the sample's shading normal,
   |n_t . n| >= 0.3, when any candidate does), so a point between two stacked surfaces goes to the
   surface it was rendered on; its unit is the k-means cell (nearest partition centre) of that
@@ -25,7 +26,9 @@ sys.path.insert(0, str(HERE.parent / "rna_surface_ownership"))
 import rso_model as M  # noqa: E402  (puts upstream RNA on sys.path)
 from rso_partition import _closest_point_tri  # noqa: E402
 
-K_CAND = 12
+K_CAND = 8      # nearest triangle centroids
+K_AUX = 8       # + triangles of the nearest auxiliary on-surface points (large triangles)
+N_AUX = 8_000_000
 COS_MIN = 0.3
 CHUNK = 100_000
 
@@ -43,6 +46,13 @@ class LegoOwner:
         n = np.cross(self.b - self.a, self.c - self.a)
         self.tn = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-30)
         self.tree = cKDTree((self.a + self.b + self.c) / 3)
+        area = 0.5 * np.linalg.norm(n, axis=1)
+        rng = np.random.default_rng(0)
+        n_aux = min(N_AUX, 100 * len(F))
+        t = rng.choice(len(F), n_aux, p=area / area.sum())
+        u, v = rng.random(n_aux), rng.random(n_aux); fl = u + v > 1; u[fl], v[fl] = 1 - u[fl], 1 - v[fl]
+        self.aux_tri = t
+        self.aux_tree = cKDTree(self.a[t] + (self.b[t] - self.a[t]) * u[:, None] + (self.c[t] - self.a[t]) * v[:, None])
         self.key = hashlib.sha256(self.centres.tobytes()).hexdigest()[:12]
 
     def __call__(self, world, normals=None, return_tri=False):
@@ -51,7 +61,10 @@ class LegoOwner:
         onsurf = np.zeros((len(world), 3))
         for s in range(0, len(world), CHUNK):
             w = world[s:s + CHUNK]
-            _, ids = self.tree.query(w, k=K_CAND, workers=-1)
+            kc, ka = min(K_CAND, len(self.a)), min(K_AUX, len(self.aux_tri))
+            _, i1 = self.tree.query(w, k=kc, workers=-1)
+            _, i2 = self.aux_tree.query(w, k=ka, workers=-1)
+            ids = np.concatenate([i1.reshape(len(w), -1), self.aux_tri[i2.reshape(len(w), -1)]], 1)
             q = _closest_point_tri(w[:, None, :], self.a[ids], self.b[ids], self.c[ids])
             d = np.linalg.norm(q - w[:, None, :], axis=-1)
             if normals is not None:
